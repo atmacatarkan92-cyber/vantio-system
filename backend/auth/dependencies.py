@@ -1,9 +1,11 @@
+from typing import Tuple
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import select
 
 from db.database import get_session
-from db.models import User
+from db.models import User, Tenant
 from auth.security import decode_access_token
 
 
@@ -11,10 +13,28 @@ from auth.security import decode_access_token
 http_bearer = HTTPBearer(auto_error=True)
 
 
+def get_db_session():
+    """Yield a DB session for auth; closed after request."""
+    session = get_session()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+def _user_role_value(user: User) -> str:
+    """Role as string for comparison (handles Enum or str)."""
+    r = getattr(user, "role", None)
+    if r is None:
+        return ""
+    return getattr(r, "value", r) if not isinstance(r, str) else r
+
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(http_bearer),
-    session=Depends(get_session),
+    session=Depends(get_db_session),
 ) -> User:
+    """Resolve current user from Bearer JWT. 401 if invalid or inactive."""
     token = credentials.credentials
     try:
         payload = decode_access_token(token)
@@ -40,8 +60,11 @@ def get_current_user(
 
 
 def require_roles(*roles: str):
+    """Dependency: require current user's role to be one of the given roles (by value)."""
+
     def dependency(user: User = Depends(get_current_user)) -> User:
-        if user.role not in roles:
+        role_val = _user_role_value(user)
+        if role_val not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not enough permissions",
@@ -49,4 +72,28 @@ def require_roles(*roles: str):
         return user
 
     return dependency
+
+
+def require_role(role: str):
+    """Dependency: require current user to have the given role."""
+    return require_roles(role)
+
+
+def get_current_tenant(
+    user: User = Depends(require_role("tenant")),
+    session=Depends(get_db_session),
+) -> Tuple[User, Tenant]:
+    """
+    Require role=tenant and resolve the Tenant record by direct FK: tenant.user_id = user.id.
+    Safe: one-to-one enforced by UNIQUE on tenant.user_id; no email matching.
+    """
+    tenant = session.exec(
+        select(Tenant).where(Tenant.user_id == str(user.id))
+    ).first()
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tenant record linked to this account. Please contact support.",
+        )
+    return user, tenant
 

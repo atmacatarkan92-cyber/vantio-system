@@ -1,6 +1,6 @@
 """
 Admin rooms: CRUD. GET by unit is in routes_admin_units.
-Protected by require_roles("platform_admin", "ops_admin").
+Protected by require_roles("admin", "manager").
 """
 
 from typing import List, Optional
@@ -50,7 +50,7 @@ class RoomPatch(BaseModel):
 @router.get("/rooms", response_model=List[dict])
 def admin_list_rooms(
     unit_id: Optional[str] = None,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """List all rooms, optionally filtered by unit_id."""
     session = get_session()
@@ -67,7 +67,7 @@ def admin_list_rooms(
 @router.post("/rooms", response_model=dict)
 def admin_create_room(
     body: RoomCreate,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Create a new room."""
     session = get_session()
@@ -94,7 +94,7 @@ def admin_create_room(
 def admin_patch_room(
     room_id: str,
     body: RoomPatch,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Update a room (partial)."""
     session = get_session()
@@ -121,7 +121,7 @@ def admin_patch_room(
 @router.delete("/rooms/{room_id}")
 def admin_delete_room(
     room_id: str,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Delete a room."""
     session = get_session()

@@ -604,6 +604,11 @@ function AdminUnitDetailPage() {
               </div>
 
               <div>
+                <p className="text-sm text-slate-500">Liegenschaft</p>
+                <p className="font-medium">{unit.property_title || "—"}</p>
+              </div>
+
+              <div>
                 <p className="text-sm text-slate-500">Verfügbar ab</p>
                 <p className="font-medium">{unit.availableFrom || "-"}</p>
               </div>

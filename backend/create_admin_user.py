@@ -1,10 +1,12 @@
 """
-Small helper script to create an initial platform_admin user.
+Create an initial admin user with hashed password (no secrets hardcoded).
 
 Usage (from backend directory):
     python create_admin_user.py
 
-The script will prompt for email and password via stdin and does not log them.
+Prompts for email and password via stdin; password is hashed with bcrypt
+and stored in user_credentials (not in users). For the running API, set
+SECRET_KEY in .env so JWT auth works; this script does not need SECRET_KEY.
 """
 
 from getpass import getpass
@@ -45,7 +47,7 @@ def main() -> None:
         user = User(
             email=email,
             full_name="Platform Admin",
-            role=UserRole.platform_admin,
+            role=UserRole.admin,
             is_active=True,
         )
         session.add(user)
@@ -55,11 +57,12 @@ def main() -> None:
         creds = UserCredentials(
             user_id=user.id,
             password_hash=hash_password(password),
+            password_algo="bcrypt",
         )
         session.add(creds)
         session.commit()
 
-        print(f"Created platform_admin user with id={user.id}")
+        print(f"Created admin user with id={user.id}")
     finally:
         session.close()
 

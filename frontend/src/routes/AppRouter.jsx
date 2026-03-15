@@ -5,6 +5,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import ChatWidget from "../components/ChatWidget";
 import AdminLayout from "../components/admin/AdminLayout";
+import { AuthProvider } from "../contexts/AuthContext";
 
 import AdminUebersichtPage from "../pages/admin/AdminUebersichtPage";
 import AdminCoLivingDashboardPage from "../pages/admin/AdminCoLivingDashboardPage";
@@ -26,7 +27,13 @@ import AdminBreakEvenPage from "../pages/admin/AdminBreakEvenPage";
 import AdminForecastPage from "../pages/admin/AdminForecastPage";
 import AdminPropertyManagersPage from "../pages/admin/AdminPropertyManagersPage";
 import AdminListingsPage from "../pages/admin/AdminListingsPage";
+import AdminPropertiesPage from "../pages/admin/AdminPropertiesPage";
 import AdminLoginPage from "../pages/admin/AdminLoginPage";
+import TenantLayout from "../components/tenant/TenantLayout";
+import TenantLoginPage from "../pages/tenant/TenantLoginPage";
+import TenantOverviewPage from "../pages/tenant/TenantOverviewPage";
+import TenantTenanciesPage from "../pages/tenant/TenantTenanciesPage";
+import TenantInvoicesPage from "../pages/tenant/TenantInvoicesPage";
 
 const HomePage = lazy(() => import("../pages/HomePage"));
 const ApartmentsPage = lazy(() => import("../pages/ApartmentsPage"));
@@ -47,14 +54,17 @@ function ScrollToTop() {
 export default function AppRouter() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith("/admin");
+  const isTenantRoute = location.pathname.startsWith("/tenant");
+  const showPublicUI = !isAdminRoute && !isTenantRoute;
 
   return (
     <div className="App">
       <ScrollToTop />
-      {!isAdminRoute && <Header />}
+      {showPublicUI && <Header />}
       <main>
-        <Suspense fallback={<div className="text-center py-20">Loading...</div>}>
-          <Routes>
+        <AuthProvider>
+          <Suspense fallback={<div className="text-center py-20">Loading...</div>}>
+            <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/apartments" element={<ApartmentsPage />} />
             <Route path="/wohnungen/:city" element={<ApartmentsPage />} />
@@ -76,6 +86,7 @@ export default function AppRouter() {
               <Route path="leads" element={<AdminLeadsPage />} />
               <Route path="tenants" element={<AdminTenantsPage />} />
               <Route path="landlords" element={<AdminLandlordsPage />} />
+              <Route path="properties" element={<AdminPropertiesPage />} />
               <Route path="bewirtschafter" element={<AdminPropertyManagersPage />} />
               <Route path="invoices" element={<AdminInvoicesPage />} />
               <Route path="invoices/:id" element={<AdminInvoiceDetailPage />} />
@@ -98,12 +109,20 @@ export default function AppRouter() {
               <Route path="leads/inquiries" element={<AdminLeadsPage />} />
               <Route path="leads/followups" element={<AdminLeadsPage />} />
             </Route>
-          </Routes>
-        </Suspense>
+
+            <Route path="/tenant" element={<TenantLayout />}>
+              <Route path="login" element={<TenantLoginPage />} />
+              <Route index element={<TenantOverviewPage />} />
+              <Route path="tenancies" element={<TenantTenanciesPage />} />
+              <Route path="invoices" element={<TenantInvoicesPage />} />
+            </Route>
+            </Routes>
+          </Suspense>
+        </AuthProvider>
       </main>
-      {!isAdminRoute && <Footer />}
+      {showPublicUI && <Footer />}
       <Toaster position="top-center" />
-      {!isAdminRoute && <ChatWidget />}
+      {showPublicUI && <ChatWidget />}
     </div>
   );
 }

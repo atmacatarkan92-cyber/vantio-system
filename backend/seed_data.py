@@ -249,26 +249,3 @@ SEED_APARTMENTS = [
         "is_active": True
     }
 ]
-
-# Airtable field mapping reference (for future integration)
-AIRTABLE_FIELD_MAPPING = {
-    "id": "ID",
-    "title.de": "Title (DE)",
-    "title.en": "Title (EN)",
-    "location": "City Code",  # Zurich, Geneva, Basel, Zug
-    "city.de": "City (DE)",
-    "city.en": "City (EN)",
-    "coordinates.lat": "Latitude",
-    "coordinates.lng": "Longitude",
-    "price": "Price (CHF/month)",
-    "bedrooms": "Bedrooms",
-    "bathrooms": "Bathrooms",
-    "sqm": "Size (sqm)",
-    "image": "Main Image URL",
-    "images": "Gallery Images",  # Comma-separated or attachment field
-    "description.de": "Description (DE)",
-    "description.en": "Description (EN)",
-    "amenities.de": "Amenities (DE)",  # Comma-separated
-    "amenities.en": "Amenities (EN)",  # Comma-separated
-    "is_active": "Active",
-}

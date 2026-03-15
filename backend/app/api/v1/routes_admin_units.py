@@ -1,6 +1,6 @@
 """
 Admin units and rooms: CRUD + list rooms by unit.
-Protected by require_roles("platform_admin", "ops_admin").
+Protected by require_roles("admin", "manager").
 """
 
 from typing import Any, List, Optional
@@ -11,14 +11,14 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlmodel import select
 
 from db.database import get_session
-from db.models import Unit, Room
+from db.models import Unit, Room, Property
 from auth.dependencies import require_roles
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-units"])
 
 
-def _unit_to_dict(u: Unit) -> dict:
+def _unit_to_dict(u: Unit, property_title: Optional[str] = None) -> dict:
     return {
         "id": str(u.id),
         "unitId": str(u.id),
@@ -29,6 +29,8 @@ def _unit_to_dict(u: Unit) -> dict:
         "city_id": getattr(u, "city_id", None),
         "type": getattr(u, "type", None),
         "rooms": getattr(u, "rooms", 0),
+        "property_id": getattr(u, "property_id", None),
+        "property_title": property_title,
         "created_at": u.created_at.isoformat() if getattr(u, "created_at", None) else None,
     }
 
@@ -55,6 +57,7 @@ class UnitCreate(BaseModel):
     city_id: Optional[str] = None
     type: Optional[str] = None
     rooms: int = 0
+    property_id: Optional[str] = None
 
 
 class UnitPatch(BaseModel):
@@ -65,17 +68,24 @@ class UnitPatch(BaseModel):
     city_id: Optional[str] = None
     type: Optional[str] = None
     rooms: Optional[int] = None
+    property_id: Optional[str] = None
 
 
 @router.get("/units", response_model=List[dict])
 def admin_list_units(
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
-    """List all units (listings dropdown + admin pages). Returns [] if table is empty."""
+    """List all units (listings dropdown + admin pages). Returns [] if table is empty. Includes property_id and property_title."""
     session = get_session()
     try:
-        units = list(session.exec(select(Unit).order_by(Unit.title)).all())
-        return [_unit_to_dict(u) for u in units]
+        statement = (
+            select(Unit, Property)
+            .select_from(Unit)
+            .outerjoin(Property, Unit.property_id == Property.id)
+            .order_by(Unit.title)
+        )
+        rows = session.exec(statement).all()
+        return [_unit_to_dict(u, p.title if p else None) for u, p in rows]
     except (OperationalError, ProgrammingError) as e:
         session.rollback()
         msg = str(e).strip() or "database error"
@@ -94,15 +104,20 @@ def admin_list_units(
 @router.get("/units/{unit_id}", response_model=dict)
 def admin_get_unit(
     unit_id: str,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
-    """Get a single unit by id."""
+    """Get a single unit by id. Includes property_id and property_title."""
     session = get_session()
     try:
         unit = session.get(Unit, unit_id)
         if not unit:
             raise HTTPException(status_code=404, detail="Unit not found")
-        return _unit_to_dict(unit)
+        property_title = None
+        if getattr(unit, "property_id", None):
+            prop = session.get(Property, unit.property_id)
+            if prop:
+                property_title = getattr(prop, "title", None)
+        return _unit_to_dict(unit, property_title)
     finally:
         session.close()
 
@@ -110,7 +125,7 @@ def admin_get_unit(
 @router.post("/units", response_model=dict)
 def admin_create_unit(
     body: UnitCreate,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Create a new unit."""
     session = get_session()
@@ -123,6 +138,7 @@ def admin_create_unit(
             rooms=body.rooms,
             type=body.type,
             city_id=body.city_id,
+            property_id=body.property_id,
         )
         session.add(unit)
         session.commit()
@@ -136,7 +152,7 @@ def admin_create_unit(
 def admin_patch_unit(
     unit_id: str,
     body: UnitPatch,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Update a unit (partial)."""
     session = get_session()
@@ -152,10 +168,17 @@ def admin_patch_unit(
         for k, v in data.items():
             if hasattr(unit, k):
                 setattr(unit, k, v)
+        if "property_id" in data and data["property_id"] == "":
+            unit.property_id = None
         session.add(unit)
         session.commit()
         session.refresh(unit)
-        return _unit_to_dict(unit)
+        property_title = None
+        if getattr(unit, "property_id", None):
+            prop = session.get(Property, unit.property_id)
+            if prop:
+                property_title = getattr(prop, "title", None)
+        return _unit_to_dict(unit, property_title)
     finally:
         session.close()
 
@@ -163,7 +186,7 @@ def admin_patch_unit(
 @router.delete("/units/{unit_id}")
 def admin_delete_unit(
     unit_id: str,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Delete a unit (caller must ensure no dependent listings/rooms)."""
     session = get_session()
@@ -181,7 +204,7 @@ def admin_delete_unit(
 @router.get("/units/{unit_id}/rooms", response_model=List[dict])
 def admin_list_rooms_for_unit(
     unit_id: str,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """List rooms belonging to the given unit (listings dropdown + admin)."""
     session = get_session()

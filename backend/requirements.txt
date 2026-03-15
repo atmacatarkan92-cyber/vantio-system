@@ -4,13 +4,13 @@ python-dotenv==1.0.1
 requests==2.32.3
 pydantic==2.7.1
 pydantic[email]
-airtable-python-wrapper==0.15.3
-pyairtable
 sendgrid==6.12.5
-# PostgreSQL (invoices / billing)
+# PostgreSQL (sync; listings, inquiries, invoices, auth)
 sqlalchemy>=2.0.0
 sqlmodel>=0.0.14
 psycopg2-binary>=2.9.9
-# Auth: password hashing & JWT
+alembic>=1.13.0
+# Auth: password hashing (bcrypt primary, argon2 for legacy) & JWT
+passlib[bcrypt]>=1.7.4
 passlib[argon2]>=1.7.4
 pyjwt>=2.8.0

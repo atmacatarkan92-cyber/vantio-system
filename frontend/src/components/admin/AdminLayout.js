@@ -1,12 +1,12 @@
 import React from "react";
 import { Outlet, useLocation, Navigate } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
-import { ADMIN_TOKEN_KEY } from "../../config";
+import { useAuth } from "../../contexts/AuthContext";
 
 function AdminLayout() {
   const location = useLocation();
   const isLoginPage = location.pathname === "/admin/login";
-  const hasToken = typeof localStorage !== "undefined" && localStorage.getItem(ADMIN_TOKEN_KEY);
+  const { isAuthenticated, loading } = useAuth();
 
   if (isLoginPage) {
     return (
@@ -20,7 +20,15 @@ function AdminLayout() {
     );
   }
 
-  if (!hasToken) {
+  if (loading) {
+    return (
+      <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center" }}>
+        <p>Lade …</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />;
   }
 

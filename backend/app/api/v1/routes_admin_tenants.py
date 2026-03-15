@@ -1,6 +1,6 @@
 """
 Admin tenants: CRUD.
-Protected by require_roles("platform_admin", "ops_admin").
+Protected by require_roles("admin", "manager").
 """
 
 from typing import List, Optional
@@ -50,7 +50,7 @@ class TenantPatch(BaseModel):
 
 @router.get("/tenants", response_model=List[dict])
 def admin_list_tenants(
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """List all tenants."""
     session = get_session()
@@ -64,7 +64,7 @@ def admin_list_tenants(
 @router.post("/tenants", response_model=dict)
 def admin_create_tenant(
     body: TenantCreate,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Create a new tenant."""
     session = get_session()
@@ -89,7 +89,7 @@ def admin_create_tenant(
 def admin_patch_tenant(
     tenant_id: str,
     body: TenantPatch,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Update a tenant (partial)."""
     session = get_session()
@@ -116,7 +116,7 @@ def admin_patch_tenant(
 @router.delete("/tenants/{tenant_id}")
 def admin_delete_tenant(
     tenant_id: str,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Delete a tenant."""
     session = get_session()

@@ -1,6 +1,6 @@
 """
 Admin tenancies: CRUD + list by room.
-Protected by require_roles("platform_admin", "ops_admin").
+Protected by require_roles("admin", "manager").
 Validates tenant/room/unit exist, room belongs to unit, no overlapping tenancies.
 """
 
@@ -90,7 +90,7 @@ def admin_list_tenancies(
     room_id: Optional[str] = None,
     unit_id: Optional[str] = None,
     status: Optional[str] = None,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """List tenancies, optionally filtered by room_id, unit_id, status."""
     session = get_session()
@@ -111,7 +111,7 @@ def admin_list_tenancies(
 @router.get("/rooms/{room_id}/tenancies", response_model=List[dict])
 def admin_list_tenancies_for_room(
     room_id: str,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """List tenancies for a room."""
     session = get_session()
@@ -129,7 +129,7 @@ def admin_list_tenancies_for_room(
 @router.post("/tenancies", response_model=dict)
 def admin_create_tenancy(
     body: TenancyCreate,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Create a tenancy. Validates tenant/room/unit and prevents overlapping tenancies."""
     session = get_session()
@@ -160,7 +160,7 @@ def admin_create_tenancy(
 def admin_patch_tenancy(
     tenancy_id: str,
     body: TenancyPatch,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Update a tenancy (partial). Checks overlap when dates change."""
     session = get_session()
@@ -192,7 +192,7 @@ def admin_patch_tenancy(
 @router.delete("/tenancies/{tenancy_id}")
 def admin_delete_tenancy(
     tenancy_id: str,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Delete a tenancy."""
     session = get_session()

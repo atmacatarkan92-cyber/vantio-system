@@ -3,19 +3,27 @@
  * Set REACT_APP_BACKEND_URL in .env (e.g. http://localhost:8000 for dev).
  * Set REACT_APP_ADMIN_API_KEY in .env when backend uses ADMIN_API_KEY (production).
  */
+import { getAccessToken } from "./authStore";
+
 const API_BASE_URL =
   process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:8000";
 
-/** localStorage key for admin JWT (used by login page and getApiHeaders). */
+/**
+ * localStorage key for admin JWT. Phase 2: primary token is in-memory (authStore);
+ * localStorage used only as transitional fallback if refresh not yet run.
+ */
 export const ADMIN_TOKEN_KEY = "fah_admin_token";
 
 /**
- * Headers for admin/protected API calls (invoices, inquiries, listings).
- * Sends JWT Bearer token if stored (ADMIN_TOKEN_KEY), else X-API-Key if set.
+ * Headers for admin/protected API calls. Uses in-memory access token first (Auth Phase 2),
+ * then localStorage fallback (transitional), then X-API-Key if set.
  */
 export function getApiHeaders() {
   const headers = { "Content-Type": "application/json" };
-  const token = typeof localStorage !== "undefined" ? localStorage.getItem(ADMIN_TOKEN_KEY) : null;
+  let token = getAccessToken();
+  if (!token && typeof localStorage !== "undefined") {
+    token = localStorage.getItem(ADMIN_TOKEN_KEY);
+  }
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   } else {

@@ -1,6 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { fetchAdminUnits, fetchAdminRooms, normalizeUnit, normalizeRoom } from "../../api/adminData";
+import {
+  fetchAdminUnits,
+  fetchAdminRooms,
+  fetchAdminProperties,
+  createAdminUnit,
+  updateAdminUnit,
+  normalizeUnit,
+  normalizeRoom,
+} from "../../api/adminData";
 
 const initialUnits = [
   {
@@ -64,6 +72,7 @@ const emptyForm = {
   rooms: "",
   occupiedRooms: 0,
   status: "Frei",
+  property_id: "",
   tenantPriceMonthly: "",
   landlordRentMonthly: "",
   utilitiesMonthly: "",
@@ -202,6 +211,7 @@ function ApartmentTable({ items, onEdit, onDelete }) {
               <th className="py-3 pr-4">PLZ</th>
               <th className="py-3 pr-4">Adresse</th>
               <th className="py-3 pr-4">Typ</th>
+              <th className="py-3 pr-4">Liegenschaft</th>
               <th className="py-3 pr-4">Status</th>
               <th className="py-3 pr-4">Zimmer</th>
               <th className="py-3 pr-4">Mieterpreis</th>
@@ -231,6 +241,7 @@ function ApartmentTable({ items, onEdit, onDelete }) {
                 <td className="py-4 pr-4">{unit.zip}</td>
                 <td className="py-4 pr-4">{unit.address}</td>
                 <td className="py-4 pr-4">{unit.type}</td>
+                <td className="py-4 pr-4">{unit.property_title || "—"}</td>
                 <td className="py-4 pr-4">{unit.status}</td>
                 <td className="py-4 pr-4">{unit.rooms}</td>
                 <td className="py-4 pr-4">
@@ -267,7 +278,7 @@ function ApartmentTable({ items, onEdit, onDelete }) {
 
             {items.length === 0 && (
               <tr>
-                <td colSpan="13" className="py-8 text-center text-slate-500">
+                <td colSpan="14" className="py-8 text-center text-slate-500">
                   Keine Apartments gefunden.
                 </td>
               </tr>
@@ -293,6 +304,7 @@ function CoLivingTable({ items, onEdit, onDelete }) {
               <th className="py-3 pr-4">Ort</th>
               <th className="py-3 pr-4">PLZ</th>
               <th className="py-3 pr-4">Adresse</th>
+              <th className="py-3 pr-4">Liegenschaft</th>
               <th className="py-3 pr-4">Status</th>
               <th className="py-3 pr-4">Belegt</th>
               <th className="py-3 pr-4">Reserviert</th>
@@ -324,9 +336,10 @@ function CoLivingTable({ items, onEdit, onDelete }) {
                     </Link>
                   </td>
                   <td className="py-4 pr-4">{unit.place}</td>
-                  <td className="py-4 pr-4">{unit.zip}</td>
-                  <td className="py-4 pr-4">{unit.address}</td>
-                  <td className="py-4 pr-4">{metrics.displayStatus}</td>
+                <td className="py-4 pr-4">{unit.zip}</td>
+                <td className="py-4 pr-4">{unit.address}</td>
+                <td className="py-4 pr-4">{unit.property_title || "—"}</td>
+                <td className="py-4 pr-4">{metrics.displayStatus}</td>
                   <td className="py-4 pr-4">{metrics.occupiedCount}</td>
                   <td className="py-4 pr-4">{metrics.reservedCount}</td>
                   <td className="py-4 pr-4">{metrics.freeCount}</td>
@@ -367,7 +380,7 @@ function CoLivingTable({ items, onEdit, onDelete }) {
 
             {items.length === 0 && (
               <tr>
-                <td colSpan="14" className="py-8 text-center text-slate-500">
+                <td colSpan="15" className="py-8 text-center text-slate-500">
                   Keine Co-Living Einheiten gefunden.
                 </td>
               </tr>
@@ -392,6 +405,9 @@ function StatCard({ label, value, hint }) {
 function AdminApartmentsPage() {
   const [units, setUnits] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [properties, setProperties] = useState([]);
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchAdminUnits()
@@ -400,9 +416,13 @@ function AdminApartmentsPage() {
     fetchAdminRooms()
       .then((data) => setRooms(Array.isArray(data) ? data.map(normalizeRoom) : []))
       .catch(() => setRooms([]));
+    fetchAdminProperties()
+      .then((data) => setProperties(Array.isArray(data) ? data : []))
+      .catch(() => setProperties([]));
   }, []);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [propertyFilter, setPropertyFilter] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
@@ -418,18 +438,25 @@ function AdminApartmentsPage() {
   }, [units]);
 
   const filteredUnits = useMemo(() => {
+    let result = units;
     const search = searchTerm.toLowerCase().trim();
-    if (!search) return units;
-    return units.filter((unit) => {
-      const a = String(unit.unitId || unit.id || "").toLowerCase();
-      const b = String(unit.place || unit.city || "").toLowerCase();
-      const c = String(unit.zip || "").toLowerCase();
-      const d = String(unit.address || "").toLowerCase();
-      const e = String(unit.type || "").toLowerCase();
-      const f = String(unit.status || "").toLowerCase();
-      return a.includes(search) || b.includes(search) || c.includes(search) || d.includes(search) || e.includes(search) || f.includes(search);
-    });
-  }, [units, searchTerm]);
+    if (search) {
+      result = result.filter((unit) => {
+        const a = String(unit.unitId || unit.id || "").toLowerCase();
+        const b = String(unit.place || unit.city || "").toLowerCase();
+        const c = String(unit.zip || "").toLowerCase();
+        const d = String(unit.address || "").toLowerCase();
+        const e = String(unit.type || "").toLowerCase();
+        const f = String(unit.status || "").toLowerCase();
+        const g = String(unit.property_title || "").toLowerCase();
+        return a.includes(search) || b.includes(search) || c.includes(search) || d.includes(search) || e.includes(search) || f.includes(search) || g.includes(search);
+      });
+    }
+    if (propertyFilter) {
+      result = result.filter((unit) => String(unit.property_id || "") === String(propertyFilter));
+    }
+    return result;
+  }, [units, searchTerm, propertyFilter]);
 
   const apartmentUnits = filteredUnits.filter((item) => item.type === "Apartment");
   const coLivingUnits = filteredUnits.filter((item) => item.type === "Co-Living");
@@ -479,6 +506,7 @@ function AdminApartmentsPage() {
       rooms: unit.rooms,
       occupiedRooms: unit.occupiedRooms || 0,
       status: unit.status,
+      property_id: unit.property_id || "",
       tenantPriceMonthly: unit.tenantPriceMonthly,
       landlordRentMonthly: unit.landlordRentMonthly,
       utilitiesMonthly: unit.utilitiesMonthly,
@@ -486,6 +514,7 @@ function AdminApartmentsPage() {
       availableFrom: unit.availableFrom,
       landlordLeaseStartDate: unit.landlordLeaseStartDate || "",
     });
+    setSaveError("");
     setIsModalOpen(true);
   }
 
@@ -526,56 +555,35 @@ function AdminApartmentsPage() {
 
   function handleSubmit(event) {
     event.preventDefault();
+    setSaveError("");
+    setSaving(true);
 
-    const totalRooms = Number(formData.rooms || 0);
-    let occupiedRooms = Number(formData.occupiedRooms || 0);
-
-    if (formData.type !== "Co-Living") {
-      occupiedRooms = 0;
-    }
-
-    if (occupiedRooms > totalRooms) {
-      occupiedRooms = totalRooms;
-    }
-
-    const payload = {
-      place: formData.place,
-      zip: formData.zip,
-      address: formData.address,
-      type: formData.type,
-      rooms: Number(formData.rooms || 0),
-      occupiedRooms,
-      status: formData.status,
-      tenantPriceMonthly: Number(formData.tenantPriceMonthly || 0),
-      landlordRentMonthly: Number(formData.landlordRentMonthly || 0),
-      utilitiesMonthly: Number(formData.utilitiesMonthly || 0),
-      cleaningCostMonthly: Number(formData.cleaningCostMonthly || 0),
-      availableFrom: formData.availableFrom,
-      landlordLeaseStartDate: formData.landlordLeaseStartDate,
+    const apiPayload = {
+      title: (formData.place || formData.address || "Unit").trim() || "Unit",
+      address: (formData.address || "").trim() || "",
+      city: (formData.place || "").trim() || "",
+      city_id: null,
+      type: (formData.type || "").trim() || null,
+      rooms: Number(formData.rooms || 0) || 0,
+      property_id: (formData.property_id || "").trim() || null,
     };
 
-    if (editingId) {
-      setUnits((prev) =>
-        prev.map((item) =>
-          item.id === editingId
-            ? {
-                ...item,
-                ...payload,
-              }
-            : item
-        )
-      );
-    } else {
-      const newUnit = {
-        id: Date.now(),
-        unitId: nextUnitId,
-        ...payload,
-      };
+    const promise = editingId
+      ? updateAdminUnit(editingId, apiPayload)
+      : createAdminUnit(apiPayload);
 
-      setUnits((prev) => [newUnit, ...prev]);
-    }
-
-    handleCloseModal();
+    promise
+      .then(() => {
+        return fetchAdminUnits();
+      })
+      .then((data) => {
+        setUnits(Array.isArray(data) ? data.map(normalizeUnit) : []);
+        handleCloseModal();
+      })
+      .catch((e) => {
+        setSaveError(e.message || "Speichern fehlgeschlagen.");
+      })
+      .finally(() => setSaving(false));
   }
 
   function handleDelete(id) {
@@ -674,7 +682,7 @@ function AdminApartmentsPage() {
         />
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6 flex flex-wrap items-center gap-4">
         <input
           type="text"
           value={searchTerm}
@@ -682,6 +690,16 @@ function AdminApartmentsPage() {
           placeholder="Suche nach Unit ID, Ort, PLZ, Adresse oder Typ..."
           className="w-full md:w-96 border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
         />
+        <select
+          value={propertyFilter}
+          onChange={(e) => setPropertyFilter(e.target.value)}
+          className="border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 min-w-[180px]"
+        >
+          <option value="">Alle Liegenschaften</option>
+          {properties.map((p) => (
+            <option key={p.id} value={p.id}>{p.title || p.id}</option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-6">
@@ -732,6 +750,9 @@ function AdminApartmentsPage() {
               </p>
             </div>
 
+            {saveError && (
+              <p className="mb-4 text-red-600 text-sm">{saveError}</p>
+            )}
             <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -788,6 +809,25 @@ function AdminApartmentsPage() {
                   >
                     <option>Apartment</option>
                     <option>Co-Living</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    Liegenschaft (optional)
+                  </label>
+                  <select
+                    name="property_id"
+                    value={formData.property_id}
+                    onChange={handleChange}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="">— Nicht zugewiesen</option>
+                    {properties.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.title || p.id}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -1004,9 +1044,10 @@ function AdminApartmentsPage() {
 
                 <button
                   type="submit"
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-3 rounded-lg font-medium transition"
+                  disabled={saving}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-3 rounded-lg font-medium transition disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {editingId ? "Änderungen speichern" : "Unit speichern"}
+                  {saving ? "Speichern …" : editingId ? "Änderungen speichern" : "Unit speichern"}
                 </button>
               </div>
             </form>

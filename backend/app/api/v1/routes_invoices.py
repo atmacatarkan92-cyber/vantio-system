@@ -24,7 +24,7 @@ router = APIRouter(prefix="/api", tags=["invoices"])
 
 
 @router.get("/invoices")
-def get_invoices_route(_=Depends(require_roles("platform_admin", "ops_admin"))):
+def get_invoices_route(_=Depends(require_roles("admin", "manager"))):
     """List all invoices (API-shaped with effective status)."""
     session = get_session()
     try:
@@ -37,7 +37,7 @@ def get_invoices_route(_=Depends(require_roles("platform_admin", "ops_admin"))):
 def update_invoice_status_route(
     invoice_id: int,
     status: str,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Update invoice status (e.g. open, overdue, cancelled)."""
     session = get_session()
@@ -54,7 +54,7 @@ def update_invoice_status_route(
 def mark_invoice_paid_route(
     invoice_id: int,
     body: Optional[dict] = Body(default=None),
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Set status=paid, paid_at=now; optional payment_method and payment_reference."""
     session = get_session()
@@ -72,7 +72,7 @@ def mark_invoice_paid_route(
 @router.patch("/admin/invoices/{invoice_id}/mark-unpaid")
 def mark_invoice_unpaid_route(
     invoice_id: int,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Set status=unpaid, clear paid_at and payment fields."""
     session = get_session()
@@ -88,7 +88,7 @@ def mark_invoice_unpaid_route(
 @router.get("/invoices/{invoice_id}/pdf")
 def download_invoice_pdf_route(
     invoice_id: int,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Download invoice PDF by id (file must exist in invoices/ folder)."""
     session = get_session()
@@ -111,7 +111,7 @@ def download_invoice_pdf_route(
 @router.post("/admin/invoices/generate")
 def generate_invoices_route(
     body: dict = Body(..., description="year and month"),
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Generate monthly invoices from active tenancies; prorate; skip duplicates."""
     year = body.get("year")

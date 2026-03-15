@@ -18,6 +18,7 @@ import {
   normalizeRoom,
   fetchAdminProfit,
   fetchAdminOccupancy,
+  fetchAdminDashboardKpis,
 } from "../../api/adminData";
 
 function roundCurrency(value) {
@@ -272,6 +273,13 @@ export default function AdminUebersichtPage() {
   const [rooms, setRooms] = useState([]);
   const [profitApi, setProfitApi] = useState({ summary: null, units: [], year: null, month: null });
   const [occupancyApi, setOccupancyApi] = useState(null);
+  const [kpis, setKpis] = useState(null);
+  const [kpisLoading, setKpisLoading] = useState(true);
+  const [kpisError, setKpisError] = useState("");
+  const [kpisPeriod, setKpisPeriod] = useState(() => {
+    const d = new Date();
+    return { year: d.getFullYear(), month: d.getMonth() + 1 };
+  });
 
   useEffect(() => {
     fetchAdminUnits()
@@ -294,6 +302,21 @@ export default function AdminUebersichtPage() {
       .then((data) => setProfitApi({ summary: data.summary || null, units: data.units || [], year: data.year, month: data.month }))
       .catch(() => setProfitApi({ summary: null, units: [], year: null, month: null }));
   }, []);
+
+  useEffect(() => {
+    setKpisLoading(true);
+    setKpisError("");
+    fetchAdminDashboardKpis({ year: kpisPeriod.year, month: kpisPeriod.month })
+      .then((data) => {
+        setKpis(data);
+        setKpisLoading(false);
+      })
+      .catch((e) => {
+        setKpisError(e.message || "KPI-Daten konnten nicht geladen werden.");
+        setKpis(null);
+        setKpisLoading(false);
+      });
+  }, [kpisPeriod.year, kpisPeriod.month]);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/invoices`, { headers: getApiHeaders() })
@@ -446,8 +469,14 @@ export default function AdminUebersichtPage() {
 
   return (
     <div style={{ display: "grid", gap: "24px" }}>
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "12px" }}>
+        <span style={{ fontSize: "14px", color: "#64748B" }}>KPI-Zeitraum:</span>
         <select
+          value={`${kpisPeriod.year}-${kpisPeriod.month}`}
+          onChange={(e) => {
+            const [y, m] = e.target.value.split("-").map(Number);
+            setKpisPeriod({ year: y, month: m });
+          }}
           style={{
             padding: "8px 12px",
             borderRadius: "8px",
@@ -456,10 +485,21 @@ export default function AdminUebersichtPage() {
             fontSize: "14px",
           }}
         >
-          <option>Dieser Monat</option>
-          <option>Letzter Monat</option>
-          <option>Dieses Jahr</option>
-          <option>Alle Zeit</option>
+          {(() => {
+            const d = new Date();
+            const options = [];
+            for (let i = 0; i < 12; i++) {
+              const date = new Date(d.getFullYear(), d.getMonth() - i, 1);
+              const y = date.getFullYear();
+              const m = date.getMonth() + 1;
+              options.push(
+                <option key={`${y}-${m}`} value={`${y}-${m}`}>
+                  {m}/{y}
+                </option>
+              );
+            }
+            return options;
+          })()}
         </select>
       </div>
       <div
@@ -551,6 +591,115 @@ export default function AdminUebersichtPage() {
           </div>
         </div>
       </div>
+
+      {kpisLoading && (
+        <p style={{ color: "#64748B", padding: "16px 0" }}>Lade KPI-Daten…</p>
+      )}
+      {kpisError && (
+        <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "12px", padding: "16px", color: "#B91C1C" }}>
+          {kpisError}
+        </div>
+      )}
+      {kpis && !kpisLoading && (
+        <>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "16px",
+            }}
+          >
+            <KpiKarte
+              titel="Durchschn. Umsatz pro Room"
+              wert={kpis.summary_cards.average_revenue_per_room?.value != null ? formatCurrency(kpis.summary_cards.average_revenue_per_room.value) : "—"}
+              hinweis={kpis.summary_cards.average_revenue_per_room?.note === "exact" ? `Periode ${kpis.period?.label || ""}` : kpis.summary_cards.average_revenue_per_room?.note}
+              farbe="#EA580C"
+              akzent="#FDBA74"
+              badge={kpis.availability?.revenue === "exact" ? "Exakt" : "Geschätzt"}
+            />
+            <KpiKarte
+              titel="Durchschn. Gewinn pro Unit"
+              wert={kpis.summary_cards.average_profit_per_unit?.value != null ? formatCurrency(kpis.summary_cards.average_profit_per_unit.value) : "—"}
+              hinweis={kpis.summary_cards.average_profit_per_unit?.note || ""}
+              farbe="#16A34A"
+              akzent="#86EFAC"
+              badge={kpis.availability?.profit === "exact" ? "Exakt" : "Geschätzt"}
+            />
+            <KpiKarte
+              titel="Beste Unit"
+              wert={kpis.summary_cards.best_unit ? `${kpis.summary_cards.best_unit.unit_title || kpis.summary_cards.best_unit.unit_id}` : "—"}
+              hinweis={kpis.summary_cards.best_unit ? `${formatCurrency(kpis.summary_cards.best_unit.value)} Gewinn` : "Keine Daten"}
+              farbe="#2563EB"
+              akzent="#93C5FD"
+              badge="Live"
+            />
+            <KpiKarte
+              titel="Schwächste Unit"
+              wert={kpis.summary_cards.weakest_unit ? `${kpis.summary_cards.weakest_unit.unit_title || kpis.summary_cards.weakest_unit.unit_id}` : "—"}
+              hinweis={kpis.summary_cards.weakest_unit ? `${formatCurrency(kpis.summary_cards.weakest_unit.value)} Gewinn` : "Keine Daten"}
+              farbe="#7C3AED"
+              akzent="#C4B5FD"
+              badge="Live"
+            />
+            <KpiKarte
+              titel="Leerstand (Room-Tage)"
+              wert={kpis.summary_cards.vacant_days_this_month?.value ?? "—"}
+              hinweis={kpis.summary_cards.vacant_days_this_month?.note === "estimated" ? "Geschätzt (free_rooms × Tage)" : kpis.summary_cards.vacant_days_this_month?.note}
+              farbe="#E11D48"
+              akzent="#FDA4AF"
+              badge="Geschätzt"
+            />
+            <KpiKarte
+              titel="Prognose nächster Monat"
+              wert={kpis.summary_cards.forecast_next_month?.revenue != null ? formatCurrency(kpis.summary_cards.forecast_next_month.revenue) : "—"}
+              hinweis={kpis.summary_cards.forecast_next_month?.methodology || ""}
+              farbe="#0D9488"
+              akzent="#5EEAD4"
+              badge="Geschätzt"
+            />
+            <KpiKarte
+              titel="Trend vs. Vormonat"
+              wert={kpis.summary_cards.trend_vs_previous_month?.revenue_diff_pct != null ? `${kpis.summary_cards.trend_vs_previous_month.revenue_diff_pct >= 0 ? "+" : ""}${kpis.summary_cards.trend_vs_previous_month.revenue_diff_pct}%` : "—"}
+              hinweis={kpis.summary_cards.trend_vs_previous_month ? `Umsatz: ${formatCurrency(kpis.summary_cards.trend_vs_previous_month.revenue_diff)} vs. Vormonat` : ""}
+              farbe="#4F46E5"
+              akzent="#A5B4FC"
+              badge="Live"
+            />
+          </div>
+
+          {Array.isArray(kpis.warnings) && kpis.warnings.length > 0 && (
+            <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: "22px", padding: "24px", boxShadow: "0 8px 24px rgba(15, 23, 42, 0.04)" }}>
+              <h3 style={{ fontSize: "22px", fontWeight: 800, margin: "0 0 12px 0", color: "#0F172A" }}>Warnungen (Units / Liegenschaften)</h3>
+              <p style={{ color: "#64748B", margin: "0 0 16px 0", fontSize: "14px" }}>Units mit Leerstand, Kosten ohne Umsatz oder negativem Gewinn.</p>
+              <ul style={{ margin: 0, paddingLeft: "20px", color: "#475569" }}>
+                {kpis.warnings.map((w, i) => (
+                  <li key={`${w.unit_id}-${i}`} style={{ marginBottom: "8px" }}>
+                    <strong>{w.unit_title || w.unit_id}</strong>: {w.message}
+                    {w.severity === "high" && <span style={{ marginLeft: "8px", color: "#B91C1C", fontWeight: 700 }}>• Hoch</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {Array.isArray(kpis.assumptions) && kpis.assumptions.length > 0 && (
+            <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "22px", padding: "24px" }}>
+              <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 12px 0", color: "#475569" }}>Annahmen & Limitationen</h3>
+              <p style={{ color: "#64748B", margin: "0 0 12px 0", fontSize: "14px" }}>So wurden die KPIs berechnet. Geschätzte oder nicht verfügbare Werte sind gekennzeichnet.</p>
+              <ul style={{ margin: 0, paddingLeft: "20px", color: "#64748B", fontSize: "14px" }}>
+                {kpis.assumptions.map((a, i) => (
+                  <li key={i} style={{ marginBottom: "6px" }}>{a}</li>
+                ))}
+              </ul>
+              {kpis.availability && (
+                <p style={{ marginTop: "12px", fontSize: "13px", color: "#94A3B8" }}>
+                  Verfügbarkeit: Umsatz/Gewinn = {kpis.availability.revenue}; Leerstandstage = {kpis.availability.vacant_days}; Prognose = {kpis.availability.forecast}; Break-even = {kpis.availability.break_even}.
+                </p>
+              )}
+            </div>
+          )}
+        </>
+      )}
 
       <div
         style={{

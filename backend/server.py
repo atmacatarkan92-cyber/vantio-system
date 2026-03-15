@@ -18,11 +18,11 @@ from models import (
 )
 
 from email_service import send_contact_notification, EmailServiceError
-from airtable_service import airtable_service
 from db.database import get_session, engine
 from db.models import Inquiry
 from auth.routes import router as auth_router
 from auth.dependencies import require_roles
+from auth.security import validate_auth_config
 from app.api.v1.routes_apartments import router as apartments_router
 from app.api.v1.routes_admin_listings import router as admin_listings_router
 from app.api.v1.routes_admin_units import router as admin_units_router
@@ -30,7 +30,10 @@ from app.api.v1.routes_admin_rooms import router as admin_rooms_router
 from app.api.v1.routes_admin_tenants import router as admin_tenants_router
 from app.api.v1.routes_admin_tenancies import router as admin_tenancies_router
 from app.api.v1.routes_admin_dashboard import router as admin_dashboard_router
+from app.api.v1.routes_admin_landlords import router as admin_landlords_router
+from app.api.v1.routes_admin_properties import router as admin_properties_router
 from app.api.v1.routes_invoices import router as invoices_router
+from app.api.v1.routes_tenant import router as tenant_router
 
 
 ROOT_DIR = Path(__file__).parent
@@ -184,7 +187,7 @@ def send_email_notification_sync(inquiry_id: str):
 # ==================== Admin API ====================
 
 @api_router.get("/admin/inquiries", response_model=List[dict])
-def get_inquiries(_: None = Depends(require_roles("platform_admin", "ops_admin"))):
+def get_inquiries(_: None = Depends(require_roles("admin", "manager"))):
     """List inquiries from PostgreSQL, newest first."""
     if engine is None:
         raise HTTPException(status_code=503, detail="PostgreSQL is not configured.")
@@ -223,6 +226,9 @@ app.include_router(admin_rooms_router)
 app.include_router(admin_tenants_router)
 app.include_router(admin_tenancies_router)
 app.include_router(admin_dashboard_router)
+app.include_router(admin_landlords_router)
+app.include_router(admin_properties_router)
+app.include_router(tenant_router)
 app.include_router(api_router)
 
 # CORS: explicit origins (required when allow_credentials=True; "*" is invalid with credentials)
@@ -251,6 +257,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting FeelAtHomeNow API...")
+    validate_auth_config()  # Refuse to start if SECRET_KEY is not set
     if engine is not None:
         from db.database import create_db
         create_db()

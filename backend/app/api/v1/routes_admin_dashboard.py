@@ -1,6 +1,6 @@
 """
 Admin dashboard: occupancy and revenue forecast aggregates.
-Protected by require_roles("platform_admin", "ops_admin").
+Protected by require_roles("admin", "manager").
 """
 
 from datetime import date
@@ -17,6 +17,7 @@ from auth.dependencies import require_roles
 from app.services.occupancy_service import get_unit_occupancy, get_unit_rooms_occupancy
 from app.services.revenue_forecast import calculate_monthly_revenue
 from app.services.profit_service import calculate_unit_profit
+from app.services.kpi_service import compute_kpis
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-dashboard"])
@@ -26,7 +27,7 @@ router = APIRouter(prefix="/api/admin", tags=["admin-dashboard"])
 def admin_get_occupancy(
     unit_id: Optional[str] = Query(None, description="Filter by unit"),
     on_date: Optional[str] = Query(None, description="Date YYYY-MM-DD; default today"),
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """
     Aggregated occupancy for dashboard: per-unit and global.
@@ -76,7 +77,7 @@ def admin_get_occupancy(
 def admin_get_occupancy_rooms(
     unit_id: Optional[str] = Query(..., description="Unit ID"),
     on_date: Optional[str] = Query(None, description="Date YYYY-MM-DD; default today"),
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """
     Per-room occupancy for a unit: room_id, room_name, status (occupied|reserved|free), tenant_name?, rent?.
@@ -105,7 +106,7 @@ def admin_get_revenue_forecast(
     unit_id: Optional[str] = Query(None, description="Filter by unit"),
     year: Optional[int] = Query(None, description="Year; default current year"),
     month: Optional[int] = Query(None, description="Month (1-12); if omitted, entire year"),
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """
     Revenue forecast for dashboard: expected revenue and room counts per unit (and optionally per month).
@@ -161,7 +162,7 @@ def admin_get_profit(
     unit_id: Optional[str] = Query(None, description="Filter by unit; if omitted, all units"),
     year: Optional[int] = Query(None, description="Year; default current year"),
     month: Optional[int] = Query(None, description="Month (1-12); default current month"),
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """
     Profit per unit for a given month: revenue (from tenancies) minus costs (from unit_costs).
@@ -202,9 +203,27 @@ def admin_get_profit(
         session.close()
 
 
+@router.get("/dashboard/kpis")
+def admin_get_dashboard_kpis(
+    year: Optional[int] = Query(None, description="Year; default current year"),
+    month: Optional[int] = Query(None, description="Month (1-12); default current month"),
+    _=Depends(require_roles("admin", "manager")),
+):
+    """
+    KPI dashboard: average revenue per room, average profit per unit, weakest/best unit,
+    vacant days, break-even per unit, forecast next month, trend vs previous month, warnings.
+    All from live PostgreSQL; no mock data.
+    """
+    session = get_session()
+    try:
+        return compute_kpis(session, year=year, month=month)
+    finally:
+        session.close()
+
+
 @router.get("/invoice-summary")
 def admin_get_invoice_summary(
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """
     Dashboard invoice KPIs: open_invoices_count, paid_invoices_count,

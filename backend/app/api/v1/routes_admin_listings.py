@@ -1,6 +1,6 @@
 """
 Admin listing management: CRUD for website listings (PostgreSQL).
-Protected by require_roles("platform_admin", "ops_admin").
+Protected by require_roles("admin", "manager").
 Validates unit, city, and optional room exist before create/update to avoid FK errors.
 """
 
@@ -78,7 +78,7 @@ class ListingAmenityResponse(BaseModel):
 class ListingCreate(BaseModel):
     unit_id: str
     city_id: str
-    slug: str
+    slug: Optional[str] = None  # optional; auto-generated from city + title if omitted (Phase C)
     title_de: str = ""
     title_en: str = ""
     description_de: str = ""
@@ -129,7 +129,7 @@ class ListingUpdate(BaseModel):
 
 @router.get("/listings", response_model=List[dict])
 def admin_list_listings(
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """List all listings (including unpublished) for admin."""
     session = get_session()
@@ -142,7 +142,7 @@ def admin_list_listings(
 @router.post("/listings", response_model=dict)
 def admin_create_listing(
     body: ListingCreate,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Create a new listing with optional images and amenities. Unit and city must exist."""
     session = get_session()
@@ -165,7 +165,7 @@ def admin_create_listing(
 def admin_update_listing(
     listing_id: str,
     body: ListingUpdate,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Update a listing by id. Omitted fields are left unchanged; images/amenities replace existing if provided."""
     session = get_session()
@@ -193,7 +193,7 @@ def admin_update_listing(
 def admin_patch_listing_status(
     listing_id: str,
     body: ListingStatusUpdate,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Update only is_published and/or availability_status. Both fields optional."""
     session = get_session()
@@ -212,7 +212,7 @@ def admin_patch_listing_status(
 @router.delete("/listings/{listing_id}")
 def admin_delete_listing(
     listing_id: str,
-    _=Depends(require_roles("platform_admin", "ops_admin")),
+    _=Depends(require_roles("admin", "manager")),
 ):
     """Delete a listing and its images and amenities."""
     session = get_session()

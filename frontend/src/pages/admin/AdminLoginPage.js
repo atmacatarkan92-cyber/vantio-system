@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL, ADMIN_TOKEN_KEY } from "../../config";
+import { useAuth } from "../../contexts/AuthContext";
+import { login as apiLogin } from "../../api/auth";
 
 const cardStyle = {
   maxWidth: "400px",
@@ -31,6 +32,7 @@ const labelStyle = {
 
 function AdminLoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -41,30 +43,11 @@ function AdminLoginPage() {
     setError("");
     setSubmitting(true);
 
-    fetch(`${API_BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.trim(), password }),
-    })
-      .then(async (res) => {
-        const text = await res.text();
-        if (!res.ok) {
-          let message = `Fehler ${res.status}`;
-          try {
-            const data = JSON.parse(text);
-            const detail = data.detail;
-            if (detail != null) message = typeof detail === "string" ? detail : String(detail);
-          } catch (_) {
-            if (text) message = text;
-          }
-          throw new Error(message);
-        }
-        return text ? JSON.parse(text) : {};
-      })
+    apiLogin(email, password)
       .then((data) => {
         const token = data.access_token;
         if (token) {
-          localStorage.setItem(ADMIN_TOKEN_KEY, token);
+          login(token);
           navigate("/admin/listings", { replace: true });
         } else {
           setError("Kein Token in der Antwort.");
@@ -83,7 +66,7 @@ function AdminLoginPage() {
           Admin Anmeldung
         </h2>
         <p style={{ color: "#64748B", margin: "0 0 24px 0", fontSize: "14px" }}>
-          E-Mail und Passwort eingeben. Nach erfolgreicher Anmeldung wirst du zu den Listings weitergeleitet.
+          E-Mail und Passwort eingeben. Nur Rollen Admin und Manager haben Zugang.
         </p>
         <form onSubmit={handleSubmit} style={{ display: "grid", gap: "16px" }}>
           <div>

@@ -2,14 +2,57 @@
 Listings service: read website listings from PostgreSQL and return
 the same shape as the legacy apartments API (Airtable/Mongo) for compatibility.
 Admin functions: full CRUD for listings (including unpublished).
+
+Phase C: slug convention — lowercase, hyphen-separated, ASCII-safe, deterministic.
 """
 
+import re
 from datetime import datetime
 from typing import List, Optional
 
 from sqlmodel import select
 
 from db.models import City, Listing, ListingImage, ListingAmenity
+
+
+def _slug_normalize(text: str) -> str:
+    """Lowercase, ASCII-safe, hyphen-separated; collapse and strip hyphens."""
+    if not text:
+        return ""
+    s = text.lower().strip()
+    for old, new in [("ä", "a"), ("ö", "o"), ("ü", "u"), ("ß", "ss")]:
+        s = s.replace(old, new)
+    s = re.sub(r"[^a-z0-9]+", "-", s)
+    s = re.sub(r"-+", "-", s).strip("-")
+    return s[:200] or "listing"
+
+
+def slug_from_city_and_title(city_code: str, title: str) -> str:
+    """Build slug: city_code + '-' + normalized title. Deterministic, stable."""
+    city = _slug_normalize(city_code or "")
+    title_part = _slug_normalize(title or "listing")
+    if not city:
+        return title_part or "listing"
+    if not title_part:
+        return city
+    return f"{city}-{title_part}"
+
+
+def _ensure_unique_slug(session, base_slug: str, exclude_listing_id: Optional[str] = None) -> str:
+    """If base_slug exists, append -2, -3, ... until unique."""
+    candidate = base_slug
+    n = 2
+    while True:
+        stmt = select(Listing).where(Listing.slug == candidate)
+        if exclude_listing_id:
+            stmt = stmt.where(Listing.id != exclude_listing_id)
+        existing = session.exec(stmt).first()
+        if not existing:
+            return candidate
+        candidate = f"{base_slug}-{n}"
+        n += 1
+        if n > 10000:
+            return f"{base_slug}-{n}"
 
 
 def _listing_to_api_shape(
@@ -23,6 +66,7 @@ def _listing_to_api_shape(
     main_url = image_urls[0] if image_urls else ""
     return {
         "id": str(listing.id),
+        "slug": getattr(listing, "slug", None) or "",
         "title": {"de": listing.title_de, "en": listing.title_en},
         "location": city.code,
         "city": {"de": city.name_de, "en": city.name_en},
@@ -103,6 +147,40 @@ def get_listing_by_id(session, listing_id: str) -> Optional[dict]:
         select(Listing, City)
         .join(City, Listing.city_id == City.id)
         .where(Listing.id == listing_id, Listing.is_published == True)
+    )
+    row = session.exec(statement).first()
+    if not row:
+        return None
+
+    listing, city = row
+
+    images = list(
+        session.exec(
+            select(ListingImage)
+            .where(ListingImage.listing_id == listing.id)
+            .order_by(ListingImage.is_main.desc(), ListingImage.position)
+        ).all()
+    )
+    amenities = list(
+        session.exec(
+            select(ListingAmenity).where(ListingAmenity.listing_id == listing.id)
+        ).all()
+    )
+    image_urls = [img.url for img in images]
+    amenities_de = [a.label_de for a in amenities]
+    amenities_en = [a.label_en for a in amenities]
+
+    return _listing_to_api_shape(listing, city, image_urls, amenities_de, amenities_en)
+
+
+def get_listing_by_slug(session, slug: str) -> Optional[dict]:
+    """Return one published listing by slug in the same API shape as get_listing_by_id, or None."""
+    if not slug or not str(slug).strip():
+        return None
+    statement = (
+        select(Listing, City)
+        .join(City, Listing.city_id == City.id)
+        .where(Listing.slug == slug.strip(), Listing.is_published == True)
     )
     row = session.exec(statement).first()
     if not row:
@@ -237,14 +315,21 @@ def get_listing_admin_by_id(session, listing_id: str) -> Optional[dict]:
 def create_listing(session, data: dict) -> dict:
     """
     Create a new listing with optional images and amenities.
-    data: unit_id, city_id, slug, title_de, title_en, and optional fields
-    (room_id, description_de, description_en, price_chf_month, bedrooms, bathrooms,
-     size_sqm, latitude, longitude, is_published, sort_order, images[], amenities[]).
+    data: unit_id, city_id, slug (optional; auto-generated from city + title if missing),
+    title_de, title_en, and optional fields (room_id, description_*, price_*, etc.).
     """
+    slug = (data.get("slug") or "").strip()
+    if not slug:
+        city = session.get(City, data["city_id"])
+        city_code = city.code if city else "listing"
+        title = (data.get("title_en") or data.get("title_de") or "listing").strip()
+        base = slug_from_city_and_title(city_code, title)
+        slug = _ensure_unique_slug(session, base)
+
     listing = Listing(
         unit_id=data["unit_id"],
         city_id=data["city_id"],
-        slug=data["slug"],
+        slug=slug,
         title_de=data.get("title_de") or "",
         title_en=data.get("title_en") or "",
         description_de=data.get("description_de") or "",

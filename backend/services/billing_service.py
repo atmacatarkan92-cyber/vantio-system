@@ -1,3 +1,4 @@
+# DEPRECATED: Uses legacy tenancy columns (start_date, end_date, monthly_rent). Safe to remove after later legacy cleanup.
 """
 DEPRECATED — Do not use.
 

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { ADMIN_TOKEN_KEY } from "../../config";
+import { useAuth } from "../../contexts/AuthContext";
 
 function hauptLinkStyle({ isActive }) {
   return {
@@ -67,10 +67,10 @@ function Bereich({ title, children, defaultOpen = true }) {
 
 function AdminSidebar() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleLogout = () => {
-    localStorage.removeItem(ADMIN_TOKEN_KEY);
-    navigate("/admin/login", { replace: true });
+    logout().then(() => navigate("/admin/login", { replace: true }));
   };
 
   return (
@@ -120,6 +120,10 @@ function AdminSidebar() {
 
           <NavLink to="/admin/apartments" style={unterLinkStyle}>
             Apartments / Units
+          </NavLink>
+
+          <NavLink to="/admin/properties" style={unterLinkStyle}>
+            Liegenschaften
           </NavLink>
 
           <NavLink to="/admin/listings" style={unterLinkStyle}>

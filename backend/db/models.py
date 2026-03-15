@@ -21,6 +21,44 @@ class City(SQLModel, table=True):
 
 
 # ---------------------------------------------------------------------------
+# Landlords and properties (Phase D)
+# ---------------------------------------------------------------------------
+
+class Landlord(SQLModel, table=True):
+    __tablename__ = "landlords"
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
+    company_name: Optional[str] = Field(default=None)
+    contact_name: str = Field(default="")
+    email: str = Field(default="")
+    phone: Optional[str] = Field(default=None)
+    notes: Optional[str] = Field(default=None)
+    status: Optional[str] = Field(default="active")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    deleted_at: Optional[datetime] = Field(default=None)
+
+
+class Property(SQLModel, table=True):
+    __tablename__ = "properties"
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    landlord_id: Optional[str] = Field(default=None, foreign_key="landlords.id", index=True)
+    title: str = Field(default="")
+    street: Optional[str] = Field(default=None)
+    house_number: Optional[str] = Field(default=None)
+    zip_code: Optional[str] = Field(default=None)
+    city: Optional[str] = Field(default=None)
+    country: Optional[str] = Field(default="CH")
+    lat: Optional[float] = Field(default=None)
+    lng: Optional[float] = Field(default=None)
+    status: Optional[str] = Field(default="active")
+    notes: Optional[str] = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    deleted_at: Optional[datetime] = Field(default=None)
+
+
+# ---------------------------------------------------------------------------
 # Operational: units + rooms (unchanged structure)
 # ---------------------------------------------------------------------------
 
@@ -138,6 +176,7 @@ class Tenant(SQLModel, table=True):
     __tablename__ = "tenant"
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True, unique=True)
     name: str
     email: str = Field(default="")
     room_id: Optional[str] = Field(default=None, index=True)
@@ -155,6 +194,7 @@ class TenancyStatus(str, Enum):
 class Tenancy(SQLModel, table=True):
     """
     Links a tenant to a room for a period. Used for occupancy and revenue.
+    Aligned to live DB column names where they differ from default (move_out_date date, monthly_rent, deposit_amount).
     """
 
     __tablename__ = "tenancies"
@@ -164,9 +204,9 @@ class Tenancy(SQLModel, table=True):
     room_id: str = Field(foreign_key="room.id", index=True)
     unit_id: str = Field(foreign_key="unit.id", index=True)
     move_in_date: date = Field(...)
-    move_out_date: Optional[date] = Field(default=None)
-    rent_chf: float = Field(default=0)
-    deposit_chf: Optional[float] = Field(default=None)
+    move_out_date: Optional[date] = Field(default=None, sa_column_kwargs={"name": "move_out_date date"})
+    rent_chf: float = Field(default=0, sa_column_kwargs={"name": "monthly_rent"})
+    deposit_chf: Optional[float] = Field(default=None, sa_column_kwargs={"name": "deposit_amount"})
     status: TenancyStatus = Field(default=TenancyStatus.active, index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -221,11 +261,12 @@ class UnitCost(SQLModel, table=True):
 
 
 class UserRole(str, Enum):
-    platform_admin = "platform_admin"
-    ops_admin = "ops_admin"
-    tenant = "tenant"
+    """Roles allowed by DB CHECK (users_role_allowed)."""
+    admin = "admin"
+    manager = "manager"
     landlord = "landlord"
-    property_manager = "property_manager"
+    tenant = "tenant"
+    support = "support"
 
 
 class User(SQLModel, table=True):
@@ -239,8 +280,8 @@ class User(SQLModel, table=True):
     email: str = Field(index=True, unique=True)
     full_name: str
     role: UserRole = Field(
-        default=UserRole.platform_admin,
-        description="Application role",
+        default=UserRole.admin,
+        description="Application role (must match users_role_allowed CHECK).",
     )
     is_active: bool = Field(default=True)
     last_login_at: datetime | None = None
@@ -259,3 +300,14 @@ class UserCredentials(SQLModel, table=True):
     password_hash: str
     password_algo: str = Field(default="argon2id")
     password_changed_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class RefreshToken(SQLModel, table=True):
+    __tablename__ = "refresh_tokens"
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    user_id: str = Field(foreign_key="users.id", index=True)
+    token_hash: str = Field(index=True)
+    expires_at: datetime = Field(index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    revoked_at: datetime | None = None
+    replaced_by_token_id: str | None = Field(default=None, foreign_key="refresh_tokens.id", index=True)
