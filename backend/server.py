@@ -40,6 +40,16 @@ from app.api.v1.routes_landlord import router as landlord_router
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
+# Optional Sentry (only if SENTRY_DSN is set)
+_sentry_dsn = os.environ.get("SENTRY_DSN", "").strip()
+if _sentry_dsn:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        environment=os.environ.get("ENVIRONMENT", "development"),
+        traces_sample_rate=0.1,
+    )
+
 # ==================== Logging ====================
 
 logging.basicConfig(
@@ -260,7 +270,8 @@ app.add_middleware(
 async def startup_event():
     logger.info("Starting FeelAtHomeNow API...")
     validate_auth_config()  # Refuse to start if SECRET_KEY is not set
-    if engine is not None:
+    # Production: schema is managed by Alembic only; skip create_db() to avoid "relation already exists"
+    if engine is not None and os.environ.get("ENVIRONMENT") != "production":
         from db.database import create_db
         create_db()
 
