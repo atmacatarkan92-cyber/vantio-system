@@ -247,6 +247,8 @@ app.include_router(api_router)
 _DEV_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://feel-at-home-now-website-v2-fqd9e5due.vercel.app",
+    "https://feel-at-home-now-website-v2.vercel.app",
 ]
 _cors_origins_env = os.environ.get("CORS_ORIGINS", "").strip()
 _frontend_url = os.environ.get("FRONTEND_URL", "").strip()
