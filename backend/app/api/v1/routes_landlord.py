@@ -1,18 +1,30 @@
 """
 Landlord portal API: scoped to the authenticated landlord only.
 Uses get_current_landlord (role=landlord + resolve Landlord by user_id).
-Read-only; all data filtered by landlord.id.
+Read for properties, units, tenancies, invoices; create for units only (Phase 1).
 """
 
 from typing import List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlmodel import select
 
 from db.database import get_session
-from db.models import User, Landlord, Property, Unit, Tenancy, Invoice
+from db.models import User, Landlord, Property, Unit, Tenancy, Tenant, Invoice
 from auth.dependencies import get_current_landlord
 from app.services.invoice_service import _invoice_to_api
+
+
+class LandlordUnitCreate(BaseModel):
+    """Body for creating a unit; property_id must belong to the authenticated landlord."""
+    property_id: str
+    title: str = ""
+    address: str = ""
+    city: str = ""
+    rooms: int = 0
+    type: Optional[str] = None
+    city_id: Optional[str] = None
 
 
 router = APIRouter(prefix="/api/landlord", tags=["landlord-portal"])
@@ -55,8 +67,13 @@ def _unit_to_dict(u: Unit, property_title: Optional[str] = None) -> dict:
     }
 
 
-def _tenancy_to_dict(t: Tenancy) -> dict:
-    return {
+def _tenancy_to_dict(
+    t: Tenancy,
+    unit: Optional[Unit] = None,
+    prop: Optional[Property] = None,
+    tenant: Optional[Tenant] = None,
+) -> dict:
+    base = {
         "id": str(t.id),
         "tenant_id": str(t.tenant_id),
         "room_id": str(t.room_id),
@@ -64,10 +81,21 @@ def _tenancy_to_dict(t: Tenancy) -> dict:
         "move_in_date": t.move_in_date.isoformat() if t.move_in_date else None,
         "move_out_date": t.move_out_date.isoformat() if t.move_out_date else None,
         "rent_chf": float(t.rent_chf),
+        "monthly_rent": float(t.rent_chf),
         "deposit_chf": float(t.deposit_chf) if t.deposit_chf is not None else None,
         "status": t.status.value if hasattr(t.status, "value") else str(t.status),
         "created_at": t.created_at.isoformat() if getattr(t, "created_at", None) else None,
     }
+    if unit is not None:
+        base["unit_title"] = getattr(unit, "title", "") or ""
+        base["unit_name"] = getattr(unit, "title", "") or ""
+    if prop is not None:
+        base["property_id"] = str(prop.id)
+        base["property_title"] = getattr(prop, "title", "") or ""
+    if tenant is not None:
+        base["tenant_name"] = getattr(tenant, "name", "") or ""
+        base["tenant_email"] = getattr(tenant, "email", "") or ""
+    return base
 
 
 @router.get("/me")
@@ -152,6 +180,42 @@ def landlord_list_units(
         session.close()
 
 
+@router.post("/units", response_model=dict)
+def landlord_create_unit(
+    body: LandlordUnitCreate,
+    user_landlord: Tuple[User, Landlord] = Depends(get_current_landlord),
+):
+    """Create a unit only if the selected property belongs to the current landlord."""
+    _, landlord = user_landlord
+    session = get_session()
+    try:
+        q_props = select(Property.id).where(Property.landlord_id == str(landlord.id))
+        landlord_property_ids = [str(row) for row in session.exec(q_props).all()]
+        if body.property_id not in landlord_property_ids:
+            raise HTTPException(
+                status_code=403,
+                detail="Property not found or you do not have permission to add units to it.",
+            )
+        title = (body.title or "").strip() or "New Unit"
+        unit = Unit(
+            title=title,
+            address=body.address or "",
+            city=body.city or "",
+            rooms=body.rooms,
+            type=body.type,
+            city_id=body.city_id,
+            property_id=body.property_id,
+        )
+        session.add(unit)
+        session.commit()
+        session.refresh(unit)
+        prop = session.get(Property, unit.property_id) if unit.property_id else None
+        property_title = getattr(prop, "title", None) if prop else None
+        return _unit_to_dict(unit, property_title)
+    finally:
+        session.close()
+
+
 @router.get("/tenancies", response_model=List[dict])
 def landlord_list_tenancies(
     user_landlord: Tuple[User, Landlord] = Depends(get_current_landlord),
@@ -169,14 +233,34 @@ def landlord_list_tenancies(
         if not landlord_unit_ids:
             return []
         q = (
-            select(Tenancy)
+            select(Tenancy, Unit, Property, Tenant)
+            .select_from(Tenancy)
+            .join(Unit, Tenancy.unit_id == Unit.id)
+            .join(Property, Unit.property_id == Property.id)
+            .outerjoin(Tenant, Tenancy.tenant_id == Tenant.id)
             .where(Tenancy.unit_id.in_(landlord_unit_ids))
             .order_by(Tenancy.move_in_date.desc())
         )
-        tenancies = list(session.exec(q).all())
-        return [_tenancy_to_dict(t) for t in tenancies]
+        rows = list(session.exec(q).all())
+        return [_tenancy_to_dict(t, unit, prop, tenant) for t, unit, prop, tenant in rows]
     finally:
         session.close()
+
+
+def _enrich_invoice_for_landlord(inv: Invoice, unit: Optional[Unit], prop: Optional[Property], tenant: Optional[Tenant]) -> dict:
+    """API shape from invoice_service plus unit/property/tenant for landlord display."""
+    out = dict(_invoice_to_api(inv))
+    out["unit_id"] = str(inv.unit_id) if getattr(inv, "unit_id", None) else None
+    if unit is not None:
+        out["unit_title"] = getattr(unit, "title", "") or ""
+        out["unit_name"] = getattr(unit, "title", "") or ""
+    if prop is not None:
+        out["property_id"] = str(prop.id)
+        out["property_title"] = getattr(prop, "title", "") or ""
+    if tenant is not None:
+        out["tenant_name"] = getattr(tenant, "name", "") or ""
+        out["tenant_email"] = getattr(tenant, "email", "") or ""
+    return out
 
 
 @router.get("/invoices", response_model=List[dict])
@@ -196,11 +280,15 @@ def landlord_list_invoices(
         if not landlord_unit_ids:
             return []
         stmt = (
-            select(Invoice)
+            select(Invoice, Unit, Property, Tenant)
+            .select_from(Invoice)
+            .join(Unit, Invoice.unit_id == Unit.id)
+            .join(Property, Unit.property_id == Property.id)
+            .outerjoin(Tenant, Invoice.tenant_id == Tenant.id)
             .where(Invoice.unit_id.in_(landlord_unit_ids))
             .order_by(Invoice.issue_date.desc())
         )
-        rows = session.exec(stmt).all()
-        return [_invoice_to_api(inv) for inv in rows]
+        rows = list(session.exec(stmt).all())
+        return [_enrich_invoice_for_landlord(inv, unit, prop, tenant) for inv, unit, prop, tenant in rows]
     finally:
         session.close()

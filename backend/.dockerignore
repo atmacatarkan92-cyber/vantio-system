@@ -1,0 +1,31 @@
+# Dependencies and caches
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv
+env
+.env
+.env.*
+
+# Git and IDE
+.git
+.gitignore
+.dockerignore
+*.md
+.vscode
+.idea
+
+# Tests and local
+.pytest_cache
+.coverage
+htmlcov
+*.log
+
+# Build / dist
+dist
+build
+*.egg-info
+.eggs
