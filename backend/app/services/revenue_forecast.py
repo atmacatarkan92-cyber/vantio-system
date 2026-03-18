@@ -26,17 +26,28 @@ def calculate_monthly_revenue(session, unit_id: str, year: int, month: int) -> d
     occupied_rooms = 0
     vacant_rooms = 0
 
-    for r in rooms:
-        room_id = str(r.id)
-        q = (
+    # Fetch tenancies once for the unit and compute per-room results in Python.
+    # This avoids the failing query shape `Tenancy.room_id == "<uuid>"` when
+    # the DB column type is integer (UUID/string vs integer mismatch).
+    overlapping_tenancies = list(
+        session.exec(
             select(Tenancy)
-            .where(Tenancy.room_id == room_id)
-            .where(Tenancy.status.in_([TenancyStatus.active, TenancyStatus.reserved]))
+            .where(Tenancy.unit_id == unit_id)
+            .where(
+                Tenancy.status.in_([TenancyStatus.active, TenancyStatus.reserved])
+            )
             .where(Tenancy.move_in_date <= last)
             .where((Tenancy.move_out_date == None) | (Tenancy.move_out_date >= first))
-        )
+        ).all()
+    )
+    tenancies_by_room_id: dict[str, list[Tenancy]] = {}
+    for t in overlapping_tenancies:
+        tenancies_by_room_id.setdefault(str(t.room_id), []).append(t)
+
+    for r in rooms:
+        room_id = str(r.id)
         found = False
-        for t in session.exec(q).all():
+        for t in tenancies_by_room_id.get(room_id, []):
             move_out = t.move_out_date or date(9999, 12, 31)
             if t.move_in_date <= last and move_out >= first:
                 start = max(first, t.move_in_date)

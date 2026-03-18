@@ -221,6 +221,20 @@ export function fetchAdminProfit(params = {}) {
 }
 
 /**
+ * Normalize fetch failure for dashboard: "Failed to fetch" means network/CORS/server unreachable.
+ * Exported so overview page can use the same message for operations load errors.
+ */
+export function normalizeFetchError(e, fallbackMessage) {
+  const msg = e?.message || "";
+  if (msg === "Failed to fetch" || msg.includes("Load failed") || msg.includes("NetworkError")) {
+    return new Error(
+      "Verbindung zum Server fehlgeschlagen. Bitte Backend-URL (REACT_APP_BACKEND_URL) und CORS prüfen."
+    );
+  }
+  return e instanceof Error ? e : new Error(fallbackMessage);
+}
+
+/**
  * Dashboard KPIs: avg revenue per room, avg profit per unit, weakest/best unit,
  * vacant days, break-even, forecast, trend, warnings. Params: year?, month? (default current).
  */
@@ -230,10 +244,14 @@ export function fetchAdminDashboardKpis(params = {}) {
   if (params.month != null) sp.set("month", String(params.month));
   const qs = sp.toString();
   const url = `${API_BASE_URL}/api/admin/dashboard/kpis${qs ? `?${qs}` : ""}`;
-  return fetch(url, { headers: getApiHeaders() }).then((res) => {
-    if (!res.ok) throw new Error("KPI-Daten konnten nicht geladen werden.");
-    return res.json();
-  });
+  return fetch(url, { headers: getApiHeaders() })
+    .then((res) => {
+      if (!res.ok) throw new Error("KPI-Daten konnten nicht geladen werden.");
+      return res.json();
+    })
+    .catch((e) => {
+      throw normalizeFetchError(e, "KPI-Daten konnten nicht geladen werden.");
+    });
 }
 
 /**

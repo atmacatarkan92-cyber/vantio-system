@@ -19,6 +19,7 @@ import {
   fetchAdminOccupancy,
   fetchAdminDashboardKpis,
   fetchAdminInvoices,
+  normalizeFetchError,
 } from "../../api/adminData";
 
 function roundCurrency(value) {
@@ -277,31 +278,37 @@ export default function AdminUebersichtPage() {
   const [kpis, setKpis] = useState(null);
   const [kpisLoading, setKpisLoading] = useState(true);
   const [kpisError, setKpisError] = useState("");
+  const [operationsLoadError, setOperationsLoadError] = useState("");
   const [kpisPeriod, setKpisPeriod] = useState(() => {
     const d = new Date();
     return { year: d.getFullYear(), month: d.getMonth() + 1 };
   });
 
   useEffect(() => {
-    fetchAdminUnits()
-      .then((data) => setUnits(Array.isArray(data) ? data.map(normalizeUnit) : []))
-      .catch(() => setUnits([]));
-    fetchAdminRooms()
-      .then((data) => setRooms(Array.isArray(data) ? data.map(normalizeRoom) : []))
-      .catch(() => setRooms([]));
-  }, []);
-
-  useEffect(() => {
-    fetchAdminOccupancy()
-      .then((data) => setOccupancyApi(data))
-      .catch(() => setOccupancyApi(null));
-  }, []);
-
-  useEffect(() => {
+    setOperationsLoadError("");
     const now = new Date();
-    fetchAdminProfit({ year: now.getFullYear(), month: now.getMonth() + 1 })
-      .then((data) => setProfitApi({ summary: data.summary || null, units: data.units || [], year: data.year, month: data.month }))
-      .catch(() => setProfitApi({ summary: null, units: [], year: null, month: null }));
+    Promise.all([
+      fetchAdminUnits(),
+      fetchAdminRooms(),
+      fetchAdminOccupancy(),
+      fetchAdminProfit({ year: now.getFullYear(), month: now.getMonth() + 1 }),
+    ])
+      .then(([unitsData, roomsData, occupancyData, profitData]) => {
+        setUnits(unitsData.map(normalizeUnit));
+        setRooms(Array.isArray(roomsData) ? roomsData.map(normalizeRoom) : []);
+        setOccupancyApi(occupancyData);
+        setProfitApi({
+          summary: profitData.summary ?? null,
+          units: profitData.units ?? [],
+          year: profitData.year,
+          month: profitData.month,
+        });
+      })
+      .catch((e) => {
+        setOperationsLoadError(
+          normalizeFetchError(e, "Betriebsdaten konnten nicht geladen werden.").message
+        );
+      });
   }, []);
 
   useEffect(() => {
@@ -695,6 +702,20 @@ export default function AdminUebersichtPage() {
             </div>
           )}
         </>
+      )}
+
+      {operationsLoadError && (
+        <div
+          style={{
+            background: "#FEF2F2",
+            border: "1px solid #FECACA",
+            borderRadius: "12px",
+            padding: "16px",
+            color: "#B91C1C",
+          }}
+        >
+          <strong>Fehler beim Laden der Betriebsdaten:</strong> {operationsLoadError}
+        </div>
       )}
 
       <div

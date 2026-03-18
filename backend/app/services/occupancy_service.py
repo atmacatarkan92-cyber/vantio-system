@@ -35,17 +35,58 @@ def get_room_status(session, room_id: str, on_date: Optional[date] = None) -> st
     return "free"
 
 
+def _status_from_tenancies(tenancies: List[Tenancy], today: date) -> str:
+    """
+    Mirrors `get_room_status` semantics, but takes already-fetched tenancies.
+    This avoids querying by Tenancy.room_id using a potentially incompatible ID type.
+    """
+    for t in tenancies:
+        move_out = t.move_out_date or date(9999, 12, 31)
+        if t.status == TenancyStatus.active and t.move_in_date <= today <= move_out:
+            return "occupied"
+        if t.status == TenancyStatus.reserved and today < t.move_in_date:
+            return "reserved"
+        if t.status == TenancyStatus.reserved and t.move_in_date <= today <= move_out:
+            return "occupied"
+    return "free"
+
+
 def get_unit_occupancy(session, unit_id: str, on_date: Optional[date] = None) -> dict:
     """
     Returns: total_rooms, occupied_rooms, reserved_rooms, free_rooms, occupancy_rate (0-100).
     """
     today = on_date or date.today()
-    rooms = list(session.exec(select(Room).where(Room.unit_id == unit_id).where(Room.is_active == True)).all())
+    rooms = list(
+        session.exec(
+            select(Room)
+            .where(Room.unit_id == unit_id)
+            .where(Room.is_active == True)
+        ).all()
+    )
     total_rooms = len(rooms)
     occupied_rooms = 0
     reserved_rooms = 0
+
+    # Fetch tenancies once for the unit and compute per-room status in Python.
+    # This avoids the failing query shape: Tenancy.room_id == "<uuid>" when the DB column
+    # is an integer (UUID/string vs integer mismatch).
+    unit_tenancies = list(
+        session.exec(
+            select(Tenancy)
+            .where(Tenancy.unit_id == unit_id)
+            .where(
+                Tenancy.status.in_([TenancyStatus.active, TenancyStatus.reserved])
+            )
+            .order_by(Tenancy.move_in_date.desc())
+        ).all()
+    )
+    tenancies_by_room_id: Dict[str, List[Tenancy]] = {}
+    for t in unit_tenancies:
+        tenancies_by_room_id.setdefault(str(t.room_id), []).append(t)
+
     for r in rooms:
-        status = get_room_status(session, str(r.id), today)
+        room_id = str(r.id)
+        status = _status_from_tenancies(tenancies_by_room_id.get(room_id, []), today)
         if status == "occupied":
             occupied_rooms += 1
         elif status == "reserved":
@@ -90,14 +131,48 @@ def get_unit_rooms_occupancy(
     today = on_date or date.today()
     rooms = list(
         session.exec(
-            select(Room).where(Room.unit_id == unit_id).where(Room.is_active == True)
+            select(Room)
+            .where(Room.unit_id == unit_id)
+            .where(Room.is_active == True)
         ).all()
     )
     result = []
+
+    # Prefetch all tenancies (and their tenant rows) for this unit once.
+    # We then compute per-room status and tenant_name/rent in Python.
+    tenancy_rows = list(
+        session.exec(
+            select(Tenancy, Tenant)
+            .join(Tenant, Tenancy.tenant_id == Tenant.id)
+            .where(Tenancy.unit_id == unit_id)
+            .where(
+                Tenancy.status.in_([TenancyStatus.active, TenancyStatus.reserved])
+            )
+            .order_by(Tenancy.move_in_date.desc())
+        ).all()
+    )
+    tenancy_rows_by_room_id: Dict[str, List[tuple]] = {}
+    for t, tenant in tenancy_rows:
+        tenancy_rows_by_room_id.setdefault(str(t.room_id), []).append((t, tenant))
+
     for r in rooms:
         room_id = str(r.id)
-        status = get_room_status(session, room_id, today)
-        tenant_name, rent = _get_tenant_name_and_rent(session, room_id, today)
+
+        room_tenancy_rows = tenancy_rows_by_room_id.get(room_id, [])
+        status = _status_from_tenancies(
+            [row[0] for row in room_tenancy_rows],
+            today,
+        )
+
+        tenant_name = None
+        rent = None
+        for t, tenant in room_tenancy_rows:
+            move_out = t.move_out_date or date(9999, 12, 31)
+            if t.move_in_date <= today <= move_out:
+                tenant_name = getattr(tenant, "name", None) or None
+                rent = float(t.rent_chf or 0)
+                break
+
         result.append({
             "room_id": room_id,
             "room_name": r.name or f"Room {room_id[:8]}",

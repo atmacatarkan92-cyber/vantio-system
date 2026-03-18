@@ -276,7 +276,9 @@ def get_inquiries(_: None = Depends(require_roles("admin", "manager"))):
 # CORS: explicit origins (required when allow_credentials=True; "*" is invalid with credentials)
 _DEV_ORIGINS = [
     "http://localhost:3000",
+    "http://localhost:3001",
     "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
     "https://feel-at-home-now-website-v2-fqd9e5due.vercel.app",
     "https://feel-at-home-now-website-v2.vercel.app",
 ]
