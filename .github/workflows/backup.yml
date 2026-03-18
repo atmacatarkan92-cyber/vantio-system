@@ -27,10 +27,15 @@ jobs:
           echo "==> Installing dependencies..."
           sudo apt-get update -qq
           sudo apt-get install -y postgresql-client
-          curl -sSf "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
-          unzip -q -o /tmp/awscliv2.zip -d /tmp
-          sudo /tmp/aws/install
-          aws --version
+          if command -v aws >/dev/null 2>&1; then
+            echo "==> AWS CLI already installed, skipping install"
+            aws --version
+          else
+            curl -sSf "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+            unzip -q -o /tmp/awscliv2.zip -d /tmp
+            sudo /tmp/aws/install
+            aws --version
+          fi
           pg_dump --version
 
       - name: Set backup paths and timestamp
