@@ -47,7 +47,13 @@ def get_invoices_route(
     org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
-    """List all invoices (API-shaped with effective status) with basic pagination."""
+    """
+    List invoices for the current organization only (organization_id match).
+
+    Rows with organization_id IS NULL are excluded (isolated from org-scoped UI/API).
+    Operational follow-up: run alembic 021 backfill and/or
+    SELECT id, tenant_id, tenancy_id FROM invoices WHERE organization_id IS NULL;
+    """
     session = get_session()
     try:
         _total_rows = session.exec(

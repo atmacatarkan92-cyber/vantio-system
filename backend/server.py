@@ -254,7 +254,10 @@ def get_inquiries(
     """
     Organization-scoped: only inquiries linked to a listing whose unit belongs to the
     current admin/manager organization (Inquiry.apartment_id -> Listing -> Unit).
-    Rows with apartment_id NULL are omitted here (public intake only; not attributed to an org).
+
+    Rows with apartment_id IS NULL are omitted (public contact intake; not attributable to a
+    listing/org in this query). Operational follow-up: review with
+    SELECT id, created_at FROM inquiries WHERE apartment_id IS NULL;
     """
     if engine is None:
         raise HTTPException(status_code=503, detail="PostgreSQL is not configured.")
