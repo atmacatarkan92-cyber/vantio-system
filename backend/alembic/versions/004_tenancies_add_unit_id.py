@@ -11,6 +11,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 
 revision: str = "004_tenancies_unit_id"
@@ -19,7 +20,18 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _tenancies_unit_id_column():
+    insp = inspect(op.get_bind())
+    for c in insp.get_columns("tenancies"):
+        if c["name"] == "unit_id":
+            return c
+    return None
+
+
 def upgrade() -> None:
+    # 001_initial already creates tenancies.unit_id + FK + ix_tenancies_unit_id; only legacy DBs lack it
+    if _tenancies_unit_id_column() is not None:
+        return
     op.add_column(
         "tenancies",
         sa.Column("unit_id", sa.String(), nullable=True),
@@ -35,6 +47,12 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    col = _tenancies_unit_id_column()
+    if col is None:
+        return
+    # 001_initial uses NOT NULL unit_id; do not drop the column/index/FK owned by that revision
+    if col.get("nullable") is False:
+        return
     op.drop_index("ix_tenancies_unit_id", "tenancies")
     op.drop_constraint("tenancies_unit_id_fkey", "tenancies", type_="foreignkey")
     op.drop_column("tenancies", "unit_id")
