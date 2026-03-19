@@ -28,3 +28,23 @@ class UserMe(BaseModel):
     is_active: bool
     last_login_at: datetime | None = None
 
+
+class ChangePasswordRequest(BaseModel):
+    """Body for POST /auth/change-password. Strength rules enforced server-side (generic errors)."""
+
+    current_password: str = Field(min_length=1, max_length=200)
+    # Max length only here; minimum length / strength return generic 400 from the route (no 422 detail).
+    new_password: str = Field(min_length=1, max_length=200)
+
+    @model_validator(mode="after")
+    def _passwords_not_blank(self):
+        if not self.current_password.strip():
+            raise ValueError("current_password must not be empty")
+        if not self.new_password.strip():
+            raise ValueError("new_password must not be empty")
+        return self
+
+
+class ChangePasswordResponse(BaseModel):
+    detail: str = "Password updated"
+

@@ -152,6 +152,122 @@ class TestAuthLogin:
         assert response.status_code == 422
 
 
+class TestChangePassword:
+    """POST /auth/change-password — requires TEST_DATABASE_URL + auth fixtures."""
+
+    NEW_PASSWORD = "N3wStr0ng!PW"
+
+    def test_change_password_success(
+        self,
+        client: TestClient,
+        override_auth_db,
+        admin_user: User,
+    ):
+        login = client.post(
+            "/auth/login",
+            json={"email": admin_user.email, "password": "test-password"},
+        )
+        assert login.status_code == 200
+        token = login.json()["access_token"]
+        r = client.post(
+            "/auth/change-password",
+            json={"current_password": "test-password", "new_password": self.NEW_PASSWORD},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 200
+        assert r.json().get("detail") == "Password updated"
+
+    def test_change_password_wrong_current_returns_generic_401(
+        self,
+        client: TestClient,
+        override_auth_db,
+        admin_user: User,
+    ):
+        login = client.post(
+            "/auth/login",
+            json={"email": admin_user.email, "password": "test-password"},
+        )
+        assert login.status_code == 200
+        token = login.json()["access_token"]
+        r = client.post(
+            "/auth/change-password",
+            json={"current_password": "not-the-password", "new_password": self.NEW_PASSWORD},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 401
+        assert r.json().get("detail") == "Invalid credentials"
+
+    def test_login_with_new_password_works_after_change(
+        self,
+        client: TestClient,
+        override_auth_db,
+        admin_user: User,
+    ):
+        login = client.post(
+            "/auth/login",
+            json={"email": admin_user.email, "password": "test-password"},
+        )
+        token = login.json()["access_token"]
+        ch = client.post(
+            "/auth/change-password",
+            json={"current_password": "test-password", "new_password": self.NEW_PASSWORD},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert ch.status_code == 200
+        login2 = client.post(
+            "/auth/login",
+            json={"email": admin_user.email, "password": self.NEW_PASSWORD},
+        )
+        assert login2.status_code == 200
+        assert login2.json().get("access_token")
+
+    def test_old_password_rejected_after_change(
+        self,
+        client: TestClient,
+        override_auth_db,
+        admin_user: User,
+    ):
+        login = client.post(
+            "/auth/login",
+            json={"email": admin_user.email, "password": "test-password"},
+        )
+        token = login.json()["access_token"]
+        client.post(
+            "/auth/change-password",
+            json={"current_password": "test-password", "new_password": self.NEW_PASSWORD},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        bad = client.post(
+            "/auth/login",
+            json={"email": admin_user.email, "password": "test-password"},
+        )
+        assert bad.status_code == 401
+        assert bad.json().get("detail") == "Invalid credentials"
+
+    def test_access_token_invalidated_after_password_change(
+        self,
+        client: TestClient,
+        override_auth_db,
+        admin_user: User,
+    ):
+        login = client.post(
+            "/auth/login",
+            json={"email": admin_user.email, "password": "test-password"},
+        )
+        old_access = login.json()["access_token"]
+        ch = client.post(
+            "/auth/change-password",
+            json={"current_password": "test-password", "new_password": self.NEW_PASSWORD},
+            headers={"Authorization": f"Bearer {old_access}"},
+        )
+        assert ch.status_code == 200
+        me = client.get(
+            "/auth/me",
+            headers={"Authorization": f"Bearer {old_access}"},
+        )
+        assert me.status_code == 401
+
+
 # ---------- Admin units tests ----------
 
 

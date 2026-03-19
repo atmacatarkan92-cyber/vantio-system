@@ -5,9 +5,16 @@ from fastapi.responses import JSONResponse
 from sqlmodel import select
 
 from db.models import User, UserCredentials, RefreshToken
-from auth.schemas import LoginRequest, Token, UserMe
+from auth.schemas import (
+    ChangePasswordRequest,
+    ChangePasswordResponse,
+    LoginRequest,
+    Token,
+    UserMe,
+)
 from auth.security import (
     verify_password,
+    hash_password,
     create_access_token,
     create_refresh_token_value,
     hash_refresh_token,
@@ -15,6 +22,8 @@ from auth.security import (
     get_refresh_token_expire_days,
     get_cookie_secure,
     get_cookie_samesite,
+    new_password_is_acceptable,
+    password_version_ts,
 )
 from auth.dependencies import get_current_user, get_db_session
 from app.core.rate_limit import limiter
@@ -85,6 +94,7 @@ def login(request: Request, data: LoginRequest, session=Depends(get_db_session))
         {
             "sub": str(user.id),
             "role": role_str,
+            "pv": password_version_ts(credentials.password_changed_at),
         }
     )
 
@@ -164,15 +174,71 @@ def refresh(request: Request, session=Depends(get_db_session)):
     session.commit()
 
     role_str = getattr(user.role, "value", user.role) if getattr(user, "role", None) is not None else ""
-    access_token = create_access_token(
-        {"sub": str(user.id), "role": role_str},
-    )
+    creds_refresh = session.exec(
+        select(UserCredentials).where(UserCredentials.user_id == str(user.id))
+    ).first()
+    token_payload: dict = {"sub": str(user.id), "role": role_str}
+    if creds_refresh is not None:
+        token_payload["pv"] = password_version_ts(creds_refresh.password_changed_at)
+    access_token = create_access_token(token_payload)
     response = JSONResponse(
         content=Token(access_token=access_token).model_dump(),
         status_code=status.HTTP_200_OK,
     )
     _set_refresh_cookie(response, plain_new)
     return response
+
+
+@router.post("/change-password", response_model=ChangePasswordResponse)
+@limiter.limit("5/minute")
+def change_password(
+    request: Request,
+    body: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    session=Depends(get_db_session),
+):
+    """
+    Authenticated password change. Same generic error for wrong current password as /auth/login.
+    Revokes all refresh sessions; access tokens with `pv` claim are invalidated via dependency.
+    """
+    creds = session.exec(
+        select(UserCredentials).where(UserCredentials.user_id == str(current_user.id))
+    ).first()
+    if not creds:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid request",
+        )
+
+    if not verify_password(body.current_password, creds.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+        )
+
+    if not new_password_is_acceptable(body.new_password, body.current_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password does not meet requirements",
+        )
+
+    creds.password_hash = hash_password(body.new_password)
+    creds.password_changed_at = datetime.now(timezone.utc)
+    session.add(creds)
+
+    now = datetime.now(timezone.utc)
+    refresh_rows = session.exec(
+        select(RefreshToken).where(
+            RefreshToken.user_id == str(current_user.id),
+            RefreshToken.revoked_at.is_(None),
+        )
+    ).all()
+    for row in refresh_rows:
+        row.revoked_at = now
+        session.add(row)
+
+    session.commit()
+    return ChangePasswordResponse()
 
 
 @router.post("/logout")

@@ -5,8 +5,8 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import select
 
 from db.database import get_session
-from db.models import User, Tenant, Landlord
-from auth.security import decode_access_token
+from db.models import User, Tenant, Landlord, UserCredentials
+from auth.security import decode_access_token, password_version_ts
 
 
 # HTTPBearer makes Swagger UI show "Authorize" with a Bearer token field
@@ -55,6 +55,24 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Inactive or unknown user",
         )
+
+    # Invalidate access tokens issued before last password change (`pv` claim).
+    creds = session.exec(
+        select(UserCredentials).where(UserCredentials.user_id == str(user.id))
+    ).first()
+    if creds is not None and "pv" in payload:
+        try:
+            token_pv = int(payload["pv"])
+        except (TypeError, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+            )
+        if token_pv != password_version_ts(creds.password_changed_at):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+            )
 
     return user
 

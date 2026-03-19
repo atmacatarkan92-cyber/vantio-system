@@ -25,6 +25,39 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
+# Obvious weak passwords (lowercase compare). Keep list small; do not log attempts.
+_WEAK_PASSWORDS = frozenset(
+    {
+        "12345678",
+        "87654321",
+        "password",
+        "password123",
+        "qwerty123",
+        "letmein1",
+        "admin123",
+        "welcome1",
+    }
+)
+
+
+def new_password_is_acceptable(new_password: str, current_password: str) -> bool:
+    """
+    Basic strength rules for password change (server-side only).
+    Returns False if rejected; callers must not expose which rule failed.
+    """
+    if not new_password or len(new_password) < 8 or len(new_password) > 200:
+        return False
+    if new_password == current_password:
+        return False
+    if new_password.isdigit():
+        return False
+    if not any(c.isalpha() for c in new_password):
+        return False
+    if new_password.lower() in _WEAK_PASSWORDS:
+        return False
+    return True
+
+
 def _get_secret_key() -> str:
     """Read SECRET_KEY from environment. No fallback — app must refuse to start if unset."""
     key = os.getenv("SECRET_KEY")
@@ -47,6 +80,17 @@ def _get_access_token_expire_minutes() -> int:
 ALGORITHM = "HS256"
 
 
+def password_version_ts(changed_at: datetime) -> int:
+    """
+    Stable integer for JWT `pv` claim (password version).
+    Microsecond resolution reduces same-second collisions vs wall-clock seconds.
+    Naive datetimes from DB are treated as UTC.
+    """
+    if changed_at.tzinfo is None:
+        changed_at = changed_at.replace(tzinfo=timezone.utc)
+    return int(changed_at.timestamp() * 1_000_000)
+
+
 def create_access_token(
     data: dict,
     expires_minutes: int | None = None,
@@ -55,7 +99,9 @@ def create_access_token(
     if expires_minutes is None:
         expires_minutes = _get_access_token_expire_minutes()
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
+    now = datetime.now(timezone.utc)
+    to_encode.setdefault("iat", int(now.timestamp()))
+    expire = now + timedelta(minutes=expires_minutes)
     to_encode["exp"] = expire
     return jwt.encode(to_encode, _get_secret_key(), algorithm=ALGORITHM)
 
