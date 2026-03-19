@@ -12,11 +12,12 @@ import os
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import Session, create_engine
 
 from auth.dependencies import get_current_user, get_db_session
 from auth.security import hash_password
 from db.models import Organization, RefreshToken, User, UserCredentials, UserRole
+from tests.db_schema_utils import ensure_test_db_schema_from_models
 
 
 # ---------- Test database setup for /auth/login ----------
@@ -33,7 +34,7 @@ def auth_test_engine():
         pytest.skip("TEST_DATABASE_URL is not set; skipping auth login DB-backed tests.")
 
     engine = create_engine(test_db_url, pool_pre_ping=True)
-    SQLModel.metadata.create_all(engine)
+    ensure_test_db_schema_from_models(engine)
     return engine
 
 

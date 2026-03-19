@@ -15,7 +15,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, create_engine, select
 
 import auth.routes as auth_routes
 from auth.dependencies import get_db_session
@@ -28,6 +28,7 @@ from db.models import (
     UserRole,
     PasswordResetToken,
 )
+from tests.db_schema_utils import ensure_test_db_schema_from_models
 
 
 GENERIC_FORGOT_DETAIL = "If the account exists, a password reset link has been sent."
@@ -43,7 +44,7 @@ def reset_test_engine():
     if not test_db_url:
         pytest.skip("TEST_DATABASE_URL is not set; skipping password reset DB tests.")
     engine = create_engine(test_db_url, pool_pre_ping=True)
-    SQLModel.metadata.create_all(engine)
+    ensure_test_db_schema_from_models(engine)
     return engine
 
 

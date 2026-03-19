@@ -9,8 +9,29 @@ on:
 
 jobs:
   backend:
-    name: Backend
+    name: Backend (PostgreSQL + Alembic + pytest)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: feelathomenow_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci_user -d feelathomenow_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+psycopg2://ci_user:ci_password@localhost:5432/feelathomenow_ci
+      TEST_DATABASE_URL: postgresql+psycopg2://ci_user:ci_password@localhost:5432/feelathomenow_ci
+      SECRET_KEY: ci-placeholder-secret-key-min-32-chars-for-pytest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
 
@@ -21,23 +42,14 @@ jobs:
 
       - name: Install backend dependencies
         run: |
-          cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Backend import test
-        env:
-          SECRET_KEY: ci-placeholder-secret-key-min-32-chars
-        run: |
-          cd backend
-          python -c "from server import app; print('OK')"
+      - name: Alembic upgrade head
+        run: alembic upgrade head
 
-      - name: Backend tests
-        env:
-          SECRET_KEY: ci-placeholder-secret-key-min-32-chars
-        run: |
-          cd backend
-          pytest tests/test_critical_paths.py -v
+      - name: Backend tests (full suite)
+        run: pytest
 
   frontend:
     name: Frontend
