@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { login as apiLogin } from "../../api/auth";
 
@@ -115,6 +115,21 @@ function AdminLoginPage() {
           >
             {submitting ? "Wird angemeldet…" : "Anmelden"}
           </button>
+
+          <div style={{ marginTop: "6px" }}>
+            <Link
+              to="/forgot-password"
+              style={{
+                display: "inline-block",
+                color: "#2563EB",
+                textDecoration: "none",
+                fontSize: "13px",
+                fontWeight: 700,
+              }}
+            >
+              Passwort vergessen?
+            </Link>
+          </div>
         </form>
       </div>
     </div>
