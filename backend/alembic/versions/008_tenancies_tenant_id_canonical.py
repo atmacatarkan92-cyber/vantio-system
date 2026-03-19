@@ -8,13 +8,15 @@ Create Date: Align tenancies.tenant_id with tenant.id (application canonical tab
 - Add tenant_id_canonical (varchar, FK tenant.id), backfill only where safe (legacy tenants -> tenant by email 1:1).
 - Drop old FK and integer tenant_id, rename tenant_id_canonical -> tenant_id.
 - Optionally backfill invoices.tenant_id from tenancies.tenant_id where set (no-op if all NULL).
-- Rollback-safe: downgrade restores integer column and FK to tenants.id.
+- Greenfield: if table `tenants` does not exist, upgrade/downgrade are no-ops (001 already canonical).
+- Rollback-safe for legacy path: downgrade restores integer column and FK to tenants.id.
 """
 
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect, text
 
 
 revision: str = "008_tenancies_tenant_canonical"
@@ -24,6 +26,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Greenfield (001_initial): tenancies.tenant_id is already VARCHAR FK -> tenant.id; legacy plural
+    # table "tenants" never existed. This revision only applies to old DBs with integer tenant_id -> tenants.id.
+    bind = op.get_bind()
+    if not inspect(bind).has_table("tenants"):
+        return
+
     # 1. Add temporary column for canonical tenant reference (tenant table = app canonical)
     op.add_column(
         "tenancies",
@@ -56,7 +64,7 @@ def upgrade() -> None:
     """))
 
     # 3. Drop old FK and column, rename canonical column to tenant_id
-    op.drop_constraint("tenancies_tenant_fk", "tenancies", type_="foreignkey")
+    op.execute(text("ALTER TABLE tenancies DROP CONSTRAINT IF EXISTS tenancies_tenant_fk"))
     op.drop_column("tenancies", "tenant_id")
     op.alter_column(
         "tenancies",
@@ -85,6 +93,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # If upgrade() was a no-op (no legacy "tenants" table), do not tear down 001's tenancies.tenant_id FK.
+    bind = op.get_bind()
+    if not inspect(bind).has_table("tenants"):
+        return
+
     # 1. Drop FK and index on tenant_id (varchar), then rename column so we can add back integer tenant_id
     op.drop_constraint("tenancies_tenant_id_fkey", "tenancies", type_="foreignkey")
     op.drop_index("ix_tenancies_tenant_id", table_name="tenancies")
