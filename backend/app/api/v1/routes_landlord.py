@@ -130,6 +130,7 @@ def landlord_list_properties(user_landlord: Tuple[User, Landlord] = Depends(get_
         q = (
             select(Property)
             .where(Property.landlord_id == str(landlord.id))
+            .where(Property.organization_id == str(landlord.organization_id))
             .order_by(Property.title)
         )
         properties = list(session.exec(q).all())
@@ -148,7 +149,11 @@ def landlord_get_property(
     session = get_session()
     try:
         prop = session.get(Property, property_id)
-        if not prop or str(prop.landlord_id) != str(landlord.id):
+        if (
+            not prop
+            or str(prop.landlord_id) != str(landlord.id)
+            or str(prop.organization_id) != str(landlord.organization_id)
+        ):
             raise HTTPException(status_code=404, detail="Property not found")
         return _property_to_dict(prop)
     finally:
@@ -165,7 +170,10 @@ def landlord_list_units(
     session = get_session()
     try:
         # Resolve landlord's property ids
-        q_props = select(Property.id).where(Property.landlord_id == str(landlord.id))
+        q_props = select(Property.id).where(
+            Property.landlord_id == str(landlord.id),
+            Property.organization_id == str(landlord.organization_id),
+        )
         landlord_property_ids = [str(row) for row in session.exec(q_props).all()]
         if property_id is not None:
             if property_id not in landlord_property_ids:
@@ -178,6 +186,7 @@ def landlord_list_units(
             .select_from(Unit)
             .join(Property, Unit.property_id == Property.id)
             .where(Unit.property_id.in_(landlord_property_ids))
+            .where(Unit.organization_id == str(landlord.organization_id))
             .order_by(Unit.title)
         )
         rows = session.exec(q).all()
@@ -195,7 +204,10 @@ def landlord_create_unit(
     _, landlord = user_landlord
     session = get_session()
     try:
-        q_props = select(Property.id).where(Property.landlord_id == str(landlord.id))
+        q_props = select(Property.id).where(
+            Property.landlord_id == str(landlord.id),
+            Property.organization_id == str(landlord.organization_id),
+        )
         landlord_property_ids = [str(row) for row in session.exec(q_props).all()]
         if body.property_id not in landlord_property_ids:
             raise HTTPException(
@@ -204,6 +216,7 @@ def landlord_create_unit(
             )
         title = (body.title or "").strip() or "New Unit"
         unit = Unit(
+            organization_id=str(landlord.organization_id),
             title=title,
             address=body.address or "",
             city=body.city or "",
@@ -230,11 +243,17 @@ def landlord_list_tenancies(
     _, landlord = user_landlord
     session = get_session()
     try:
-        q_props = select(Property.id).where(Property.landlord_id == str(landlord.id))
+        q_props = select(Property.id).where(
+            Property.landlord_id == str(landlord.id),
+            Property.organization_id == str(landlord.organization_id),
+        )
         landlord_property_ids = [str(row) for row in session.exec(q_props).all()]
         if not landlord_property_ids:
             return []
-        q_units = select(Unit.id).where(Unit.property_id.in_(landlord_property_ids))
+        q_units = select(Unit.id).where(
+            Unit.property_id.in_(landlord_property_ids),
+            Unit.organization_id == str(landlord.organization_id),
+        )
         landlord_unit_ids = [str(row) for row in session.exec(q_units).all()]
         if not landlord_unit_ids:
             return []
@@ -245,6 +264,7 @@ def landlord_list_tenancies(
             .join(Property, Unit.property_id == Property.id)
             .outerjoin(Tenant, Tenancy.tenant_id == Tenant.id)
             .where(Tenancy.unit_id.in_(landlord_unit_ids))
+            .where(Tenancy.organization_id == str(landlord.organization_id))
             .order_by(Tenancy.move_in_date.desc())
         )
         rows = list(session.exec(q).all())
@@ -277,11 +297,17 @@ def landlord_list_invoices(
     _, landlord = user_landlord
     session = get_session()
     try:
-        q_props = select(Property.id).where(Property.landlord_id == str(landlord.id))
+        q_props = select(Property.id).where(
+            Property.landlord_id == str(landlord.id),
+            Property.organization_id == str(landlord.organization_id),
+        )
         landlord_property_ids = [str(row) for row in session.exec(q_props).all()]
         if not landlord_property_ids:
             return []
-        q_units = select(Unit.id).where(Unit.property_id.in_(landlord_property_ids))
+        q_units = select(Unit.id).where(
+            Unit.property_id.in_(landlord_property_ids),
+            Unit.organization_id == str(landlord.organization_id),
+        )
         landlord_unit_ids = [str(row) for row in session.exec(q_units).all()]
         if not landlord_unit_ids:
             return []
@@ -292,6 +318,7 @@ def landlord_list_invoices(
             .join(Property, Unit.property_id == Property.id)
             .outerjoin(Tenant, Invoice.tenant_id == Tenant.id)
             .where(Invoice.unit_id.in_(landlord_unit_ids))
+            .where(Invoice.organization_id == str(landlord.organization_id))
             .order_by(Invoice.issue_date.desc())
         )
         rows = list(session.exec(stmt).all())

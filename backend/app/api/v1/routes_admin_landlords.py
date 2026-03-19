@@ -10,8 +10,8 @@ from pydantic import BaseModel, EmailStr
 from sqlmodel import select
 
 from db.database import get_session
-from db.models import Landlord
-from auth.dependencies import require_roles
+from db.models import Landlord, User
+from auth.dependencies import get_current_organization, require_roles
 from app.core.rate_limit import limiter
 
 
@@ -56,12 +56,19 @@ class LandlordUpdate(BaseModel):
 
 @router.get("/landlords", response_model=List[dict])
 def admin_list_landlords(
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """List all landlords (Phase D table)."""
     session = get_session()
     try:
-        landlords = list(session.exec(select(Landlord).order_by(Landlord.contact_name, Landlord.company_name)).all())
+        landlords = list(
+            session.exec(
+                select(Landlord)
+                .where(Landlord.organization_id == org_id)
+                .order_by(Landlord.contact_name, Landlord.company_name)
+            ).all()
+        )
         return [_landlord_to_dict(l) for l in landlords]
     finally:
         session.close()
@@ -70,13 +77,14 @@ def admin_list_landlords(
 @router.get("/landlords/{landlord_id}", response_model=dict)
 def admin_get_landlord(
     landlord_id: str,
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """Get a single landlord by id."""
     session = get_session()
     try:
         landlord = session.get(Landlord, landlord_id)
-        if not landlord:
+        if not landlord or str(landlord.organization_id) != org_id:
             raise HTTPException(status_code=404, detail="Landlord not found")
         return _landlord_to_dict(landlord)
     finally:
@@ -88,12 +96,18 @@ def admin_get_landlord(
 def admin_create_landlord(
     request: Request,
     body: LandlordCreate,
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """Create a new landlord."""
     session = get_session()
     try:
+        if body.user_id:
+            u = session.get(User, body.user_id)
+            if not u or str(u.organization_id) != org_id:
+                raise HTTPException(status_code=400, detail="Invalid user reference")
         landlord = Landlord(
+            organization_id=org_id,
             user_id=body.user_id,
             company_name=body.company_name,
             contact_name=(body.contact_name or "").strip() or "—",
@@ -114,15 +128,20 @@ def admin_create_landlord(
 def admin_put_landlord(
     landlord_id: str,
     body: LandlordUpdate,
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """Update a landlord (partial)."""
     session = get_session()
     try:
         landlord = session.get(Landlord, landlord_id)
-        if not landlord:
+        if not landlord or str(landlord.organization_id) != org_id:
             raise HTTPException(status_code=404, detail="Landlord not found")
         data = body.model_dump(exclude_unset=True)
+        if "user_id" in data and data["user_id"]:
+            u = session.get(User, data["user_id"])
+            if not u or str(u.organization_id) != org_id:
+                raise HTTPException(status_code=400, detail="Invalid user reference")
         for k, v in data.items():
             if hasattr(landlord, k):
                 setattr(landlord, k, v)

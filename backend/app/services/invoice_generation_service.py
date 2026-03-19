@@ -11,7 +11,6 @@ from typing import Tuple
 from sqlmodel import select
 
 from db.models import Invoice, Tenancy, TenancyStatus
-from db.organization import get_or_create_default_organization
 
 
 def get_month_bounds(year: int, month: int) -> Tuple[date, date]:
@@ -25,7 +24,7 @@ def build_invoice_number(invoice_id: int, year: int, month: int) -> str:
     return f"INV-{year}-{month:02d}-{invoice_id:04d}"
 
 
-def generate_monthly_invoices(session, year: int, month: int) -> dict:
+def generate_monthly_invoices(session, year: int, month: int, *, organization_id: str) -> dict:
     """
     Find all tenancies with status=active that overlap the given month.
     For each: prorate rent_chf by overlapping days, create one Invoice and PDF.
@@ -39,6 +38,7 @@ def generate_monthly_invoices(session, year: int, month: int) -> dict:
 
     stmt = (
         select(Tenancy)
+        .where(Tenancy.organization_id == organization_id)
         .where(Tenancy.status == TenancyStatus.active)
         .where(Tenancy.move_in_date <= last)
         .where((Tenancy.move_out_date == None) | (Tenancy.move_out_date >= first))
@@ -47,8 +47,7 @@ def generate_monthly_invoices(session, year: int, month: int) -> dict:
 
     created_count = 0
     skipped_count = 0
-    org = get_or_create_default_organization(session)
-    org_id = str(org.id)
+    org_id = organization_id
 
     for t in tenancies:
         tenancy_id = str(t.id)

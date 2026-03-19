@@ -26,7 +26,13 @@ def _prev_month(year: int, month: int) -> tuple:
     return year, month - 1
 
 
-def compute_kpis(session, year: Optional[int] = None, month: Optional[int] = None) -> Dict[str, Any]:
+def compute_kpis(
+    session,
+    year: Optional[int] = None,
+    month: Optional[int] = None,
+    *,
+    organization_id: str,
+) -> Dict[str, Any]:
     """
     Compute dashboard KPIs for the given month (default: current month).
     Returns structured dict with period, summary_cards, unit_performance, vacancy,
@@ -40,7 +46,11 @@ def compute_kpis(session, year: Optional[int] = None, month: Optional[int] = Non
     last = date(y, m, last_day)
     days_in_month = (last - first).days + 1
 
-    units = list(session.exec(select(Unit).order_by(Unit.title)).all())
+    units = list(
+        session.exec(
+            select(Unit).where(Unit.organization_id == organization_id).order_by(Unit.title)
+        ).all()
+    )
     period_label = f"{y}-{m:02d}"
 
     # --- Revenue & profit for current month (from existing services) ---

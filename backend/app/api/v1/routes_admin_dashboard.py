@@ -6,13 +6,13 @@ Protected by require_roles("admin", "manager").
 from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 
 from db.database import get_session
 from db.models import Unit
 from sqlmodel import select
-from auth.dependencies import require_roles
+from auth.dependencies import get_current_organization, require_roles
 
 from app.services.occupancy_service import get_unit_occupancy, get_unit_rooms_occupancy
 from app.services.revenue_forecast import calculate_monthly_revenue
@@ -27,6 +27,7 @@ router = APIRouter(prefix="/api/admin", tags=["admin-dashboard"])
 def admin_get_occupancy(
     unit_id: Optional[str] = Query(None, description="Filter by unit"),
     on_date: Optional[str] = Query(None, description="Date YYYY-MM-DD; default today"),
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """
@@ -41,7 +42,7 @@ def admin_get_occupancy(
                 day = date.fromisoformat(on_date)
             except ValueError:
                 day = date.today()
-        q = select(Unit).order_by(Unit.title)
+        q = select(Unit).where(Unit.organization_id == org_id).order_by(Unit.title)
         if unit_id:
             q = q.where(Unit.id == unit_id)
         units = list(session.exec(q).all())
@@ -77,6 +78,7 @@ def admin_get_occupancy(
 def admin_get_occupancy_rooms(
     unit_id: Optional[str] = Query(..., description="Unit ID"),
     on_date: Optional[str] = Query(None, description="Date YYYY-MM-DD; default today"),
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """
@@ -91,6 +93,9 @@ def admin_get_occupancy_rooms(
                 day = date.fromisoformat(on_date)
             except ValueError:
                 day = date.today()
+        u = session.get(Unit, unit_id)
+        if not u or str(getattr(u, "organization_id", "")) != org_id:
+            raise HTTPException(status_code=404, detail="Unit not found")
         rooms_occupancy = get_unit_rooms_occupancy(session, unit_id, day)
         return {
             "unit_id": unit_id,
@@ -106,6 +111,7 @@ def admin_get_revenue_forecast(
     unit_id: Optional[str] = Query(None, description="Filter by unit"),
     year: Optional[int] = Query(None, description="Year; default current year"),
     month: Optional[int] = Query(None, description="Month (1-12); if omitted, entire year"),
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """
@@ -114,7 +120,7 @@ def admin_get_revenue_forecast(
     session = get_session()
     try:
         y = year or date.today().year
-        q = select(Unit).order_by(Unit.title)
+        q = select(Unit).where(Unit.organization_id == org_id).order_by(Unit.title)
         if unit_id:
             q = q.where(Unit.id == unit_id)
         units = list(session.exec(q).all())
@@ -162,6 +168,7 @@ def admin_get_profit(
     unit_id: Optional[str] = Query(None, description="Filter by unit; if omitted, all units"),
     year: Optional[int] = Query(None, description="Year; default current year"),
     month: Optional[int] = Query(None, description="Month (1-12); default current month"),
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """
@@ -175,7 +182,7 @@ def admin_get_profit(
         m = month if month is not None else today.month
         if not (1 <= m <= 12):
             m = today.month
-        q = select(Unit).order_by(Unit.title)
+        q = select(Unit).where(Unit.organization_id == org_id).order_by(Unit.title)
         if unit_id:
             q = q.where(Unit.id == unit_id)
         units = list(session.exec(q).all())
@@ -207,6 +214,7 @@ def admin_get_profit(
 def admin_get_dashboard_kpis(
     year: Optional[int] = Query(None, description="Year; default current year"),
     month: Optional[int] = Query(None, description="Month (1-12); default current month"),
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """
@@ -216,13 +224,14 @@ def admin_get_dashboard_kpis(
     """
     session = get_session()
     try:
-        return compute_kpis(session, year=year, month=month)
+        return compute_kpis(session, year=year, month=month, organization_id=org_id)
     finally:
         session.close()
 
 
 @router.get("/invoice-summary")
 def admin_get_invoice_summary(
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """
@@ -239,7 +248,9 @@ def admin_get_invoice_summary(
                     COUNT(*) FILTER (WHERE LOWER(TRIM(status)) != 'paid' AND due_date >= CURRENT_DATE) AS open_invoices_count,
                     COALESCE(SUM(amount) FILTER (WHERE LOWER(TRIM(status)) != 'paid'), 0) AS open_invoices_amount
                 FROM invoices
-            """)
+                WHERE organization_id = :org_id
+            """),
+            {"org_id": org_id},
         )
         row = result.fetchone()
         if not row:

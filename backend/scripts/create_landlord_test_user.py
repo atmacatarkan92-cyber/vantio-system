@@ -73,6 +73,7 @@ def main() -> None:
             landlord = session.exec(select(Landlord).where(Landlord.user_id == str(user.id))).first()
             if not landlord:
                 landlord = Landlord(
+                    organization_id=org_id,
                     user_id=user.id,
                     contact_name=TEST_FULL_NAME,
                     email=TEST_EMAIL,
@@ -100,6 +101,7 @@ def main() -> None:
             session.add(creds)
             session.commit()
             landlord = Landlord(
+                organization_id=org_id,
                 user_id=user.id,
                 contact_name=TEST_FULL_NAME,
                 email=TEST_EMAIL,

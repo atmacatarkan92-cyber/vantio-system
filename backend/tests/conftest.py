@@ -47,6 +47,7 @@ def landlord_user_and_landlord():
     )
     landlord = Landlord(
         id=landlord_id,
+        organization_id="test-org-mock-id",
         user_id=user_id,
         contact_name="Test Landlord",
         email="landlord-test@test.example",

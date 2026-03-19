@@ -12,14 +12,24 @@ from sqlalchemy import or_
 from sqlmodel import select
 
 from db.database import get_session
-from db.models import Tenant, User
+from db.models import Tenant, User, Room, Unit
 from db.audit import create_audit_log, model_snapshot
-from db.organization import get_or_create_default_organization
-from auth.dependencies import require_roles
+from auth.dependencies import get_current_organization, require_roles
 from app.core.rate_limit import limiter
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-tenants"])
+
+
+def _assert_room_in_org(session, room_id: Optional[str], org_id: str) -> None:
+    if not room_id:
+        return
+    room = session.get(Room, room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    unit = session.get(Unit, room.unit_id)
+    if not unit or str(getattr(unit, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Room not found")
 
 
 def _tenant_to_dict(t: Tenant) -> dict:
@@ -84,13 +94,12 @@ class TenantListResponse(BaseModel):
 def admin_list_tenants(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """List all tenants."""
     session = get_session()
     try:
-        org = get_or_create_default_organization(session)
-        org_id = str(org.id)
         base_query = (
             select(Tenant)
             .where(Tenant.organization_id == org_id)
@@ -114,15 +123,16 @@ def admin_list_tenants(
 def admin_create_tenant(
     request: Request,
     body: TenantCreate,
+    org_id: str = Depends(get_current_organization),
     current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Create a new tenant."""
     session = get_session()
     try:
-        org = get_or_create_default_organization(session)
+        _assert_room_in_org(session, body.room_id, org_id)
         name = (body.full_name or body.name or "").strip() or "Tenant"
         tenant = Tenant(
-            organization_id=str(org.id),
+            organization_id=org_id,
             name=name,
             email=body.email or "",
             room_id=body.room_id,
@@ -147,18 +157,19 @@ def admin_patch_tenant(
     request: Request,
     tenant_id: str,
     body: TenantPatch,
+    org_id: str = Depends(get_current_organization),
     current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Update a tenant (partial)."""
     session = get_session()
     try:
-        org = get_or_create_default_organization(session)
-        org_id = str(org.id)
         tenant = session.get(Tenant, tenant_id)
-        if not tenant or (getattr(tenant, "organization_id", None) not in (None, org_id)):
+        if not tenant or str(getattr(tenant, "organization_id", "")) != org_id:
             raise HTTPException(status_code=404, detail="Tenant not found")
         old_snapshot = model_snapshot(tenant)
         data = body.model_dump(exclude_unset=True)
+        if "room_id" in data:
+            _assert_room_in_org(session, data.get("room_id"), org_id)
         if "full_name" in data and "name" not in data:
             data["name"] = data.pop("full_name")
         elif "name" in data:
@@ -183,15 +194,14 @@ def admin_patch_tenant(
 def admin_delete_tenant(
     request: Request,
     tenant_id: str,
+    org_id: str = Depends(get_current_organization),
     current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Delete a tenant."""
     session = get_session()
     try:
-        org = get_or_create_default_organization(session)
-        org_id = str(org.id)
         tenant = session.get(Tenant, tenant_id)
-        if not tenant or (getattr(tenant, "organization_id", None) not in (None, org_id)):
+        if not tenant or str(getattr(tenant, "organization_id", "")) != org_id:
             raise HTTPException(status_code=404, detail="Tenant not found")
         old_snapshot = model_snapshot(tenant)
         session.delete(tenant)

@@ -77,6 +77,20 @@ def get_current_user(
     return user
 
 
+def get_current_organization(current_user: User = Depends(get_current_user)) -> str:
+    """
+    Organization id for the authenticated user only.
+    No database fallback and no default organization helper.
+    """
+    oid = getattr(current_user, "organization_id", None)
+    if oid is None or str(oid).strip() == "":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Organization context missing",
+        )
+    return str(oid)
+
+
 def require_roles(*roles: str):
     """Dependency: require current user's role to be one of the given roles (by value)."""
 
@@ -128,6 +142,11 @@ def get_current_landlord(
         select(Landlord).where(Landlord.user_id == str(user.id))
     ).first()
     if not landlord:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No landlord record linked to this account. Please contact support.",
+        )
+    if str(getattr(landlord, "organization_id", "")) != str(getattr(user, "organization_id", "")):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No landlord record linked to this account. Please contact support.",

@@ -42,7 +42,12 @@ class MockSessionUnits:
 
     def get(self, model, id):
         if model is Property and self._created_unit and getattr(self._created_unit, "property_id", None) == id:
-            p = Property(id=id, title=self._created_unit_property_title, landlord_id="test-landlord-id")
+            p = Property(
+                id=id,
+                organization_id="test-org-mock-id",
+                title=self._created_unit_property_title,
+                landlord_id="test-landlord-id",
+            )
             return p
         return None
 
@@ -70,6 +75,7 @@ def landlord_user_and_landlord():
     )
     landlord = Landlord(
         id="test-landlord-id",
+        organization_id="test-org-mock-id",
         user_id="test-user-landlord-id",
         contact_name="Test Landlord",
         email="landlord-test@test.example",
@@ -88,6 +94,7 @@ class TestLandlordUnitsList:
         prop_id = "prop-own-1"
         unit1 = Unit(
             id="unit-1",
+            organization_id="test-org-mock-id",
             title="Unit A",
             address="Addr 1",
             city="Zurich",
@@ -95,7 +102,12 @@ class TestLandlordUnitsList:
             property_id=prop_id,
             created_at=datetime.utcnow(),
         )
-        prop = Property(id=prop_id, title="My Property", landlord_id=str(landlord.id))
+        prop = Property(
+            id=prop_id,
+            organization_id="test-org-mock-id",
+            title="My Property",
+            landlord_id=str(landlord.id),
+        )
         app.dependency_overrides[get_current_landlord] = lambda: (user, landlord)
         try:
             with patch("app.api.v1.routes_landlord.get_session") as mock_get_session:

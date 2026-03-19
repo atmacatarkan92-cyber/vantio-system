@@ -13,14 +13,26 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlmodel import select
 
 from db.database import get_session
-from db.models import Unit, Room, Property, User
+from db.models import Unit, Room, Property, Landlord, User
 from db.audit import create_audit_log, model_snapshot
-from db.organization import get_or_create_default_organization
-from auth.dependencies import require_roles
+from auth.dependencies import get_current_organization, require_roles
 from app.core.rate_limit import limiter
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-units"])
+
+
+def _assert_property_and_landlord_in_org(session, property_id: Optional[str], org_id: str) -> None:
+    if not property_id:
+        return
+    prop = session.get(Property, property_id)
+    if not prop or str(getattr(prop, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Property not found")
+    lid = getattr(prop, "landlord_id", None)
+    if lid:
+        ll = session.get(Landlord, lid)
+        if not ll or str(getattr(ll, "organization_id", "")) != org_id:
+            raise HTTPException(status_code=400, detail="Invalid landlord reference for property")
 
 
 def _unit_to_dict(u: Unit, property_title: Optional[str] = None) -> dict:
@@ -87,13 +99,12 @@ class UnitListResponse(BaseModel):
 def admin_list_units(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """List units (listings dropdown + admin pages) with basic pagination."""
     session = get_session()
     try:
-        org = get_or_create_default_organization(session)
-        org_id = str(org.id)
         base_query = (
             select(Unit, Property)
             .select_from(Unit)
@@ -138,13 +149,14 @@ def admin_list_units(
 @router.get("/units/{unit_id}", response_model=dict)
 def admin_get_unit(
     unit_id: str,
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """Get a single unit by id. Includes property_id and property_title."""
     session = get_session()
     try:
         unit = session.get(Unit, unit_id)
-        if not unit:
+        if not unit or str(getattr(unit, "organization_id", "")) != org_id:
             raise HTTPException(status_code=404, detail="Unit not found")
         property_title = None
         if getattr(unit, "property_id", None):
@@ -161,15 +173,16 @@ def admin_get_unit(
 def admin_create_unit(
     request: Request,
     body: UnitCreate,
+    org_id: str = Depends(get_current_organization),
     current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Create a new unit."""
     session = get_session()
     try:
-        org = get_or_create_default_organization(session)
+        _assert_property_and_landlord_in_org(session, body.property_id, org_id)
         title = (body.title or body.name or "").strip() or "New Unit"
         unit = Unit(
-            organization_id=str(org.id),
+            organization_id=org_id,
             title=title,
             address=body.address or "",
             city=body.city or "",
@@ -196,18 +209,20 @@ def admin_patch_unit(
     request: Request,
     unit_id: str,
     body: UnitPatch,
+    org_id: str = Depends(get_current_organization),
     current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Update a unit (partial)."""
     session = get_session()
     try:
-        org = get_or_create_default_organization(session)
-        org_id = str(org.id)
         unit = session.get(Unit, unit_id)
-        if not unit or (getattr(unit, "organization_id", None) not in (None, org_id)):
+        if not unit or str(getattr(unit, "organization_id", "")) != org_id:
             raise HTTPException(status_code=404, detail="Unit not found")
         old_snapshot = model_snapshot(unit)
         data = body.model_dump(exclude_unset=True)
+        if "property_id" in data:
+            pid = data["property_id"] if data["property_id"] else None
+            _assert_property_and_landlord_in_org(session, pid, org_id)
         if "name" in data and "title" not in data:
             data["title"] = data.pop("name")
         elif "title" in data:
@@ -239,15 +254,14 @@ def admin_patch_unit(
 def admin_delete_unit(
     request: Request,
     unit_id: str,
+    org_id: str = Depends(get_current_organization),
     current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Delete a unit (caller must ensure no dependent listings/rooms)."""
     session = get_session()
     try:
-        org = get_or_create_default_organization(session)
-        org_id = str(org.id)
         unit = session.get(Unit, unit_id)
-        if not unit or (getattr(unit, "organization_id", None) not in (None, org_id)):
+        if not unit or str(getattr(unit, "organization_id", "")) != org_id:
             raise HTTPException(status_code=404, detail="Unit not found")
         old_snapshot = model_snapshot(unit)
         session.delete(unit)
@@ -264,13 +278,14 @@ def admin_delete_unit(
 @router.get("/units/{unit_id}/rooms", response_model=List[dict])
 def admin_list_rooms_for_unit(
     unit_id: str,
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """List rooms belonging to the given unit (listings dropdown + admin)."""
     session = get_session()
     try:
         unit = session.get(Unit, unit_id)
-        if not unit:
+        if not unit or str(getattr(unit, "organization_id", "")) != org_id:
             raise HTTPException(status_code=404, detail="Unit not found")
         rooms = list(
             session.exec(

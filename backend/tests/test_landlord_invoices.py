@@ -51,6 +51,7 @@ def landlord_user_and_landlord():
     )
     landlord = Landlord(
         id="test-landlord-id",
+        organization_id="test-org-mock-id",
         user_id="test-user-landlord-id",
         contact_name="Test Landlord",
         email="landlord-test@test.example",
@@ -68,9 +69,15 @@ class TestLandlordInvoicesList:
         user, landlord = landlord_user_and_landlord
         prop_id = "prop-own-1"
         unit_id = "unit-own-1"
-        tenant = Tenant(id="tenant-1", name="Max Mustermann", email="max@example.com")
+        tenant = Tenant(
+            id="tenant-1",
+            organization_id="test-org-mock-id",
+            name="Max Mustermann",
+            email="max@example.com",
+        )
         unit = Unit(
             id=unit_id,
+            organization_id="test-org-mock-id",
             title="Wohnung 1",
             address="Str 1",
             city="Zurich",
@@ -78,9 +85,15 @@ class TestLandlordInvoicesList:
             property_id=prop_id,
             created_at=datetime.utcnow(),
         )
-        prop = Property(id=prop_id, title="Mein Objekt", landlord_id=str(landlord.id))
+        prop = Property(
+            id=prop_id,
+            organization_id="test-org-mock-id",
+            title="Mein Objekt",
+            landlord_id=str(landlord.id),
+        )
         inv = Invoice(
             id=1,
+            organization_id="test-org-mock-id",
             invoice_number="INV-001",
             unit_id=unit_id,
             tenant_id=tenant.id,

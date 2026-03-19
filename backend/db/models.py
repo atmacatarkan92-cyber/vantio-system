@@ -41,6 +41,7 @@ class Organization(SQLModel, table=True):
 class Landlord(SQLModel, table=True):
     __tablename__ = "landlords"
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
     user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
     company_name: Optional[str] = Field(default=None)
     contact_name: str = Field(default="")

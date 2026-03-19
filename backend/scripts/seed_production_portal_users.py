@@ -166,6 +166,7 @@ def ensure_landlord(session):
     landlord = session.exec(select(Landlord).where(Landlord.user_id == str(user.id))).first()
     if landlord is None:
         landlord = Landlord(
+            organization_id=str(user.organization_id),
             user_id=user.id,
             contact_name=LANDLORD_FULL_NAME,
             email=LANDLORD_EMAIL,

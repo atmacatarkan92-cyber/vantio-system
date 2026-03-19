@@ -14,7 +14,7 @@ from sqlalchemy import or_
 from sqlmodel import select
 
 from db.database import get_session
-from auth.dependencies import require_roles
+from auth.dependencies import get_current_organization, require_roles
 from app.core.rate_limit import limiter
 from app.services.invoice_service import (
     _invoice_to_api,
@@ -24,7 +24,6 @@ from app.services.invoice_service import (
     mark_invoice_unpaid,
 )
 from db.models import Invoice
-from db.organization import get_or_create_default_organization
 
 
 router = APIRouter(prefix="/api", tags=["invoices"])
@@ -45,13 +44,12 @@ class MarkInvoicePaidBody(BaseModel):
 def get_invoices_route(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """List all invoices (API-shaped with effective status) with basic pagination."""
     session = get_session()
     try:
-        org = get_or_create_default_organization(session)
-        org_id = str(org.id)
         _total_rows = session.exec(
             select(func.count())
             .select_from(Invoice)
@@ -81,11 +79,15 @@ def get_invoices_route(
 def update_invoice_status_route(
     invoice_id: int,
     status: Literal["unpaid", "paid", "open", "overdue", "cancelled"],
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """Update invoice status (e.g. open, overdue, cancelled)."""
     session = get_session()
     try:
+        inv = session.get(Invoice, invoice_id)
+        if not inv or str(inv.organization_id or "") != org_id:
+            raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
         result = update_invoice_status(session, invoice_id, status)
         if result is None:
             raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
@@ -100,11 +102,15 @@ def mark_invoice_paid_route(
     request: Request,
     invoice_id: int,
     body: Optional[MarkInvoicePaidBody] = Body(default=None),
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """Set status=paid, paid_at=now; optional payment_method and payment_reference."""
     session = get_session()
     try:
+        inv = session.get(Invoice, invoice_id)
+        if not inv or str(inv.organization_id or "") != org_id:
+            raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
         payment_method = body.payment_method if body else None
         payment_reference = body.payment_reference if body else None
         result = mark_invoice_paid(session, invoice_id, payment_method, payment_reference)
@@ -120,11 +126,15 @@ def mark_invoice_paid_route(
 def mark_invoice_unpaid_route(
     request: Request,
     invoice_id: int,
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """Set status=unpaid, clear paid_at and payment fields."""
     session = get_session()
     try:
+        inv = session.get(Invoice, invoice_id)
+        if not inv or str(inv.organization_id or "") != org_id:
+            raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
         result = mark_invoice_unpaid(session, invoice_id)
         if result is None:
             raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
@@ -136,13 +146,14 @@ def mark_invoice_unpaid_route(
 @router.get("/invoices/{invoice_id}/pdf")
 def download_invoice_pdf_route(
     invoice_id: int,
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """Download invoice PDF by id (file must exist in invoices/ folder)."""
     session = get_session()
     try:
         inv = get_invoice(session, invoice_id)
-        if not inv or not inv.invoice_number:
+        if not inv or str(inv.organization_id or "") != org_id or not inv.invoice_number:
             raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
         file_path = f"invoices/{inv.invoice_number}.pdf"
         if not os.path.exists(file_path):
@@ -161,13 +172,14 @@ def download_invoice_pdf_route(
 def generate_invoices_route(
     request: Request,
     body: InvoiceGenerateBody = Body(..., description="year and month"),
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """Generate monthly invoices from active tenancies; prorate; skip duplicates."""
     session = get_session()
     try:
         from app.services.invoice_generation_service import generate_monthly_invoices
-        result = generate_monthly_invoices(session, body.year, body.month)
+        result = generate_monthly_invoices(session, body.year, body.month, organization_id=org_id)
         return result
     except Exception as e:
         session.rollback()

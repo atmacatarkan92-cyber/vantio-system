@@ -16,8 +16,7 @@ from sqlmodel import select
 from db.database import get_session
 from db.models import Tenancy, TenancyStatus, Tenant, Room, Unit, User
 from db.audit import create_audit_log, model_snapshot
-from db.organization import get_or_create_default_organization
-from auth.dependencies import require_roles
+from auth.dependencies import get_current_organization, require_roles
 from app.core.rate_limit import limiter
 
 
@@ -77,25 +76,33 @@ class TenancyPatch(BaseModel):
         return self
 
 
-def _validate_relations(session, tenant_id: str, room_id: str, unit_id: str) -> Room:
+def _validate_relations(session, tenant_id: str, room_id: str, unit_id: str, org_id: str) -> Room:
     tenant = session.get(Tenant, tenant_id)
-    if not tenant:
+    if not tenant or str(getattr(tenant, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Tenant not found")
     room = session.get(Room, room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
     unit = session.get(Unit, unit_id)
-    if not unit:
+    if not unit or str(getattr(unit, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Unit not found")
     if str(room.unit_id) != str(unit_id):
         raise HTTPException(status_code=400, detail="Room does not belong to unit")
     return room
 
 
-def _overlaps(session, room_id: str, move_in: date, move_out: Optional[date], exclude_tenancy_id: Optional[str] = None) -> bool:
+def _overlaps(
+    session,
+    room_id: str,
+    move_in: date,
+    move_out: Optional[date],
+    org_id: str,
+    exclude_tenancy_id: Optional[str] = None,
+) -> bool:
     """True if another tenancy for this room overlaps the given date range."""
     q = select(Tenancy).where(
         Tenancy.room_id == room_id,
+        Tenancy.organization_id == org_id,
         Tenancy.status.in_([TenancyStatus.active, TenancyStatus.reserved]),
     )
     if exclude_tenancy_id:
@@ -123,13 +130,12 @@ def admin_list_tenancies(
     status: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """List tenancies, optionally filtered by room_id, unit_id, status."""
     session = get_session()
     try:
-        org = get_or_create_default_organization(session)
-        org_id = str(org.id)
         base_query = (
             select(Tenancy)
             .where(Tenancy.organization_id == org_id)
@@ -164,6 +170,7 @@ def admin_list_tenancies(
 @router.get("/rooms/{room_id}/tenancies", response_model=List[dict])
 def admin_list_tenancies_for_room(
     room_id: str,
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """List tenancies for a room."""
@@ -172,7 +179,14 @@ def admin_list_tenancies_for_room(
         room = session.get(Room, room_id)
         if not room:
             raise HTTPException(status_code=404, detail="Room not found")
-        q = select(Tenancy).where(Tenancy.room_id == room_id).order_by(Tenancy.move_in_date.desc())
+        unit = session.get(Unit, room.unit_id)
+        if not unit or str(getattr(unit, "organization_id", "")) != org_id:
+            raise HTTPException(status_code=404, detail="Room not found")
+        q = (
+            select(Tenancy)
+            .where(Tenancy.room_id == room_id, Tenancy.organization_id == org_id)
+            .order_by(Tenancy.move_in_date.desc())
+        )
         tenancies = list(session.exec(q).all())
         return [_tenancy_to_dict(t) for t in tenancies]
     finally:
@@ -184,18 +198,18 @@ def admin_list_tenancies_for_room(
 def admin_create_tenancy(
     request: Request,
     body: TenancyCreate,
+    org_id: str = Depends(get_current_organization),
     current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Create a tenancy. Validates tenant/room/unit and prevents overlapping tenancies."""
     session = get_session()
     try:
-        org = get_or_create_default_organization(session)
-        _validate_relations(session, body.tenant_id, body.room_id, body.unit_id)
+        _validate_relations(session, body.tenant_id, body.room_id, body.unit_id, org_id)
         status = body.status
-        if _overlaps(session, body.room_id, body.move_in_date, body.move_out_date):
+        if _overlaps(session, body.room_id, body.move_in_date, body.move_out_date, org_id):
             raise HTTPException(status_code=400, detail="Another tenancy overlaps this room for the given dates")
         tenancy = Tenancy(
-            organization_id=str(org.id),
+            organization_id=org_id,
             tenant_id=body.tenant_id,
             room_id=body.room_id,
             unit_id=body.unit_id,
@@ -223,15 +237,14 @@ def admin_patch_tenancy(
     request: Request,
     tenancy_id: str,
     body: TenancyPatch,
+    org_id: str = Depends(get_current_organization),
     current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Update a tenancy (partial). Checks overlap when dates change."""
     session = get_session()
     try:
-        org = get_or_create_default_organization(session)
-        org_id = str(org.id)
         tenancy = session.get(Tenancy, tenancy_id)
-        if not tenancy or (getattr(tenancy, "organization_id", None) not in (None, org_id)):
+        if not tenancy or str(getattr(tenancy, "organization_id", "")) != org_id:
             raise HTTPException(status_code=404, detail="Tenancy not found")
         old_snapshot = model_snapshot(tenancy)
         data = body.model_dump(exclude_unset=True)
@@ -241,7 +254,7 @@ def admin_patch_tenancy(
         if move_out is not None and move_out < move_in:
             raise HTTPException(status_code=400, detail="move_out_date must be on/after move_in_date")
 
-        if _overlaps(session, tenancy.room_id, move_in, move_out, exclude_tenancy_id=tenancy_id):
+        if _overlaps(session, tenancy.room_id, move_in, move_out, org_id, exclude_tenancy_id=tenancy_id):
             raise HTTPException(status_code=400, detail="Another tenancy overlaps this room for the given dates")
         for k, v in data.items():
             if hasattr(tenancy, k):
@@ -263,15 +276,14 @@ def admin_patch_tenancy(
 def admin_delete_tenancy(
     request: Request,
     tenancy_id: str,
+    org_id: str = Depends(get_current_organization),
     current_user: User = Depends(require_roles("admin", "manager")),
 ):
     """Delete a tenancy."""
     session = get_session()
     try:
-        org = get_or_create_default_organization(session)
-        org_id = str(org.id)
         tenancy = session.get(Tenancy, tenancy_id)
-        if not tenancy or (getattr(tenancy, "organization_id", None) not in (None, org_id)):
+        if not tenancy or str(getattr(tenancy, "organization_id", "")) != org_id:
             raise HTTPException(status_code=404, detail="Tenancy not found")
         old_snapshot = model_snapshot(tenancy)
         session.delete(tenancy)
