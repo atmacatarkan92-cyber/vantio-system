@@ -28,6 +28,7 @@ import AdminForecastPage from "../pages/admin/AdminForecastPage";
 import AdminPropertyManagersPage from "../pages/admin/AdminPropertyManagersPage";
 import AdminListingsPage from "../pages/admin/AdminListingsPage";
 import AdminPropertiesPage from "../pages/admin/AdminPropertiesPage";
+import AdminUsersPage from "../pages/admin/AdminUsersPage";
 import AdminLoginPage from "../pages/admin/AdminLoginPage";
 import TenantLayout from "../components/tenant/TenantLayout";
 import TenantLoginPage from "../pages/tenant/TenantLoginPage";
@@ -94,6 +95,7 @@ export default function AppRouter() {
               <Route path="leads" element={<AdminLeadsPage />} />
               <Route path="tenants" element={<AdminTenantsPage />} />
               <Route path="landlords" element={<AdminLandlordsPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
               <Route path="properties" element={<AdminPropertiesPage />} />
               <Route path="bewirtschafter" element={<AdminPropertyManagersPage />} />
               <Route path="invoices" element={<AdminInvoicesPage />} />

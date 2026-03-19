@@ -172,6 +172,10 @@ function AdminSidebar() {
             Mieter
           </NavLink>
 
+          <NavLink to="/admin/users" style={unterLinkStyle}>
+            Users
+          </NavLink>
+
           <NavLink to="/admin/landlords" style={unterLinkStyle}>
             Verwaltungen
           </NavLink>
