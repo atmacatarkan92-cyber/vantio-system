@@ -46,7 +46,7 @@ class TestAuthRoleProtection:
         app.dependency_overrides[get_current_landlord] = lambda: (user, landlord)
         try:
             with patch("app.api.v1.routes_landlord.get_session") as mock_get_session:
-                from conftest import MockSession
+                from tests.conftest import MockSession
                 mock_get_session.return_value = MockSession(mock_properties_for_landlord)
                 response = client.get("/api/landlord/properties")
         finally:
@@ -83,7 +83,7 @@ class TestLandlordScoping:
         app.dependency_overrides[get_current_landlord] = lambda: (user, landlord)
         try:
             with patch("app.api.v1.routes_landlord.get_session") as mock_get_session:
-                from conftest import MockSession
+                from tests.conftest import MockSession
                 mock_get_session.return_value = MockSession(mock_properties_for_landlord)
                 response = client.get("/api/landlord/properties")
         finally:
