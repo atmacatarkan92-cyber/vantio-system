@@ -20,5 +20,6 @@ slowapi==0.1.9
 limits==3.6.0
 # Optional: error tracking (init only if SENTRY_DSN is set)
 sentry-sdk[fastapi]>=1.39.0
-# Testing
+# Testing (Starlette/FastAPI TestClient uses httpx)
 pytest>=7.0.0
+httpx>=0.27.0
