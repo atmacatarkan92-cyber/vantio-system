@@ -23,9 +23,9 @@ from models import (
 
 from email_service import send_contact_notification, EmailServiceError
 from db.database import get_session, engine
-from db.models import Inquiry
+from db.models import Inquiry, Listing, Unit
 from auth.routes import router as auth_router
-from auth.dependencies import require_roles
+from auth.dependencies import get_current_organization, require_roles
 from auth.security import validate_auth_config
 from app.core.rate_limit import limiter
 from app.api.v1.routes_apartments import router as apartments_router
@@ -186,7 +186,10 @@ def submit_contact(
     inquiry: ContactInquiryCreate,
     background_tasks: BackgroundTasks,
 ):
-    """Store inquiry in PostgreSQL and optionally send notification email."""
+    """
+    Public contact intake (unauthenticated). Persists Inquiry rows without organization_id;
+    not mixed into org-scoped admin listings. See GET /api/admin/inquiries for org filtering.
+    """
     if engine is None:
         raise HTTPException(status_code=503, detail="Service temporarily unavailable.")
     session = get_session()
@@ -244,14 +247,28 @@ def send_email_notification_sync(inquiry_id: str):
 # ==================== Admin API ====================
 
 @api_router.get("/admin/inquiries", response_model=List[dict])
-def get_inquiries(_: None = Depends(require_roles("admin", "manager"))):
-    """List inquiries from PostgreSQL, newest first."""
+def get_inquiries(
+    _: None = Depends(require_roles("admin", "manager")),
+    org_id: str = Depends(get_current_organization),
+):
+    """
+    Organization-scoped: only inquiries linked to a listing whose unit belongs to the
+    current admin/manager organization (Inquiry.apartment_id -> Listing -> Unit).
+    Rows with apartment_id NULL are omitted here (public intake only; not attributed to an org).
+    """
     if engine is None:
         raise HTTPException(status_code=503, detail="PostgreSQL is not configured.")
     session = get_session()
     try:
         from sqlmodel import select
-        stmt = select(Inquiry).order_by(Inquiry.created_at.desc()).limit(500)
+        stmt = (
+            select(Inquiry)
+            .join(Listing, Inquiry.apartment_id == Listing.id)
+            .join(Unit, Listing.unit_id == Unit.id)
+            .where(Unit.organization_id == org_id)
+            .order_by(Inquiry.created_at.desc())
+            .limit(500)
+        )
         rows = session.exec(stmt).all()
         return [
             {

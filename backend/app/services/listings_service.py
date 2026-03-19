@@ -12,7 +12,7 @@ from typing import List, Optional
 
 from sqlmodel import select
 
-from db.models import City, Listing, ListingImage, ListingAmenity
+from db.models import City, Listing, ListingImage, ListingAmenity, Unit
 
 
 def _slug_normalize(text: str) -> str:
@@ -88,8 +88,8 @@ def _listing_to_api_shape(
 
 def get_listings(session, city_code: Optional[str] = None) -> List[dict]:
     """
-    Return published listings in the legacy API shape.
-    If city_code is set, filter by city (City.code).
+    Public catalog: published listings only (legacy API shape). Not organization-filtered;
+    used by the public website. Admin listing management uses get_all_listings_admin.
     """
     statement = (
         select(Listing, City)
@@ -246,11 +246,13 @@ def _listing_to_admin_shape(listing, city, images, amenities):
     }
 
 
-def get_all_listings_admin(session) -> List[dict]:
-    """Return all listings (including unpublished) for admin. Ordered by sort_order, created_at."""
+def get_all_listings_admin(session, *, organization_id: str) -> List[dict]:
+    """Return listings for one organization (via Unit.organization_id). Includes unpublished."""
     statement = (
         select(Listing, City)
         .join(City, Listing.city_id == City.id)
+        .join(Unit, Listing.unit_id == Unit.id)
+        .where(Unit.organization_id == organization_id)
         .order_by(Listing.sort_order, Listing.created_at)
     )
     rows = session.exec(statement).all()
@@ -286,12 +288,13 @@ def get_all_listings_admin(session) -> List[dict]:
     return result
 
 
-def get_listing_admin_by_id(session, listing_id: str) -> Optional[dict]:
-    """Return one listing by id for admin (including unpublished), or None."""
+def get_listing_admin_by_id(session, listing_id: str, *, organization_id: str) -> Optional[dict]:
+    """Return one listing by id for admin if its unit belongs to organization_id, else None."""
     statement = (
         select(Listing, City)
         .join(City, Listing.city_id == City.id)
-        .where(Listing.id == listing_id)
+        .join(Unit, Listing.unit_id == Unit.id)
+        .where(Listing.id == listing_id, Unit.organization_id == organization_id)
     )
     row = session.exec(statement).first()
     if not row:
@@ -312,7 +315,7 @@ def get_listing_admin_by_id(session, listing_id: str) -> Optional[dict]:
     return _listing_to_admin_shape(listing, city, images, amenities)
 
 
-def create_listing(session, data: dict) -> dict:
+def create_listing(session, data: dict, *, organization_id: str) -> dict:
     """
     Create a new listing with optional images and amenities.
     data: unit_id, city_id, slug (optional; auto-generated from city + title if missing),
@@ -364,10 +367,10 @@ def create_listing(session, data: dict) -> dict:
         ))
     session.commit()
 
-    return get_listing_admin_by_id(session, str(listing.id))
+    return get_listing_admin_by_id(session, str(listing.id), organization_id=organization_id)
 
 
-def update_listing(session, listing_id: str, data: dict) -> Optional[dict]:
+def update_listing(session, listing_id: str, data: dict, *, organization_id: str) -> Optional[dict]:
     """
     Update a listing by id. data can contain any listing fields + images[], amenities[].
     If images or amenities are provided, they replace existing ones.
@@ -375,8 +378,14 @@ def update_listing(session, listing_id: str, data: dict) -> Optional[dict]:
     listing = session.get(Listing, listing_id)
     if not listing:
         return None
+    unit_row = session.get(Unit, listing.unit_id)
+    if not unit_row or str(unit_row.organization_id) != organization_id:
+        return None
 
     if "unit_id" in data:
+        nu = session.get(Unit, data["unit_id"])
+        if not nu or str(nu.organization_id) != organization_id:
+            return None
         listing.unit_id = data["unit_id"]
     if "room_id" in data:
         listing.room_id = data.get("room_id")
@@ -436,13 +445,16 @@ def update_listing(session, listing_id: str, data: dict) -> Optional[dict]:
     session.add(listing)
     session.commit()
     session.refresh(listing)
-    return get_listing_admin_by_id(session, listing_id)
+    return get_listing_admin_by_id(session, listing_id, organization_id=organization_id)
 
 
-def delete_listing(session, listing_id: str) -> bool:
-    """Delete a listing and its images and amenities. Returns True if deleted."""
+def delete_listing(session, listing_id: str, *, organization_id: str) -> bool:
+    """Delete a listing and its images and amenities if it belongs to organization_id."""
     listing = session.get(Listing, listing_id)
     if not listing:
+        return False
+    unit_row = session.get(Unit, listing.unit_id)
+    if not unit_row or str(unit_row.organization_id) != organization_id:
         return False
     for img in session.exec(select(ListingImage).where(ListingImage.listing_id == listing_id)).all():
         session.delete(img)

@@ -1,3 +1,11 @@
+"""
+Public marketing API: intentionally unauthenticated.
+
+Returns only published listings (is_published) in the legacy website shape. No admin fields,
+no tenant/invoice data. Published listings from all organizations may appear (shared public site);
+this is not an org-scoped admin surface.
+"""
+
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
@@ -12,8 +20,7 @@ router = APIRouter(prefix="/api", tags=["apartments"])
 @router.get("/apartments", response_model=List[dict])
 async def get_apartments(city: Optional[str] = Query(None)):
     """
-    Return published listings from PostgreSQL. Response shape unchanged for the frontend.
-    Includes slug for each listing (Phase C).
+    Published listings only (PostgreSQL). Same response shape as legacy frontend.
     """
     if engine is None:
         return []
@@ -27,7 +34,7 @@ async def get_apartments(city: Optional[str] = Query(None)):
 @router.get("/apartments/{apartment_id}", response_model=dict)
 async def get_apartment(apartment_id: str):
     """
-    Return one published listing by id or slug. Tries id first, then slug.
+    One published listing by id or slug (tries id first). Unpublished or missing -> 404.
     """
     if engine is None:
         raise HTTPException(status_code=404, detail="Apartment not found")

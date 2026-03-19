@@ -13,10 +13,9 @@ from sqlmodel import Session
 
 from db.database import get_session
 from db.models import City, Unit, Room
-from auth.dependencies import require_roles
+from auth.dependencies import get_current_organization, require_roles
 from app.services.listings_service import (
     get_all_listings_admin,
-    get_listing_admin_by_id,
     create_listing,
     update_listing,
     delete_listing,
@@ -29,22 +28,27 @@ router = APIRouter(prefix="/api/admin", tags=["admin-listings"])
 def _validate_listing_relations(
     session: Session,
     *,
+    organization_id: str,
     unit_id: Optional[str] = None,
     city_id: Optional[str] = None,
     room_id: Optional[str] = None,
 ) -> None:
     """
-    Ensure referenced unit, city, and (if provided) room exist.
-    Raises HTTPException 404 with a clear message if any is missing.
+    Ensure referenced unit (same org), city, and optional room (unit in same org) exist.
     """
     if unit_id is not None:
-        if session.get(Unit, unit_id) is None:
+        u = session.get(Unit, unit_id)
+        if u is None or str(u.organization_id) != organization_id:
             raise HTTPException(status_code=404, detail="Unit not found")
     if city_id is not None:
         if session.get(City, city_id) is None:
             raise HTTPException(status_code=404, detail="City not found")
     if room_id is not None and room_id.strip() != "":
-        if session.get(Room, room_id) is None:
+        room = session.get(Room, room_id)
+        if room is None:
+            raise HTTPException(status_code=404, detail="Room not found")
+        ru = session.get(Unit, room.unit_id)
+        if ru is None or str(ru.organization_id) != organization_id:
             raise HTTPException(status_code=404, detail="Room not found")
 
 
@@ -130,12 +134,13 @@ class ListingUpdate(BaseModel):
 
 @router.get("/listings", response_model=List[dict])
 def admin_list_listings(
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
-    """List all listings (including unpublished) for admin."""
+    """List listings for the current organization (including unpublished)."""
     session = get_session()
     try:
-        return get_all_listings_admin(session)
+        return get_all_listings_admin(session, organization_id=org_id)
     finally:
         session.close()
 
@@ -143,6 +148,7 @@ def admin_list_listings(
 @router.post("/listings", response_model=dict)
 def admin_create_listing(
     body: ListingCreate,
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """Create a new listing with optional images and amenities. Unit and city must exist."""
@@ -150,6 +156,7 @@ def admin_create_listing(
     try:
         _validate_listing_relations(
             session,
+            organization_id=org_id,
             unit_id=body.unit_id,
             city_id=body.city_id,
             room_id=body.room_id,
@@ -157,7 +164,7 @@ def admin_create_listing(
         data = body.model_dump()
         data["images"] = [x.model_dump() for x in body.images]
         data["amenities"] = [x.model_dump() for x in body.amenities]
-        return create_listing(session, data)
+        return create_listing(session, data, organization_id=org_id)
     finally:
         session.close()
 
@@ -166,6 +173,7 @@ def admin_create_listing(
 def admin_update_listing(
     listing_id: str,
     body: ListingUpdate,
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """Update a listing by id. Omitted fields are left unchanged; images/amenities replace existing if provided."""
@@ -174,6 +182,7 @@ def admin_update_listing(
         data = body.model_dump(exclude_unset=True)
         _validate_listing_relations(
             session,
+            organization_id=org_id,
             unit_id=data.get("unit_id"),
             city_id=data.get("city_id"),
             room_id=data.get("room_id"),
@@ -182,7 +191,7 @@ def admin_update_listing(
             data["images"] = [x.model_dump() for x in body.images]
         if body.amenities is not None:
             data["amenities"] = [x.model_dump() for x in body.amenities]
-        result = update_listing(session, listing_id, data)
+        result = update_listing(session, listing_id, data, organization_id=org_id)
         if result is None:
             raise HTTPException(status_code=404, detail="Listing not found")
         return result
@@ -194,6 +203,7 @@ def admin_update_listing(
 def admin_patch_listing_status(
     listing_id: str,
     body: ListingStatusUpdate,
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """Update only is_published and/or availability_status. Both fields optional."""
@@ -202,7 +212,7 @@ def admin_patch_listing_status(
         data = body.model_dump(exclude_unset=True)
         if "availability_status" in data and data["availability_status"] not in ("available", "occupied", "unavailable"):
             raise HTTPException(status_code=400, detail="availability_status must be available, occupied, or unavailable")
-        result = update_listing(session, listing_id, data)
+        result = update_listing(session, listing_id, data, organization_id=org_id)
         if result is None:
             raise HTTPException(status_code=404, detail="Listing not found")
         return result
@@ -213,12 +223,13 @@ def admin_patch_listing_status(
 @router.delete("/listings/{listing_id}")
 def admin_delete_listing(
     listing_id: str,
+    org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
 ):
     """Delete a listing and its images and amenities."""
     session = get_session()
     try:
-        if not delete_listing(session, listing_id):
+        if not delete_listing(session, listing_id, organization_id=org_id):
             raise HTTPException(status_code=404, detail="Listing not found")
         return {"status": "deleted", "id": listing_id}
     finally:
