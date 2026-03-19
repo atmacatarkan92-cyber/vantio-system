@@ -15,19 +15,19 @@ jest.mock("react-router-dom", () => ({
 
 const mockLogin = jest.fn();
 const mockLogout = jest.fn();
-jest.mock("../../../contexts/AuthContext", () => ({
+jest.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({
     login: mockLogin,
     logout: mockLogout,
   }),
 }));
 
-jest.mock("../../../api/auth", () => ({
+jest.mock("../../api/auth", () => ({
   login: jest.fn(),
   getMe: jest.fn(),
 }));
 
-import { login as apiLogin, getMe } from "../../../api/auth";
+import { login as apiLogin, getMe } from "../../api/auth";
 
 describe("LandlordLoginPage role guard", () => {
   beforeEach(() => {
@@ -44,8 +44,9 @@ describe("LandlordLoginPage role guard", () => {
       </MemoryRouter>
     );
 
-    await userEvent.type(screen.getByLabelText(/e-mail/i), "admin@test.com");
-    await userEvent.type(screen.getByLabelText(/passwort/i), "password");
+    // Labels are not wired with htmlFor/id; use placeholders (matches real DOM).
+    await userEvent.type(screen.getByPlaceholderText("ihre@email.ch"), "admin@test.com");
+    await userEvent.type(screen.getByPlaceholderText("••••••••"), "password");
     screen.getByRole("button", { name: /anmelden/i }).click();
 
     await waitFor(() => {

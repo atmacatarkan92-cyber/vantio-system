@@ -58,6 +58,30 @@ let webpackConfig = {
       return webpackConfig;
     },
   },
+  // react-router / react-router-dom v7 use package "exports"; Jest's resolver can fail with
+  // "Cannot find module 'react-router-dom'" unless mapped to the published CJS files.
+  jest: {
+    configure: (jestConfig) => {
+      const moduleNameMapper = {
+        ...(jestConfig.moduleNameMapper || {}),
+        "^react-router-dom$": path.join(
+          __dirname,
+          "node_modules/react-router-dom/dist/index.js"
+        ),
+        "^react-router$": path.join(
+          __dirname,
+          "node_modules/react-router/dist/development/index.js"
+        ),
+        "^react-router/dom$": path.join(
+          __dirname,
+          "node_modules/react-router/dist/development/dom-export.js"
+        ),
+      };
+      const polyfillPath = path.join(__dirname, "jest.polyfills.js");
+      const setupFiles = [polyfillPath, ...(jestConfig.setupFiles || [])];
+      return { ...jestConfig, moduleNameMapper, setupFiles };
+    },
+  },
 };
 
 webpackConfig.devServer = (devServerConfig) => {

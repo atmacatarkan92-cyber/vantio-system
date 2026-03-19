@@ -2,11 +2,11 @@
  * Landlord units page: list, empty state, create form submit success, error on failed create.
  */
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import LandlordUnitsPage from "./LandlordUnitsPage";
 
-jest.mock("../../../api/landlordApi", () => ({
+jest.mock("../../api/landlordApi", () => ({
   fetchLandlordUnits: jest.fn(),
   fetchLandlordProperties: jest.fn(),
   createLandlordUnit: jest.fn(),
@@ -16,7 +16,7 @@ import {
   fetchLandlordUnits,
   fetchLandlordProperties,
   createLandlordUnit,
-} from "../../../api/landlordApi";
+} from "../../api/landlordApi";
 
 describe("LandlordUnitsPage", () => {
   beforeEach(() => {
@@ -80,12 +80,14 @@ describe("LandlordUnitsPage", () => {
     });
 
     await user.click(screen.getByRole("button", { name: /neue einheit/i }));
-    await waitFor(() => {
-      expect(screen.getByLabelText(/objekt \*/i)).toBeInTheDocument();
+    const createFormHeading = await screen.findByRole("heading", {
+      name: /Neue Einheit anlegen/i,
     });
+    const createForm = createFormHeading.closest("form");
+    const propertySelect = within(createForm).getByRole("combobox");
 
-    await user.selectOptions(screen.getByLabelText(/objekt \*/i), "p1");
-    await user.type(screen.getByLabelText(/titel \/ name \*/i), "Neue Wohnung");
+    await user.selectOptions(propertySelect, "p1");
+    await user.type(screen.getByPlaceholderText(/z\. B\. Wohnung 1/i), "Neue Wohnung");
     await user.type(screen.getByPlaceholderText(/z\. B\. Zürich/i), "Bern");
     await user.click(screen.getByRole("button", { name: /einheit erstellen/i }));
 
@@ -123,12 +125,14 @@ describe("LandlordUnitsPage", () => {
     });
 
     await user.click(screen.getByRole("button", { name: /neue einheit/i }));
-    await waitFor(() => {
-      expect(screen.getByLabelText(/objekt \*/i)).toBeInTheDocument();
+    const createFormHeading = await screen.findByRole("heading", {
+      name: /Neue Einheit anlegen/i,
     });
+    const createForm = createFormHeading.closest("form");
+    const propertySelect = within(createForm).getByRole("combobox");
 
-    await user.selectOptions(screen.getByLabelText(/objekt \*/i), "p1");
-    await user.type(screen.getByLabelText(/titel \/ name \*/i), "Unit");
+    await user.selectOptions(propertySelect, "p1");
+    await user.type(screen.getByPlaceholderText(/z\. B\. Wohnung 1/i), "Unit");
     await user.click(screen.getByRole("button", { name: /einheit erstellen/i }));
 
     await waitFor(() => {

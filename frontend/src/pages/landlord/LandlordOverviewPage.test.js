@@ -5,7 +5,7 @@ import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import LandlordOverviewPage from "./LandlordOverviewPage";
 
-jest.mock("../../../api/landlordApi", () => ({
+jest.mock("../../api/landlordApi", () => ({
   fetchLandlordMe: jest.fn(),
   fetchLandlordProperties: jest.fn(),
   fetchLandlordUnits: jest.fn(),
@@ -19,7 +19,7 @@ import {
   fetchLandlordUnits,
   fetchLandlordTenancies,
   fetchLandlordInvoices,
-} from "../../../api/landlordApi";
+} from "../../api/landlordApi";
 
 function mockAllResolved(overrides = {}) {
   fetchLandlordMe.mockResolvedValue({
@@ -62,8 +62,8 @@ describe("LandlordOverviewPage", () => {
     });
     expect(screen.getByText("Test Landlord")).toBeInTheDocument();
     expect(screen.getByText("landlord@test.com")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument(); // properties count
-    expect(screen.getByText("1")).toBeInTheDocument(); // units count
+    // Summary shows "1" for both properties and units — multiple nodes match.
+    expect(screen.getAllByText("1").length).toBeGreaterThanOrEqual(2);
   });
 
   it("renders error state when API fails", async () => {

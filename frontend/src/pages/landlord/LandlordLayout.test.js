@@ -6,7 +6,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import LandlordLayout from "../../components/landlord/LandlordLayout";
 
-jest.mock("../../../contexts/AuthContext", () => ({
+jest.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({
     isLandlordAuthenticated: false,
     loading: false,

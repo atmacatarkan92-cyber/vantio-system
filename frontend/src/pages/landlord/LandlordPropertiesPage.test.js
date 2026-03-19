@@ -5,11 +5,11 @@ import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import LandlordPropertiesPage from "./LandlordPropertiesPage";
 
-jest.mock("../../../api/landlordApi", () => ({
+jest.mock("../../api/landlordApi", () => ({
   fetchLandlordProperties: jest.fn(),
 }));
 
-import { fetchLandlordProperties } from "../../../api/landlordApi";
+import { fetchLandlordProperties } from "../../api/landlordApi";
 
 describe("LandlordPropertiesPage", () => {
   beforeEach(() => {
