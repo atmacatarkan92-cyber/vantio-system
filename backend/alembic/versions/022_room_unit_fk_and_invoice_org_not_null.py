@@ -1,6 +1,6 @@
 """Enforce room.unit_id -> unit (CASCADE) and invoices.organization_id NOT NULL.
 
-Revision ID: 022_integrity_room_unit_invoice_org
+Revision ID: 022_room_unit_fk_invoice_org
 Revises: 021_invoice_org_backfill
 Create Date: 2026-03-20
 
@@ -16,7 +16,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import text
 
-revision: str = "022_integrity_room_unit_invoice_org"
+revision: str = "022_room_unit_fk_invoice_org"
 down_revision: Union[str, None] = "021_invoice_org_backfill"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
