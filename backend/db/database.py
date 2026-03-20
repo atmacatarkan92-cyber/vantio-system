@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 from sqlalchemy.engine import URL
 from sqlmodel import SQLModel, create_engine, Session
 
+from db.rls import apply_pg_organization_context, get_request_organization_id
+
 # Load backend/.env before reading DATABASE_URL (so scripts and app both see it)
 _backend_root = Path(__file__).resolve().parent.parent
 load_dotenv(_backend_root / ".env")
@@ -53,9 +55,23 @@ engine = (
 
 
 def get_session():
+    """
+    New Session per call. If the request ContextVar has an org id (set in get_current_user),
+    apply_pg_organization_context stores rls_org_id on the session and opens a transaction
+    (SELECT 1) so Session.after_begin runs SET LOCAL before any ORM query on this session.
+
+    Without ContextVar, session.info has no rls_org_id — RLS denies tenant tables.
+
+    Scripts: call apply_pg_organization_context(session, org_id) before tenant operations,
+    or rely on ContextVar when running code under the same request model.
+    """
     if engine is None:
         raise RuntimeError("PostgreSQL is not configured. Set DATABASE_URL or PG_* env vars.")
-    return Session(engine)
+    session = Session(engine)
+    oid = get_request_organization_id()
+    if oid:
+        apply_pg_organization_context(session, oid)
+    return session
 
 
 def create_db():

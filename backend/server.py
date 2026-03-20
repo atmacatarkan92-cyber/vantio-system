@@ -23,6 +23,7 @@ from models import (
 
 from email_service import send_contact_notification, EmailServiceError
 from db.database import get_session, engine
+from db.rls import OrgContextMiddleware
 from db.models import Inquiry, Listing, Unit
 from auth.routes import router as auth_router
 from auth.dependencies import get_current_organization, require_roles
@@ -322,6 +323,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Last registered = outermost: reset tenant ContextVar before each request (RLS session context).
+app.add_middleware(OrgContextMiddleware)
 
 
 app.include_router(auth_router)

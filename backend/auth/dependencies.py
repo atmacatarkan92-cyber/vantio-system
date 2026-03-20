@@ -6,6 +6,7 @@ from sqlmodel import select
 
 from db.database import get_session
 from db.models import User, Tenant, Landlord, UserCredentials
+from db.rls import apply_pg_organization_context, set_request_organization_id
 from auth.security import decode_access_token, password_version_ts
 
 
@@ -74,6 +75,14 @@ def get_current_user(
                 detail="Invalid authentication credentials",
             )
 
+    _oid = getattr(user, "organization_id", None)
+    if _oid is not None and str(_oid).strip():
+        _s = str(_oid).strip()
+        set_request_organization_id(_s)
+        apply_pg_organization_context(session, _s)
+    else:
+        set_request_organization_id(None)
+
     return user
 
 
@@ -88,7 +97,9 @@ def get_current_organization(current_user: User = Depends(get_current_user)) -> 
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Organization context missing",
         )
-    return str(oid)
+    s = str(oid).strip()
+    set_request_organization_id(s)
+    return s
 
 
 def require_roles(*roles: str):
