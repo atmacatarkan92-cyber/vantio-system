@@ -1,13 +1,74 @@
-import os
 import logging
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Email, To, Content
+import os
+import smtplib
+import ssl
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import formataddr
 
 logger = logging.getLogger(__name__)
 
 
 class EmailServiceError(Exception):
     pass
+
+
+def _smtp_config() -> tuple[str, int, str, str, str] | None:
+    """Load SMTP settings from environment. Never log passwords."""
+    host = (os.environ.get("SMTP_HOST") or "").strip()
+    port_raw = (os.environ.get("SMTP_PORT") or "").strip()
+    user = (os.environ.get("SMTP_USER") or "").strip()
+    password = os.environ.get("SMTP_PASS")  # may contain spaces; do not strip secrets blindly
+    from_addr = (os.environ.get("SMTP_FROM") or "").strip()
+
+    if not host or not port_raw or not user or password is None or password == "" or not from_addr:
+        return None
+
+    try:
+        port = int(port_raw)
+    except ValueError:
+        return None
+
+    return (host, port, user, password, from_addr)
+
+
+def send_email(to_email: str, subject: str, html_content: str) -> bool:
+    """
+    Send a single HTML email via Microsoft 365–compatible SMTP (STARTTLS + auth).
+
+    Uses SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM from the environment.
+    """
+    cfg = _smtp_config()
+    if cfg is None:
+        logger.error(
+            "SMTP not configured: require SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM"
+        )
+        raise EmailServiceError("Email service not configured")
+
+    host, port, user, password, from_addr = cfg
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = formataddr(("FeelAtHomeNow", from_addr))
+    msg["To"] = to_email
+    msg.attach(MIMEText(html_content, "html", "utf-8"))
+
+    context = ssl.create_default_context()
+    try:
+        with smtplib.SMTP(host, port, timeout=30) as server:
+            server.ehlo()
+            server.starttls(context=context)
+            server.ehlo()
+            server.login(user, password)
+            server.send_message(msg)
+    except smtplib.SMTPException as e:
+        logger.error("SMTP send failed: %s", e)
+        raise EmailServiceError("Failed to send email") from e
+    except OSError as e:
+        logger.error("SMTP connection error: %s", e)
+        raise EmailServiceError("Failed to send email") from e
+
+    return True
 
 
 def send_contact_notification(
@@ -17,11 +78,11 @@ def send_contact_notification(
     contact_phone: str,
     contact_company: str,
     contact_message: str,
-    language: str = "de"
+    language: str = "de",
 ) -> bool:
     """
     Send email notification when contact form is submitted.
-    
+
     Args:
         recipient_email: Email to send notification to (info@feelathomenow.ch)
         contact_name: Name of the person who submitted the form
@@ -30,17 +91,10 @@ def send_contact_notification(
         contact_company: Company name (optional)
         contact_message: Message content
         language: Language preference (de/en)
-    
+
     Returns:
         bool: True if email was sent successfully
     """
-    sendgrid_api_key = os.environ.get("SENDGRID_API_KEY")
-    sender_email = os.environ.get("SENDER_EMAIL", "noreply@feelathomenow.ch")
-    
-    if not sendgrid_api_key:
-        logger.error("SENDGRID_API_KEY not configured")
-        raise EmailServiceError("Email service not configured")
-    
     # Create subject based on language
     if language == "de":
         subject = f"Neue Kontaktanfrage von {contact_name}"
@@ -54,7 +108,7 @@ def send_contact_notification(
         phone_label = "Phone"
         message_label = "Message"
         footer_text = "This email was automatically sent from the FeelAtHomeNow contact form."
-    
+
     # Build HTML email content
     html_content = f"""
     <!DOCTYPE html>
@@ -159,28 +213,10 @@ def send_contact_notification(
     </body>
     </html>
     """
-    
-    message = Mail(
-        from_email=Email(sender_email, "FeelAtHomeNow"),
-        to_emails=To(recipient_email),
-        subject=subject,
-        html_content=Content("text/html", html_content)
-    )
-    
-    try:
-        sg = SendGridAPIClient(sendgrid_api_key)
-        response = sg.send(message)
-        
-        if response.status_code in [200, 201, 202]:
-            logger.info(f"Email sent successfully to {recipient_email}")
-            return True
-        else:
-            logger.error(f"SendGrid returned status {response.status_code}")
-            raise EmailServiceError(f"Email sending failed with status {response.status_code}")
-            
-    except Exception as e:
-        logger.error(f"Failed to send email: {str(e)}")
-        raise EmailServiceError(f"Failed to send email: {str(e)}")
+
+    send_email(recipient_email, subject, html_content)
+    logger.info("Contact notification email sent successfully to %s", recipient_email)
+    return True
 
 
 def send_password_reset_email(recipient_email: str, reset_link: str) -> bool:
@@ -191,13 +227,6 @@ def send_password_reset_email(recipient_email: str, reset_link: str) -> bool:
     - Caller generates the reset token and includes it in reset_link.
     - This function does not log reset_link.
     """
-    sendgrid_api_key = os.environ.get("SENDGRID_API_KEY")
-    if not sendgrid_api_key:
-        logger.error("SENDGRID_API_KEY not configured")
-        raise EmailServiceError("Email service not configured")
-
-    sender_email = os.environ.get("SENDER_EMAIL", "noreply@feelathomenow.ch")
-
     subject = "Reset your FeelAtHomeNow password"
     html_content = f"""
     <!DOCTYPE html>
@@ -220,19 +249,6 @@ def send_password_reset_email(recipient_email: str, reset_link: str) -> bool:
     </html>
     """.strip()
 
-    message = Mail(
-        from_email=Email(sender_email, "FeelAtHomeNow"),
-        to_emails=To(recipient_email),
-        subject=subject,
-        html_content=Content("text/html", html_content),
-    )
-
-    sg = SendGridAPIClient(sendgrid_api_key)
-    response = sg.send(message)
-
-    if response.status_code in [200, 201, 202]:
-        logger.info("Password reset email sent")
-        return True
-
-    logger.error(f"SendGrid returned status {response.status_code} for password reset email")
-    raise EmailServiceError(f"Email sending failed with status {response.status_code}")
+    send_email(recipient_email, subject, html_content)
+    logger.info("Password reset email sent")
+    return True

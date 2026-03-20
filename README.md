@@ -47,7 +47,7 @@ cp .env.example .env
 # - MONGO_URL
 # - AIRTABLE_API_KEY
 # - AIRTABLE_BASE_ID
-# - SENDGRID_API_KEY (optional)
+# - SMTP_* (optional; see Environment Variables)
 
 # Run the server
 uvicorn server:app --reload --port 8001
@@ -116,8 +116,11 @@ Create a table named "Apartments" with these fields:
 | AIRTABLE_API_KEY | Airtable Personal Access Token |
 | AIRTABLE_BASE_ID | Airtable Base ID |
 | AIRTABLE_TABLE_NAME | Table name (default: "Apartments") |
-| SENDGRID_API_KEY | SendGrid API key (optional) |
-| SENDER_EMAIL | From email for notifications |
+| SMTP_HOST | SMTP server (e.g. Microsoft 365) |
+| SMTP_PORT | SMTP port (typically 587 for STARTTLS) |
+| SMTP_USER | SMTP username (often mailbox address) |
+| SMTP_PASS | SMTP password or app password |
+| SMTP_FROM | From address (must be allowed for that mailbox) |
 | NOTIFICATION_EMAIL | Email to receive contact notifications |
 
 ### Frontend (.env)
