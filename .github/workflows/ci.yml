@@ -58,6 +58,7 @@ jobs:
 
       - name: Backend tests (full suite)
         env:
+          ENVIRONMENT: production
           DATABASE_URL: postgresql+psycopg2://feelathomenow_app:feelathomenow_app_ci_pass@localhost:5432/feelathomenow_ci
           TEST_DATABASE_URL: postgresql+psycopg2://feelathomenow_app:feelathomenow_app_ci_pass@localhost:5432/feelathomenow_ci
         run: pytest
