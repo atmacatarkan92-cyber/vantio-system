@@ -12,6 +12,8 @@ import pytest
 _backend_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_backend_root))
 os.environ.setdefault("SECRET_KEY", "test-secret-key-min-32-chars-for-pytest")
+# Match CI: skip create_db() on startup when DATABASE_URL is present from .env (Alembic owns schema in prod).
+os.environ.setdefault("ENVIRONMENT", "production")
 # Do not set DATABASE_URL so engine is None and app starts without DB (endpoints that need DB use overrides)
 
 

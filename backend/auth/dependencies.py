@@ -6,6 +6,7 @@ from sqlmodel import select
 
 from db.database import get_session
 from db.models import User, Tenant, Landlord, UserCredentials
+from app.core.request_logging import set_log_user_id
 from db.rls import apply_pg_organization_context, set_request_organization_id
 from auth.security import decode_access_token, password_version_ts
 
@@ -56,6 +57,8 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Inactive or unknown user",
         )
+
+    set_log_user_id(str(user.id))
 
     # Invalidate access tokens issued before last password change (`pv` claim).
     creds = session.exec(

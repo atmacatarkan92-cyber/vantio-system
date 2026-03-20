@@ -13,6 +13,10 @@ from db.rls import OrgContextMiddleware
 from auth.routes import router as auth_router
 from auth.security import validate_auth_config
 from app.core.rate_limit import limiter
+from app.core.request_logging import (
+    RequestLoggingMiddleware,
+    install_request_context_filter,
+)
 from app.core.security_headers_middleware import SecurityHeadersMiddleware
 from app.api.v1.routes_health import router as health_router
 from app.api.v1.routes_contact import router as contact_router
@@ -53,8 +57,13 @@ if _sentry_dsn:
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format=(
+        "%(asctime)s - %(name)s - %(levelname)s - "
+        "request_id=%(request_id)s org_id=%(org_id)s user_id=%(user_id)s - %(message)s"
+    ),
 )
+
+install_request_context_filter()
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +129,10 @@ else:
     CORS_ORIGINS = _DEV_ORIGINS.copy()
     if _frontend_url and _frontend_url not in CORS_ORIGINS:
         CORS_ORIGINS.append(_frontend_url)
+
+# First registered = innermost: request_id + lifecycle logs wrap the app directly so
+# org/user ContextVars are still set when the response returns (before OrgContext reset).
+app.add_middleware(RequestLoggingMiddleware)
 
 app.add_middleware(SecurityHeadersMiddleware)
 
