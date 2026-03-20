@@ -4,12 +4,10 @@ Tests for /api/admin/units pagination behavior.
 
 from typing import List, Tuple
 
-from unittest.mock import patch
-
 import pytest
 from fastapi.testclient import TestClient
 
-from auth.dependencies import get_current_user
+from auth.dependencies import get_current_user, get_db_session
 from db.models import User, UserRole
 
 
@@ -121,16 +119,20 @@ def admin_user():
 class TestAdminUnitsPagination:
     def test_default_pagination(self, client: TestClient, app, admin_user):
         rows = _make_units(10)
+
+        def _override_db():
+            yield _UnitsMockSession(rows)
+
         app.dependency_overrides[get_current_user] = lambda: admin_user
+        app.dependency_overrides[get_db_session] = _override_db
         try:
-            with patch("app.api.v1.routes_admin_units.get_session") as mock_get_session:
-                mock_get_session.return_value = _UnitsMockSession(rows)
-                response = client.get(
-                    "/api/admin/units",
-                    headers={"Authorization": "Bearer test-token"},
-                )
+            response = client.get(
+                "/api/admin/units",
+                headers={"Authorization": "Bearer test-token"},
+            )
         finally:
             app.dependency_overrides.pop(get_current_user, None)
+            app.dependency_overrides.pop(get_db_session, None)
 
         assert response.status_code == 200
         data = response.json()
@@ -142,16 +144,20 @@ class TestAdminUnitsPagination:
 
     def test_custom_skip_and_limit(self, client: TestClient, app, admin_user):
         rows = _make_units(30)
+
+        def _override_db():
+            yield _UnitsMockSession(rows)
+
         app.dependency_overrides[get_current_user] = lambda: admin_user
+        app.dependency_overrides[get_db_session] = _override_db
         try:
-            with patch("app.api.v1.routes_admin_units.get_session") as mock_get_session:
-                mock_get_session.return_value = _UnitsMockSession(rows)
-                response = client.get(
-                    "/api/admin/units?skip=5&limit=10",
-                    headers={"Authorization": "Bearer test-token"},
-                )
+            response = client.get(
+                "/api/admin/units?skip=5&limit=10",
+                headers={"Authorization": "Bearer test-token"},
+            )
         finally:
             app.dependency_overrides.pop(get_current_user, None)
+            app.dependency_overrides.pop(get_db_session, None)
 
         assert response.status_code == 200
         data = response.json()
@@ -164,16 +170,20 @@ class TestAdminUnitsPagination:
 
     def test_max_limit_enforced(self, client: TestClient, app, admin_user):
         rows = _make_units(300)
+
+        def _override_db():
+            yield _UnitsMockSession(rows)
+
         app.dependency_overrides[get_current_user] = lambda: admin_user
+        app.dependency_overrides[get_db_session] = _override_db
         try:
-            with patch("app.api.v1.routes_admin_units.get_session") as mock_get_session:
-                mock_get_session.return_value = _UnitsMockSession(rows)
-                response = client.get(
-                    "/api/admin/units?skip=0&limit=201",
-                    headers={"Authorization": "Bearer test-token"},
-                )
+            response = client.get(
+                "/api/admin/units?skip=0&limit=201",
+                headers={"Authorization": "Bearer test-token"},
+            )
         finally:
             app.dependency_overrides.pop(get_current_user, None)
+            app.dependency_overrides.pop(get_db_session, None)
 
         # FastAPI validation should reject limit > 200
         assert response.status_code == 422

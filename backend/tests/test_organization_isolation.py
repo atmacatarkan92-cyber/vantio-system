@@ -3,12 +3,10 @@ Organization isolation: cross-org admin operations must fail; same-org reads suc
 Uses dependency overrides + minimal session mocks (no production DB).
 """
 
-from unittest.mock import patch
-
 import pytest
 from fastapi.testclient import TestClient
 
-from auth.dependencies import get_current_user
+from auth.dependencies import get_current_user, get_db_session
 from db.models import Landlord, Property, Unit, User, UserRole
 from server import app
 
@@ -45,16 +43,19 @@ class TestAdminUnitIsolation:
             def close(self):
                 pass
 
+        def _override_db():
+            yield MiniSession()
+
         app.dependency_overrides[get_current_user] = lambda: admin_user_org_a
+        app.dependency_overrides[get_db_session] = _override_db
         try:
-            with patch("app.api.v1.routes_admin_units.get_session") as m:
-                m.return_value = MiniSession()
-                r = client.get(
-                    "/api/admin/units/unit-in-b",
-                    headers={"Authorization": "Bearer test-token"},
-                )
+            r = client.get(
+                "/api/admin/units/unit-in-b",
+                headers={"Authorization": "Bearer test-token"},
+            )
         finally:
             app.dependency_overrides.pop(get_current_user, None)
+            app.dependency_overrides.pop(get_db_session, None)
 
         assert r.status_code == 404
         assert "not found" in r.json().get("detail", "").lower()
@@ -78,16 +79,19 @@ class TestAdminUnitIsolation:
             def close(self):
                 pass
 
+        def _override_db():
+            yield MiniSession()
+
         app.dependency_overrides[get_current_user] = lambda: admin_user_org_a
+        app.dependency_overrides[get_db_session] = _override_db
         try:
-            with patch("app.api.v1.routes_admin_units.get_session") as m:
-                m.return_value = MiniSession()
-                r = client.get(
-                    "/api/admin/units/unit-in-a",
-                    headers={"Authorization": "Bearer test-token"},
-                )
+            r = client.get(
+                "/api/admin/units/unit-in-a",
+                headers={"Authorization": "Bearer test-token"},
+            )
         finally:
             app.dependency_overrides.pop(get_current_user, None)
+            app.dependency_overrides.pop(get_db_session, None)
 
         assert r.status_code == 200
         assert r.json()["id"] == "unit-in-a"
@@ -123,17 +127,20 @@ class TestAdminPropertyLandlordIsolation:
             def close(self):
                 pass
 
+        def _override_db():
+            yield MiniSession()
+
         app.dependency_overrides[get_current_user] = lambda: admin_user_org_a
+        app.dependency_overrides[get_db_session] = _override_db
         try:
-            with patch("app.api.v1.routes_admin_properties.get_session") as m:
-                m.return_value = MiniSession()
-                r = client.post(
-                    "/api/admin/properties",
-                    json={"landlord_id": "landlord-b", "title": "Should fail"},
-                    headers={"Authorization": "Bearer test-token"},
-                )
+            r = client.post(
+                "/api/admin/properties",
+                json={"landlord_id": "landlord-b", "title": "Should fail"},
+                headers={"Authorization": "Bearer test-token"},
+            )
         finally:
             app.dependency_overrides.pop(get_current_user, None)
+            app.dependency_overrides.pop(get_db_session, None)
 
         assert r.status_code == 400
 
@@ -167,17 +174,20 @@ class TestAdminPropertyLandlordIsolation:
             def close(self):
                 pass
 
+        def _override_db():
+            yield MiniSession()
+
         app.dependency_overrides[get_current_user] = lambda: admin_user_org_a
+        app.dependency_overrides[get_db_session] = _override_db
         try:
-            with patch("app.api.v1.routes_admin_properties.get_session") as m:
-                m.return_value = MiniSession()
-                r = client.post(
-                    "/api/admin/properties",
-                    json={"landlord_id": "landlord-a", "title": "OK"},
-                    headers={"Authorization": "Bearer test-token"},
-                )
+            r = client.post(
+                "/api/admin/properties",
+                json={"landlord_id": "landlord-a", "title": "OK"},
+                headers={"Authorization": "Bearer test-token"},
+            )
         finally:
             app.dependency_overrides.pop(get_current_user, None)
+            app.dependency_overrides.pop(get_db_session, None)
 
         assert r.status_code == 200
         assert len(created) == 1

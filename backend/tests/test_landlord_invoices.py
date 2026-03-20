@@ -3,14 +3,20 @@ Backend tests for landlord invoices workflow (Phase 1): read-only.
 Landlord only sees own invoices; empty when none; another landlord's invoices excluded.
 """
 from datetime import date, datetime
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from auth.dependencies import get_current_landlord
+from auth.dependencies import get_current_landlord, get_db_session
 from db.models import User, Landlord, UserRole, Property, Unit, Invoice, Tenant
 from server import app
+
+
+def _override_db(mock_session):
+    def _gen():
+        yield mock_session
+
+    return _gen
 
 
 class MockSessionInvoices:
@@ -104,16 +110,18 @@ class TestLandlordInvoicesList:
             due_date=date(2024, 2, 1),
         )
         app.dependency_overrides[get_current_landlord] = lambda: (user, landlord)
+        app.dependency_overrides[get_db_session] = _override_db(
+            MockSessionInvoices(
+                property_ids=[prop_id],
+                unit_ids=[unit_id],
+                invoice_rows=[(inv, unit, prop, tenant)],
+            )
+        )
         try:
-            with patch("app.api.v1.routes_landlord.get_session") as mock_get_session:
-                mock_get_session.return_value = MockSessionInvoices(
-                    property_ids=[prop_id],
-                    unit_ids=[unit_id],
-                    invoice_rows=[(inv, unit, prop, tenant)],
-                )
-                response = client.get("/api/landlord/invoices")
+            response = client.get("/api/landlord/invoices")
         finally:
             app.dependency_overrides.pop(get_current_landlord, None)
+            app.dependency_overrides.pop(get_db_session, None)
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
@@ -138,16 +146,18 @@ class TestLandlordInvoicesList:
         prop_id = "prop-own-1"
         unit_id = "unit-own-1"
         app.dependency_overrides[get_current_landlord] = lambda: (user, landlord)
+        app.dependency_overrides[get_db_session] = _override_db(
+            MockSessionInvoices(
+                property_ids=[prop_id],
+                unit_ids=[unit_id],
+                invoice_rows=[],
+            )
+        )
         try:
-            with patch("app.api.v1.routes_landlord.get_session") as mock_get_session:
-                mock_get_session.return_value = MockSessionInvoices(
-                    property_ids=[prop_id],
-                    unit_ids=[unit_id],
-                    invoice_rows=[],
-                )
-                response = client.get("/api/landlord/invoices")
+            response = client.get("/api/landlord/invoices")
         finally:
             app.dependency_overrides.pop(get_current_landlord, None)
+            app.dependency_overrides.pop(get_db_session, None)
         assert response.status_code == 200
         assert response.json() == []
 
@@ -159,15 +169,17 @@ class TestLandlordInvoicesList:
         own_prop_id = "prop-own-1"
         own_unit_id = "unit-own-1"
         app.dependency_overrides[get_current_landlord] = lambda: (user, landlord)
+        app.dependency_overrides[get_db_session] = _override_db(
+            MockSessionInvoices(
+                property_ids=[own_prop_id],
+                unit_ids=[own_unit_id],
+                invoice_rows=[],
+            )
+        )
         try:
-            with patch("app.api.v1.routes_landlord.get_session") as mock_get_session:
-                mock_get_session.return_value = MockSessionInvoices(
-                    property_ids=[own_prop_id],
-                    unit_ids=[own_unit_id],
-                    invoice_rows=[],
-                )
-                response = client.get("/api/landlord/invoices")
+            response = client.get("/api/landlord/invoices")
         finally:
             app.dependency_overrides.pop(get_current_landlord, None)
+            app.dependency_overrides.pop(get_db_session, None)
         assert response.status_code == 200
         assert response.json() == []

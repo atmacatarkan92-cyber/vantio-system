@@ -1,7 +1,7 @@
 """
 POST /api/admin/users — integration tests (PostgreSQL via TEST_DATABASE_URL).
 
-Patches routes_admin_users.get_session so the route uses the same session as auth overrides.
+Overrides get_db_session so auth and admin routes share the same test session.
 """
 
 from __future__ import annotations
@@ -17,19 +17,6 @@ from auth.dependencies import get_db_session
 from auth.security import hash_password
 from db.models import Organization, RefreshToken, User, UserCredentials, UserRole
 from tests.db_schema_utils import ensure_test_db_schema_from_models
-
-
-class _SessionNoClose:
-    """Proxy so admin_create_user's session.close() does not close the shared test session."""
-
-    def __init__(self, inner: Session):
-        self._inner = inner
-
-    def __getattr__(self, name: str):
-        return getattr(self._inner, name)
-
-    def close(self) -> None:
-        pass
 
 
 @pytest.fixture(scope="session")
@@ -125,7 +112,7 @@ def two_orgs_and_admins(admin_users_session: Session, admin_users_cleanup):
 
 @pytest.fixture
 def override_db_and_patch_admin_users_session(admin_users_session: Session, app):
-    """Auth + admin user routes share the same DB session."""
+    """Auth + admin user routes share the same DB session via get_db_session."""
 
     def _override() -> Generator[Session, None, None]:
         try:
@@ -134,18 +121,9 @@ def override_db_and_patch_admin_users_session(admin_users_session: Session, app)
             pass
 
     app.dependency_overrides[get_db_session] = _override
-
-    def _fake_get_session():
-        return _SessionNoClose(admin_users_session)
-
-    import app.api.v1.routes_admin_users as routes_admin_users_mod
-
-    original = routes_admin_users_mod.get_session
-    routes_admin_users_mod.get_session = _fake_get_session
     try:
         yield
     finally:
-        routes_admin_users_mod.get_session = original
         app.dependency_overrides.pop(get_db_session, None)
 
 

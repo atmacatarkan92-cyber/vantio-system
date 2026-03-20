@@ -2,15 +2,21 @@
 Critical-path backend tests: health, auth/role protection, landlord scoping, tenant/landlord boundary.
 Uses FastAPI TestClient; no production secrets. Landlord success tests use dependency/session overrides.
 """
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from auth.dependencies import get_current_landlord, get_current_user
+from auth.dependencies import get_current_landlord, get_current_user, get_db_session
 from auth.security import create_access_token
 from db.models import UserRole
 from server import app
+
+
+def _override_db(mock_session):
+    def _gen():
+        yield mock_session
+
+    return _gen
 
 
 def _make_token(sub: str, role: str) -> str:
@@ -42,15 +48,16 @@ class TestAuthRoleProtection:
         landlord_user_and_landlord,
         mock_properties_for_landlord,
     ):
+        from tests.conftest import MockSession
+
         user, landlord = landlord_user_and_landlord
         app.dependency_overrides[get_current_landlord] = lambda: (user, landlord)
+        app.dependency_overrides[get_db_session] = _override_db(MockSession(mock_properties_for_landlord))
         try:
-            with patch("app.api.v1.routes_landlord.get_session") as mock_get_session:
-                from tests.conftest import MockSession
-                mock_get_session.return_value = MockSession(mock_properties_for_landlord)
-                response = client.get("/api/landlord/properties")
+            response = client.get("/api/landlord/properties")
         finally:
             app.dependency_overrides.pop(get_current_landlord, None)
+            app.dependency_overrides.pop(get_db_session, None)
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
@@ -79,15 +86,16 @@ class TestLandlordScoping:
         landlord_user_and_landlord,
         mock_properties_for_landlord,
     ):
+        from tests.conftest import MockSession
+
         user, landlord = landlord_user_and_landlord
         app.dependency_overrides[get_current_landlord] = lambda: (user, landlord)
+        app.dependency_overrides[get_db_session] = _override_db(MockSession(mock_properties_for_landlord))
         try:
-            with patch("app.api.v1.routes_landlord.get_session") as mock_get_session:
-                from tests.conftest import MockSession
-                mock_get_session.return_value = MockSession(mock_properties_for_landlord)
-                response = client.get("/api/landlord/properties")
+            response = client.get("/api/landlord/properties")
         finally:
             app.dependency_overrides.pop(get_current_landlord, None)
+            app.dependency_overrides.pop(get_db_session, None)
         assert response.status_code == 200
         for p in response.json():
             assert p["landlord_id"] == str(landlord.id)

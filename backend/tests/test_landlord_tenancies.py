@@ -3,14 +3,20 @@ Backend tests for landlord tenancies workflow (Phase 1): read-only.
 Landlord only receives tenancies for own properties/units; empty when none; other landlord's excluded.
 """
 from datetime import date, datetime
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from auth.dependencies import get_current_landlord
+from auth.dependencies import get_current_landlord, get_db_session
 from db.models import User, Landlord, UserRole, Property, Unit, Tenancy, Tenant, TenancyStatus
 from server import app
+
+
+def _override_db(mock_session):
+    def _gen():
+        yield mock_session
+
+    return _gen
 
 
 class MockSessionTenancies:
@@ -104,16 +110,18 @@ class TestLandlordTenanciesList:
             created_at=datetime.utcnow(),
         )
         app.dependency_overrides[get_current_landlord] = lambda: (user, landlord)
+        app.dependency_overrides[get_db_session] = _override_db(
+            MockSessionTenancies(
+                property_ids=[prop_id],
+                unit_ids=[unit_id],
+                tenancy_rows=[(tenancy, unit, prop, tenant)],
+            )
+        )
         try:
-            with patch("app.api.v1.routes_landlord.get_session") as mock_get_session:
-                mock_get_session.return_value = MockSessionTenancies(
-                    property_ids=[prop_id],
-                    unit_ids=[unit_id],
-                    tenancy_rows=[(tenancy, unit, prop, tenant)],
-                )
-                response = client.get("/api/landlord/tenancies")
+            response = client.get("/api/landlord/tenancies")
         finally:
             app.dependency_overrides.pop(get_current_landlord, None)
+            app.dependency_overrides.pop(get_db_session, None)
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
@@ -137,16 +145,18 @@ class TestLandlordTenanciesList:
         prop_id = "prop-own-1"
         unit_id = "unit-own-1"
         app.dependency_overrides[get_current_landlord] = lambda: (user, landlord)
+        app.dependency_overrides[get_db_session] = _override_db(
+            MockSessionTenancies(
+                property_ids=[prop_id],
+                unit_ids=[unit_id],
+                tenancy_rows=[],
+            )
+        )
         try:
-            with patch("app.api.v1.routes_landlord.get_session") as mock_get_session:
-                mock_get_session.return_value = MockSessionTenancies(
-                    property_ids=[prop_id],
-                    unit_ids=[unit_id],
-                    tenancy_rows=[],
-                )
-                response = client.get("/api/landlord/tenancies")
+            response = client.get("/api/landlord/tenancies")
         finally:
             app.dependency_overrides.pop(get_current_landlord, None)
+            app.dependency_overrides.pop(get_db_session, None)
         assert response.status_code == 200
         assert response.json() == []
 
@@ -159,15 +169,17 @@ class TestLandlordTenanciesList:
         own_unit_id = "unit-own-1"
         # Mock: landlord only has own_prop_id and own_unit_id; tenancy list is empty (no tenancies in their units)
         app.dependency_overrides[get_current_landlord] = lambda: (user, landlord)
+        app.dependency_overrides[get_db_session] = _override_db(
+            MockSessionTenancies(
+                property_ids=[own_prop_id],
+                unit_ids=[own_unit_id],
+                tenancy_rows=[],
+            )
+        )
         try:
-            with patch("app.api.v1.routes_landlord.get_session") as mock_get_session:
-                mock_get_session.return_value = MockSessionTenancies(
-                    property_ids=[own_prop_id],
-                    unit_ids=[own_unit_id],
-                    tenancy_rows=[],
-                )
-                response = client.get("/api/landlord/tenancies")
+            response = client.get("/api/landlord/tenancies")
         finally:
             app.dependency_overrides.pop(get_current_landlord, None)
+            app.dependency_overrides.pop(get_db_session, None)
         assert response.status_code == 200
         assert response.json() == []

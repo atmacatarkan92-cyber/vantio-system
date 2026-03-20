@@ -1,16 +1,22 @@
 """
 Backend tests for landlord units workflow (Phase 1): list only own units, create for own property, 403 for other.
-Uses dependency override and mocked get_session; no real DB.
+Uses dependency override and mocked DB session via get_db_session; no real DB.
 """
 from datetime import datetime
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from auth.dependencies import get_current_landlord
+from auth.dependencies import get_current_landlord, get_db_session
 from db.models import User, Landlord, UserRole, Property, Unit
 from server import app
+
+
+def _override_db(mock_session):
+    def _gen():
+        yield mock_session
+
+    return _gen
 
 
 class MockSessionUnits:
@@ -109,15 +115,17 @@ class TestLandlordUnitsList:
             landlord_id=str(landlord.id),
         )
         app.dependency_overrides[get_current_landlord] = lambda: (user, landlord)
+        app.dependency_overrides[get_db_session] = _override_db(
+            MockSessionUnits(
+                property_ids=[prop_id],
+                unit_rows=[(unit1, prop)],
+            )
+        )
         try:
-            with patch("app.api.v1.routes_landlord.get_session") as mock_get_session:
-                mock_get_session.return_value = MockSessionUnits(
-                    property_ids=[prop_id],
-                    unit_rows=[(unit1, prop)],
-                )
-                response = client.get("/api/landlord/units")
+            response = client.get("/api/landlord/units")
         finally:
             app.dependency_overrides.pop(get_current_landlord, None)
+            app.dependency_overrides.pop(get_db_session, None)
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
@@ -132,15 +140,17 @@ class TestLandlordUnitsList:
         user, landlord = landlord_user_and_landlord
         prop_id = "prop-own-1"
         app.dependency_overrides[get_current_landlord] = lambda: (user, landlord)
+        app.dependency_overrides[get_db_session] = _override_db(
+            MockSessionUnits(
+                property_ids=[prop_id],
+                unit_rows=[],
+            )
+        )
         try:
-            with patch("app.api.v1.routes_landlord.get_session") as mock_get_session:
-                mock_get_session.return_value = MockSessionUnits(
-                    property_ids=[prop_id],
-                    unit_rows=[],
-                )
-                response = client.get("/api/landlord/units")
+            response = client.get("/api/landlord/units")
         finally:
             app.dependency_overrides.pop(get_current_landlord, None)
+            app.dependency_overrides.pop(get_db_session, None)
         assert response.status_code == 200
         assert response.json() == []
 
@@ -154,26 +164,28 @@ class TestLandlordUnitsCreate:
         user, landlord = landlord_user_and_landlord
         prop_id = "prop-own-1"
         app.dependency_overrides[get_current_landlord] = lambda: (user, landlord)
+        app.dependency_overrides[get_db_session] = _override_db(
+            MockSessionUnits(
+                property_ids=[prop_id],
+                unit_rows=[],
+                created_unit_property_title="My Property",
+            )
+        )
         try:
-            with patch("app.api.v1.routes_landlord.get_session") as mock_get_session:
-                mock_get_session.return_value = MockSessionUnits(
-                    property_ids=[prop_id],
-                    unit_rows=[],
-                    created_unit_property_title="My Property",
-                )
-                response = client.post(
-                    "/api/landlord/units",
-                    json={
-                        "property_id": prop_id,
-                        "title": "New Apartment",
-                        "address": "Street 1",
-                        "city": "Zurich",
-                        "rooms": 3,
-                        "type": "Wohnung",
-                    },
-                )
+            response = client.post(
+                "/api/landlord/units",
+                json={
+                    "property_id": prop_id,
+                    "title": "New Apartment",
+                    "address": "Street 1",
+                    "city": "Zurich",
+                    "rooms": 3,
+                    "type": "Wohnung",
+                },
+            )
         finally:
             app.dependency_overrides.pop(get_current_landlord, None)
+            app.dependency_overrides.pop(get_db_session, None)
         assert response.status_code == 200
         data = response.json()
         assert data["title"] == "New Apartment"
@@ -190,25 +202,26 @@ class TestLandlordUnitsCreate:
         own_prop_id = "prop-own-1"
         other_prop_id = "prop-other-2"
         app.dependency_overrides[get_current_landlord] = lambda: (user, landlord)
+        app.dependency_overrides[get_db_session] = _override_db(
+            MockSessionUnits(
+                property_ids=[own_prop_id],
+                unit_rows=[],
+            )
+        )
         try:
-            with patch("app.api.v1.routes_landlord.get_session") as mock_get_session:
-                # Current landlord only has own_prop_id
-                mock_get_session.return_value = MockSessionUnits(
-                    property_ids=[own_prop_id],
-                    unit_rows=[],
-                )
-                response = client.post(
-                    "/api/landlord/units",
-                    json={
-                        "property_id": other_prop_id,
-                        "title": "Hacked Unit",
-                        "address": "",
-                        "city": "Bern",
-                        "rooms": 1,
-                    },
-                )
+            response = client.post(
+                "/api/landlord/units",
+                json={
+                    "property_id": other_prop_id,
+                    "title": "Hacked Unit",
+                    "address": "",
+                    "city": "Bern",
+                    "rooms": 1,
+                },
+            )
         finally:
             app.dependency_overrides.pop(get_current_landlord, None)
+            app.dependency_overrides.pop(get_db_session, None)
         assert response.status_code == 403
         data = response.json()
         assert "detail" in data

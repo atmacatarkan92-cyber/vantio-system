@@ -290,9 +290,8 @@ class TestAdminUnitsAuth:
     def test_get_units_with_admin_auth_returns_200(self, client: TestClient, app):
         """
         Provide an admin user via get_current_user override and
-        patch get_session used by the admin units route so no real DB is needed.
+        override get_db_session for the admin units route so no real DB is needed.
         """
-        from unittest.mock import patch
 
         admin_user = User(
             id="admin-user-id",
@@ -303,48 +302,49 @@ class TestAdminUnitsAuth:
             is_active=True,
         )
 
+        class _UnitsMockSession:
+            def __init__(self, rows=None):
+                self._rows = rows or []
+                self._org_id = "test-org-id"
+
+            def exec(self, _query):
+                class Result:
+                    def __init__(self, data):
+                        self._data = data
+
+                    def all(self):
+                        return list(self._data)
+
+                if "FROM organization" in str(_query):
+                    from db.models import Organization
+                    return Result([Organization(id=self._org_id, name="Default")])
+                return Result(self._rows)
+
+            def close(self):
+                pass
+
+            def add(self, _obj):
+                pass
+
+            def commit(self):
+                pass
+
+            def refresh(self, _obj):
+                pass
+
+        def _override_db():
+            yield _UnitsMockSession(rows=[])
+
         app.dependency_overrides[get_current_user] = lambda: admin_user
+        app.dependency_overrides[get_db_session] = _override_db
         try:
-            # Minimal session mock compatible with admin_list_units:
-            # uses exec(...).all() and close().
-            class _UnitsMockSession:
-                def __init__(self, rows=None):
-                    self._rows = rows or []
-                    self._org_id = "test-org-id"
-
-                def exec(self, _query):
-                    class Result:
-                        def __init__(self, data):
-                            self._data = data
-
-                        def all(self):
-                            return list(self._data)
-
-                    if "FROM organization" in str(_query):
-                        from db.models import Organization
-                        return Result([Organization(id=self._org_id, name="Default")])
-                    return Result(self._rows)
-
-                def close(self):
-                    pass
-
-                def add(self, _obj):
-                    pass
-
-                def commit(self):
-                    pass
-
-                def refresh(self, _obj):
-                    pass
-
-            with patch("app.api.v1.routes_admin_units.get_session") as mock_get_session:
-                mock_get_session.return_value = _UnitsMockSession(rows=[])
-                response = client.get(
-                    "/api/admin/units",
-                    headers={"Authorization": "Bearer test-token"},
-                )
+            response = client.get(
+                "/api/admin/units",
+                headers={"Authorization": "Bearer test-token"},
+            )
         finally:
             app.dependency_overrides.pop(get_current_user, None)
+            app.dependency_overrides.pop(get_db_session, None)
 
         assert response.status_code == 200
         data = response.json()
