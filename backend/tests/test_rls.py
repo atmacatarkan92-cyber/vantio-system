@@ -51,6 +51,7 @@ def seeded_tenant_rows(engine, rls_test_ids):
     org_a = ids["org_a"]
     org_b = ids["org_b"]
 
+    # Commit org + unit first so the room policy's EXISTS (.. unit ..) sees a committed unit row.
     with Session(engine) as session:
         apply_pg_organization_context(session, org_a)
         session.add(Organization(id=org_a, name="RLS test A"))
@@ -64,6 +65,10 @@ def seeded_tenant_rows(engine, rls_test_ids):
                 rooms=2,
             )
         )
+        session.commit()
+
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
         session.add(
             Room(
                 id=ids["room_a"],
@@ -174,6 +179,10 @@ def test_rls_insert_unit_without_context_fails(engine):
         msg = str(exc.value).lower()
         assert "row-level security" in msg or "policy" in msg
     finally:
+        with Session(engine) as session:
+            apply_pg_organization_context(session, org_x)
+            session.execute(text("DELETE FROM unit WHERE id = :id"), {"id": uid})
+            session.commit()
         with Session(engine) as session:
             session.execute(text("DELETE FROM organization WHERE id = :id"), {"id": org_x})
             session.commit()
