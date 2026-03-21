@@ -5,6 +5,8 @@ Revises: 023_rls_unit_tenant_room
 
 Idempotent: safe if columns/FKs/indexes already exist. Does not modify prior migration files.
 Downgrade: not supported (one-way repair).
+
+Drift repair only: VARCHAR organization keys (no UUID type migration).
 """
 
 from __future__ import annotations
@@ -14,14 +16,11 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy import text
-from sqlalchemy.dialects import postgresql
 
 revision: str = "024_repair_org_schema_from_drift"
 down_revision: Union[str, None] = "023_rls_unit_tenant_room"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
-
-_UUID_PG = postgresql.UUID(as_uuid=True)
 
 
 def _column_exists(conn, table: str, column: str) -> bool:
@@ -68,7 +67,7 @@ def _ensure_organization_table(conn) -> None:
         text(
             """
             CREATE TABLE organization (
-                id UUID NOT NULL,
+                id VARCHAR NOT NULL,
                 name VARCHAR NOT NULL,
                 created_at TIMESTAMP NOT NULL,
                 CONSTRAINT organization_pkey PRIMARY KEY (id)
@@ -78,61 +77,13 @@ def _ensure_organization_table(conn) -> None:
     )
 
 
-def _ensure_organization_pk_uuid(conn) -> None:
-    if not _table_exists(conn, "organization"):
-        return
-    udt = conn.execute(
-        text(
-            """
-            SELECT udt_name FROM information_schema.columns
-            WHERE table_schema = current_schema()
-              AND table_name = 'organization'
-              AND column_name = 'id'
-            """
-        )
-    ).scalar()
-    if udt == "uuid":
-        return
-    if udt:
-        conn.execute(
-            text("ALTER TABLE organization ALTER COLUMN id TYPE uuid USING id::uuid")
-        )
-
-
-def _ensure_child_organization_id_uuid(conn, table: str, fk_name: str) -> None:
-    if not _column_exists(conn, table, "organization_id"):
-        return
-    udt = conn.execute(
-        text(
-            """
-            SELECT udt_name FROM information_schema.columns
-            WHERE table_schema = current_schema()
-              AND table_name = :t
-              AND column_name = 'organization_id'
-            """
-        ),
-        {"t": table},
-    ).scalar()
-    if udt == "uuid":
-        return
-    if udt:
-        conn.execute(
-            text(f"ALTER TABLE {table} DROP CONSTRAINT IF EXISTS {fk_name}")
-        )
-        conn.execute(
-            text(
-                f"ALTER TABLE {table} ALTER COLUMN organization_id TYPE uuid "
-                f"USING organization_id::uuid"
-            )
-        )
-
-
 def _ensure_default_organization_row(conn) -> str:
+    # Text id compatible with VARCHAR PK; gen_random_uuid()::text is built-in on PostgreSQL 13+ (no extension).
     conn.execute(
         text(
             """
             INSERT INTO organization (id, name, created_at)
-            SELECT gen_random_uuid(),
+            SELECT gen_random_uuid()::text,
                    'Default (repair 024)',
                    (NOW() AT TIME ZONE 'utc')
             WHERE NOT EXISTS (SELECT 1 FROM organization LIMIT 1)
@@ -154,18 +105,7 @@ def _ensure_default_organization_row(conn) -> str:
 def upgrade() -> None:
     conn = op.get_bind()
 
-    # gen_random_uuid() is built-in on PostgreSQL 13+, so pgcrypto is not required for the seed INSERT.
-    # CREATE EXTENSION is best-effort only (many hosts restrict extension creation to superuser).
-    try:
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto"))
-    except Exception:
-        pass
-
     _ensure_organization_table(conn)
-    _ensure_organization_pk_uuid(conn)
-    _ensure_child_organization_id_uuid(conn, "landlords", "landlords_organization_id_fkey")
-    _ensure_child_organization_id_uuid(conn, "properties", "properties_organization_id_fkey")
-    _ensure_child_organization_id_uuid(conn, "unit", "unit_organization_id_fkey")
 
     default_org_id = _ensure_default_organization_row(conn)
 
@@ -173,17 +113,17 @@ def upgrade() -> None:
     if not _column_exists(conn, "landlords", "organization_id"):
         op.add_column(
             "landlords",
-            sa.Column("organization_id", _UUID_PG, nullable=True),
+            sa.Column("organization_id", sa.String(), nullable=True),
         )
     if not _column_exists(conn, "properties", "organization_id"):
         op.add_column(
             "properties",
-            sa.Column("organization_id", _UUID_PG, nullable=True),
+            sa.Column("organization_id", sa.String(), nullable=True),
         )
     if not _column_exists(conn, "unit", "organization_id"):
         op.add_column(
             "unit",
-            sa.Column("organization_id", _UUID_PG, nullable=True),
+            sa.Column("organization_id", sa.String(), nullable=True),
         )
 
     # --- backfill: landlords from users ---
