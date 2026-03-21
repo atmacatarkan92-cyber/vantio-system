@@ -11,7 +11,13 @@ import {
   BarChart,
   Bar,
 } from "recharts";
-import { fetchAdminUnits, normalizeUnit } from "../../api/adminData";
+import {
+  fetchAdminUnits,
+  fetchAdminProfit,
+  fetchAdminOccupancy,
+  normalizeUnit,
+  sanitizeClientErrorMessage,
+} from "../../api/adminData";
 
 function roundCurrency(value) {
   return Math.round(Number(value || 0));
@@ -174,12 +180,41 @@ function getTrendLabel(current, previous) {
   };
 }
 
+function lastNMonths(n) {
+  const out = [];
+  const d = new Date();
+  for (let i = n - 1; i >= 0; i -= 1) {
+    const dt = new Date(d.getFullYear(), d.getMonth() - i, 1);
+    out.push({ year: dt.getFullYear(), month: dt.getMonth() + 1 });
+  }
+  return out;
+}
+
+function monthEndDateString(year, month) {
+  const lastDay = new Date(year, month, 0);
+  const y = lastDay.getFullYear();
+  const m = String(lastDay.getMonth() + 1).padStart(2, "0");
+  const day = String(lastDay.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function occupancyRateFromChartRow(row) {
+  const occ = Number(row?.occupied || 0);
+  const free = Number(row?.free || 0);
+  const t = occ + free;
+  return t > 0 ? (occ / t) * 100 : 0;
+}
+
 function AdminBusinessApartmentsDashboardPage() {
   const [selectedPeriod, setSelectedPeriod] = useState("thisMonth");
   const [selectedPlace, setSelectedPlace] = useState("all");
   const [selectedUnitId, setSelectedUnitId] = useState("all");
 
   const [units, setUnits] = useState([]);
+  const [chartsLoading, setChartsLoading] = useState(true);
+  const [chartsError, setChartsError] = useState("");
+  const [financeChartData, setFinanceChartData] = useState([]);
+  const [occupancyChartData, setOccupancyChartData] = useState([]);
 
   useEffect(() => {
     fetchAdminUnits()
@@ -205,6 +240,80 @@ function AdminBusinessApartmentsDashboardPage() {
       return placeOk && unitOk;
     });
   }, [businessUnits, selectedPlace, selectedUnitId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (filteredUnits.length === 0) {
+      setFinanceChartData([]);
+      setOccupancyChartData([]);
+      setChartsLoading(false);
+      setChartsError("");
+      return undefined;
+    }
+    const allowedIds = new Set(filteredUnits.map((u) => String(u.unitId || u.id)));
+    const months = lastNMonths(6);
+    setChartsLoading(true);
+    setChartsError("");
+    Promise.all([
+      Promise.all(months.map(({ year, month }) => fetchAdminProfit({ year, month }))),
+      Promise.all(
+        months.map(({ year, month }) =>
+          fetchAdminOccupancy({ on_date: monthEndDateString(year, month) })
+        )
+      ),
+    ])
+      .then(([profits, occupancies]) => {
+        if (cancelled) return;
+        const finance = months.map((m, idx) => {
+          const p = profits[idx];
+          const label = new Date(m.year, m.month - 1, 1).toLocaleDateString("de-CH", {
+            month: "short",
+          });
+          let revenue = 0;
+          let costs = 0;
+          let profit = 0;
+          for (const u of p?.units || []) {
+            if (allowedIds.has(String(u.unit_id))) {
+              revenue += Number(u.revenue || 0);
+              costs += Number(u.costs || 0);
+              profit += Number(u.profit || 0);
+            }
+          }
+          return { month: label, revenue, costs, profit };
+        });
+        const occRows = months.map((m, idx) => {
+          const o = occupancies[idx];
+          const label = new Date(m.year, m.month - 1, 1).toLocaleDateString("de-CH", {
+            month: "short",
+          });
+          let occupied = 0;
+          let free = 0;
+          for (const u of o?.units || []) {
+            if (allowedIds.has(String(u.unit_id))) {
+              occupied += Number(u.occupied_rooms || 0);
+              free += Number(u.free_rooms || 0);
+            }
+          }
+          return { month: label, occupied, free };
+        });
+        setFinanceChartData(finance);
+        setOccupancyChartData(occRows);
+        setChartsLoading(false);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        console.error(e);
+        setChartsError(
+          sanitizeClientErrorMessage(e.message, "Monatsdaten konnten nicht geladen werden.")
+        );
+        setFinanceChartData([]);
+        setOccupancyChartData([]);
+        setChartsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filteredUnits]);
 
   const dashboard = useMemo(() => {
     let totalApartments = 0;
@@ -262,43 +371,33 @@ function AdminBusinessApartmentsDashboardPage() {
     };
   }, [filteredUnits]);
 
-  const financeChartData = [
-    { month: "Jan", revenue: 0, costs: 0, profit: 0 },
-    { month: "Feb", revenue: 0, costs: 0, profit: 0 },
-    { month: "Mär", revenue: 0, costs: 0, profit: 0 },
-    { month: "Apr", revenue: 4800, costs: 2900, profit: 1900 },
-    { month: "Mai", revenue: 7600, costs: 4200, profit: 3400 },
-    { month: "Jun", revenue: 11400, costs: 6100, profit: 5300 },
-  ];
+  const revenueTrend = useMemo(() => {
+    if (financeChartData.length < 2) return null;
+    const cur = financeChartData[financeChartData.length - 1];
+    const prev = financeChartData[financeChartData.length - 2];
+    return getTrendLabel(cur.revenue, prev.revenue);
+  }, [financeChartData]);
 
-  const occupancyChartData = [
-    { month: "Jan", occupied: 0, free: 5 },
-    { month: "Feb", occupied: 1, free: 4 },
-    { month: "Mär", occupied: 2, free: 3 },
-    { month: "Apr", occupied: 3, free: 2 },
-    { month: "Mai", occupied: 4, free: 1 },
-    { month: "Jun", occupied: 4, free: 1 },
-  ];
+  const profitTrend = useMemo(() => {
+    if (financeChartData.length < 2) return null;
+    const cur = financeChartData[financeChartData.length - 1];
+    const prev = financeChartData[financeChartData.length - 2];
+    return getTrendLabel(cur.profit, prev.profit);
+  }, [financeChartData]);
 
-  const revenueTrend = getTrendLabel(
-    financeChartData[5]?.revenue || 0,
-    financeChartData[4]?.revenue || 0
-  );
+  const costTrend = useMemo(() => {
+    if (financeChartData.length < 2) return null;
+    const cur = financeChartData[financeChartData.length - 1];
+    const prev = financeChartData[financeChartData.length - 2];
+    return getTrendLabel(cur.costs, prev.costs);
+  }, [financeChartData]);
 
-  const profitTrend = getTrendLabel(
-    financeChartData[5]?.profit || 0,
-    financeChartData[4]?.profit || 0
-  );
-
-  const costTrend = getTrendLabel(
-    financeChartData[5]?.costs || 0,
-    financeChartData[4]?.costs || 0
-  );
-
-  const occupancyTrend = getTrendLabel(
-    dashboard.occupiedRate,
-    dashboard.occupiedRate * 0.92
-  );
+  const occupancyTrend = useMemo(() => {
+    if (occupancyChartData.length < 2) return null;
+    const cur = occupancyChartData[occupancyChartData.length - 1];
+    const prev = occupancyChartData[occupancyChartData.length - 2];
+    return getTrendLabel(occupancyRateFromChartRow(cur), occupancyRateFromChartRow(prev));
+  }, [occupancyChartData]);
 
   return (
     <div className="min-h-screen bg-slate-50 -m-6 p-6 md:p-8">
@@ -415,39 +514,55 @@ function AdminBusinessApartmentsDashboardPage() {
             title="Finanzentwicklung letzte 6 Monate"
             subtitle="Umsatz, Kosten und Gewinn im zeitlichen Verlauf"
           >
-            <div className="h-[420px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={financeChartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => `CHF ${value.toLocaleString()}`} />
-                  <Legend />
-                  <Bar name="Umsatz" dataKey="revenue" fill="#f97316" radius={[8, 8, 0, 0]} />
-                  <Bar name="Ausgaben" dataKey="costs" fill="#334155" radius={[8, 8, 0, 0]} />
-                  <Bar name="Gewinn" dataKey="profit" fill="#16a34a" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {chartsLoading ? (
+              <p className="text-slate-500 py-8">Lade Monatsdaten…</p>
+            ) : chartsError ? (
+              <p className="text-rose-700 py-8">{chartsError}</p>
+            ) : financeChartData.length === 0 ? (
+              <p className="text-slate-500 py-8">Keine Daten vorhanden</p>
+            ) : (
+              <div className="h-[420px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={financeChartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => `CHF ${value.toLocaleString()}`} />
+                    <Legend />
+                    <Bar name="Umsatz" dataKey="revenue" fill="#f97316" radius={[8, 8, 0, 0]} />
+                    <Bar name="Ausgaben" dataKey="costs" fill="#334155" radius={[8, 8, 0, 0]} />
+                    <Bar name="Gewinn" dataKey="profit" fill="#16a34a" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </SectionCard>
 
           <SectionCard
             title="Belegung Apartments letzte 6 Monate"
             subtitle="Belegte und freie Apartments im Verlauf"
           >
-            <div className="h-[420px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={occupancyChartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar name="Belegt" dataKey="occupied" fill="#16a34a" radius={[8, 8, 0, 0]} />
-                  <Bar name="Frei" dataKey="free" fill="#ef4444" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {chartsLoading ? (
+              <p className="text-slate-500 py-8">Lade Monatsdaten…</p>
+            ) : chartsError ? (
+              <p className="text-rose-700 py-8">{chartsError}</p>
+            ) : occupancyChartData.length === 0 ? (
+              <p className="text-slate-500 py-8">Keine Daten vorhanden</p>
+            ) : (
+              <div className="h-[420px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={occupancyChartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="month" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar name="Belegt" dataKey="occupied" fill="#16a34a" radius={[8, 8, 0, 0]} />
+                    <Bar name="Frei" dataKey="free" fill="#ef4444" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </SectionCard>
         </div>
 

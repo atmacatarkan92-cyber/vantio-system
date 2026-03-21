@@ -221,6 +221,28 @@ export function fetchAdminProfit(params = {}) {
 }
 
 /**
+ * Strip browser/extension noise (e.g. postMessage) from user-facing error text.
+ * Logs the raw message to the console; callers should show the returned string only.
+ */
+export function sanitizeClientErrorMessage(message, fallback) {
+  const raw = String(message || "");
+  if (/postmessage/i.test(raw) || /target origin/i.test(raw)) {
+    console.warn("Ignored non-actionable error:", raw);
+    return fallback || "Ein unerwarteter Fehler ist aufgetreten.";
+  }
+  return raw || fallback || "";
+}
+
+function sanitizeNonActionableUiMessage(msg) {
+  const raw = String(msg || "");
+  if (/postmessage/i.test(raw) || /target origin/i.test(raw)) {
+    console.warn("Ignored non-actionable error:", raw);
+    return "";
+  }
+  return raw;
+}
+
+/**
  * Normalize fetch failure for dashboard: "Failed to fetch" means network/CORS/server unreachable.
  * Exported so overview page can use the same message for operations load errors.
  */
@@ -231,7 +253,12 @@ export function normalizeFetchError(e, fallbackMessage) {
       "Verbindung zum Server fehlgeschlagen. Bitte Backend-URL (REACT_APP_API_URL) und CORS prüfen."
     );
   }
-  return e instanceof Error ? e : new Error(fallbackMessage);
+  const base = e instanceof Error ? e : new Error(fallbackMessage);
+  const cleaned = sanitizeNonActionableUiMessage(base.message);
+  if (!cleaned) {
+    return new Error(fallbackMessage);
+  }
+  return new Error(cleaned);
 }
 
 /**

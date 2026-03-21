@@ -20,6 +20,7 @@ import {
   fetchAdminDashboardKpis,
   fetchAdminInvoices,
   normalizeFetchError,
+  sanitizeClientErrorMessage,
 } from "../../api/adminData";
 
 function roundCurrency(value) {
@@ -43,6 +44,25 @@ function formatDate(dateString) {
     month: "2-digit",
     day: "2-digit",
   });
+}
+
+/** Last `n` calendar months from today (oldest first). */
+function lastNMonths(n) {
+  const out = [];
+  const d = new Date();
+  for (let i = n - 1; i >= 0; i -= 1) {
+    const dt = new Date(d.getFullYear(), d.getMonth() - i, 1);
+    out.push({ year: dt.getFullYear(), month: dt.getMonth() + 1 });
+  }
+  return out;
+}
+
+function monthEndDateString(year, month) {
+  const lastDay = new Date(year, month, 0);
+  const y = lastDay.getFullYear();
+  const m = String(lastDay.getMonth() + 1).padStart(2, "0");
+  const day = String(lastDay.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function loadSavedArray(key) {
@@ -279,6 +299,10 @@ export default function AdminUebersichtPage() {
   const [kpisLoading, setKpisLoading] = useState(true);
   const [kpisError, setKpisError] = useState("");
   const [operationsLoadError, setOperationsLoadError] = useState("");
+  const [monthlyChartsLoading, setMonthlyChartsLoading] = useState(true);
+  const [monthlyChartsError, setMonthlyChartsError] = useState("");
+  const [financeChartData, setFinanceChartData] = useState([]);
+  const [belegungChartData, setBelegungChartData] = useState([]);
   const [kpisPeriod, setKpisPeriod] = useState(() => {
     const d = new Date();
     return { year: d.getFullYear(), month: d.getMonth() + 1 };
@@ -306,9 +330,69 @@ export default function AdminUebersichtPage() {
       })
       .catch((e) => {
         setOperationsLoadError(
-          normalizeFetchError(e, "Betriebsdaten konnten nicht geladen werden.").message
+          sanitizeClientErrorMessage(
+            normalizeFetchError(e, "Betriebsdaten konnten nicht geladen werden.").message,
+            "Betriebsdaten konnten nicht geladen werden."
+          )
         );
       });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const months = lastNMonths(6);
+    setMonthlyChartsLoading(true);
+    setMonthlyChartsError("");
+    Promise.all([
+      Promise.all(months.map(({ year, month }) => fetchAdminProfit({ year, month }))),
+      Promise.all(
+        months.map(({ year, month }) =>
+          fetchAdminOccupancy({ on_date: monthEndDateString(year, month) })
+        )
+      ),
+    ])
+      .then(([profits, occupancies]) => {
+        if (cancelled) return;
+        const finance = months.map((m, idx) => {
+          const p = profits[idx];
+          const label = new Date(m.year, m.month - 1, 1).toLocaleDateString("de-CH", {
+            month: "short",
+          });
+          return {
+            month: label,
+            revenue: Number(p?.summary?.total_revenue ?? 0),
+            costs: Number(p?.summary?.total_costs ?? 0),
+            profit: Number(p?.summary?.total_profit ?? 0),
+          };
+        });
+        const belegung = months.map((m, idx) => {
+          const o = occupancies[idx];
+          const label = new Date(m.year, m.month - 1, 1).toLocaleDateString("de-CH", {
+            month: "short",
+          });
+          return {
+            month: label,
+            occupied: Number(o?.summary?.occupied_rooms ?? 0),
+            free: Number(o?.summary?.free_rooms ?? 0),
+          };
+        });
+        setFinanceChartData(finance);
+        setBelegungChartData(belegung);
+        setMonthlyChartsLoading(false);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        console.error(e);
+        setMonthlyChartsError(
+          sanitizeClientErrorMessage(e.message, "Monatsdaten konnten nicht geladen werden.")
+        );
+        setFinanceChartData([]);
+        setBelegungChartData([]);
+        setMonthlyChartsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -320,7 +404,9 @@ export default function AdminUebersichtPage() {
         setKpisLoading(false);
       })
       .catch((e) => {
-        setKpisError(e.message || "KPI-Daten konnten nicht geladen werden.");
+        setKpisError(
+          sanitizeClientErrorMessage(e.message, "KPI-Daten konnten nicht geladen werden.")
+        );
         setKpis(null);
         setKpisLoading(false);
       });
@@ -332,7 +418,12 @@ export default function AdminUebersichtPage() {
       .then(setInvoices)
       .catch((e) => {
         console.error(e);
-        setInvoiceError(e?.message ?? "Rechnungen konnten nicht geladen werden.");
+        setInvoiceError(
+          sanitizeClientErrorMessage(
+            e?.message ?? "",
+            "Rechnungen konnten nicht geladen werden."
+          )
+        );
       })
       .finally(() => setInvoiceLoading(false));
   }, []);
@@ -452,23 +543,6 @@ export default function AdminUebersichtPage() {
     }
     return warnings.slice(0, 4);
   }, [operationsStats, invoiceStats]);
-
-  const financeChartData = [
-    { month: "Jan", revenue: 0, costs: 0, profit: 0 },
-    { month: "Feb", revenue: 0, costs: 0, profit: 0 },
-    { month: "Mär", revenue: 0, costs: 0, profit: 0 },
-    { month: "Apr", revenue: 3200, costs: 1800, profit: 1400 },
-    { month: "Mai", revenue: 6400, costs: 3900, profit: 2500 },
-    { month: "Jun", revenue: 10850, costs: 7799, profit: 3051 },
-  ];
-  const belegungChartData = [
-    { month: "Jan", occupied: 0, free: 21 },
-    { month: "Feb", occupied: 4, free: 17 },
-    { month: "Mär", occupied: 8, free: 13 },
-    { month: "Apr", occupied: 10, free: 11 },
-    { month: "Mai", occupied: 11, free: 10 },
-    { month: "Jun", occupied: 12, free: 9 },
-  ];
 
   return (
     <div style={{ display: "grid", gap: "24px" }}>
@@ -799,19 +873,27 @@ export default function AdminUebersichtPage() {
         }}
       >
         <h3 style={{ marginBottom: "20px" }}>Finanzentwicklung letzte 6 Monate</h3>
-        <div style={{ width: "100%", height: "320px" }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={financeChartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip formatter={(value) => `CHF ${value.toLocaleString()}`} />
-              <Bar dataKey="revenue" fill="#f97316" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="costs" fill="#334155" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="profit" fill="#16a34a" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {monthlyChartsLoading ? (
+          <p style={{ color: "#64748B" }}>Lade Monatsdaten…</p>
+        ) : monthlyChartsError ? (
+          <p style={{ color: "#B91C1C" }}>{monthlyChartsError}</p>
+        ) : financeChartData.length === 0 ? (
+          <p style={{ color: "#64748B" }}>Keine Daten vorhanden</p>
+        ) : (
+          <div style={{ width: "100%", height: "320px" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={financeChartData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(value) => `CHF ${value.toLocaleString()}`} />
+                <Bar dataKey="revenue" fill="#f97316" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="costs" fill="#334155" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="profit" fill="#16a34a" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       <div
@@ -823,19 +905,27 @@ export default function AdminUebersichtPage() {
         }}
       >
         <h3 style={{ marginBottom: "20px" }}>Belegung Rooms letzte 6 Monate</h3>
-        <div style={{ width: "100%", height: "320px" }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={belegungChartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar name="Belegt" dataKey="occupied" fill="#16a34a" radius={[8, 8, 0, 0]} />
-              <Bar name="Frei" dataKey="free" fill="#ef4444" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {monthlyChartsLoading ? (
+          <p style={{ color: "#64748B" }}>Lade Monatsdaten…</p>
+        ) : monthlyChartsError ? (
+          <p style={{ color: "#B91C1C" }}>{monthlyChartsError}</p>
+        ) : belegungChartData.length === 0 ? (
+          <p style={{ color: "#64748B" }}>Keine Daten vorhanden</p>
+        ) : (
+          <div style={{ width: "100%", height: "320px" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={belegungChartData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar name="Belegt" dataKey="occupied" fill="#16a34a" radius={[8, 8, 0, 0]} />
+                <Bar name="Frei" dataKey="free" fill="#ef4444" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       <div
