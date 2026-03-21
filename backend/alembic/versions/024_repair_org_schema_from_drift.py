@@ -60,6 +60,20 @@ def _fk_exists(conn, name: str) -> bool:
     return r is not None
 
 
+def _organization_id_data_type(conn) -> str:
+    r = conn.execute(
+        text(
+            """
+            SELECT data_type FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'organization'
+              AND column_name = 'id'
+            """
+        )
+    ).scalar()
+    return (r or "").lower()
+
+
 def _ensure_organization_table(conn) -> None:
     if not _table_exists(conn, "organization"):
         conn.execute(
@@ -82,12 +96,18 @@ def _ensure_organization_table(conn) -> None:
 
 
 def _ensure_default_organization_row(conn) -> str:
-    # Text id compatible with VARCHAR PK; gen_random_uuid()::text is built-in on PostgreSQL 13+ (no extension).
+    dt = _organization_id_data_type(conn)
+    if dt == "uuid":
+        id_expr = "gen_random_uuid()"
+    elif dt == "character varying":
+        id_expr = "gen_random_uuid()::text"
+    else:
+        id_expr = "gen_random_uuid()::text"
     conn.execute(
         text(
-            """
+            f"""
             INSERT INTO organization (id, name, created_at)
-            SELECT gen_random_uuid()::text,
+            SELECT {id_expr},
                    'Default (repair 024)',
                    (NOW() AT TIME ZONE 'utc')
             WHERE NOT EXISTS (SELECT 1 FROM organization LIMIT 1)
