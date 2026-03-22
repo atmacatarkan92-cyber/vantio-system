@@ -131,7 +131,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         got = {(r[0], r[1]) for r in pols}
         assert got == expected_policies, (
             f"expected policies {expected_policies}; got {got}. "
-            "Apply migrations 023_rls_unit_tenant_room and 025_rls_tenancies_invoices_properties."
+            "Apply migrations 023_rls_unit_tenant_room and 025_rls_core_tables."
         )
 
 

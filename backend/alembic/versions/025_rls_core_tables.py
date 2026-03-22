@@ -1,6 +1,6 @@
 """RLS: tenancies, invoices, properties, landlords (direct org); unit_costs via unit parent.
 
-Revision ID: 025_rls_tenancies_invoices_properties
+Revision ID: 025_rls_core_tables
 Revises: 024_repair_org_schema_from_drift
 
 Policies use current_setting('app.current_organization_id', true) — VARCHAR-safe; missing
@@ -16,7 +16,7 @@ from typing import Sequence, Union
 from alembic import op
 from sqlalchemy import text
 
-revision: str = "025_rls_tenancies_invoices_properties"
+revision: str = "025_rls_core_tables"
 down_revision: Union[str, None] = "024_repair_org_schema_from_drift"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
