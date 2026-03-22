@@ -10,8 +10,8 @@ unit_costs has no organization_id; isolation is via parent unit.organization_id.
 
 Note: users and audit_logs are intentionally out of scope here — see project docs / task notes.
 
-Drift: some DBs have tenancies without organization_id; that column must exist and be populated
-before any tenancies RLS policy (policies reference organization_id).
+Drift: some DBs lack organization_id on tenancies and/or invoices; repair before RLS (no FK on
+added columns here). properties/landlords are expected to already have organization_id.
 """
 
 from typing import Sequence, Union
@@ -28,13 +28,12 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     conn = op.get_bind()
 
-    # Drift repair: tenancies.organization_id required for RLS policies below.
+    # Drift repair: tenancies.organization_id required for RLS policies below (no FK in this migration).
     conn.execute(
         text(
             """
             ALTER TABLE tenancies
             ADD COLUMN IF NOT EXISTS organization_id UUID
-            REFERENCES organization(id)
             """
         )
     )
@@ -58,6 +57,59 @@ def upgrade() -> None:
         )
     conn.execute(
         text("ALTER TABLE tenancies ALTER COLUMN organization_id SET NOT NULL")
+    )
+
+    # Drift repair: invoices.organization_id required for RLS policies below (no FK in this migration).
+    conn.execute(
+        text(
+            """
+            ALTER TABLE invoices
+            ADD COLUMN IF NOT EXISTS organization_id UUID
+            """
+        )
+    )
+    conn.execute(
+        text(
+            """
+            UPDATE invoices i
+            SET organization_id = t.organization_id
+            FROM tenancies t
+            WHERE i.tenancy_id = t.id
+              AND i.organization_id IS NULL
+            """
+        )
+    )
+    conn.execute(
+        text(
+            """
+            UPDATE invoices i
+            SET organization_id = u.organization_id
+            FROM unit u
+            WHERE i.unit_id = u.id
+              AND i.organization_id IS NULL
+            """
+        )
+    )
+    conn.execute(
+        text(
+            """
+            UPDATE invoices i
+            SET organization_id = te.organization_id
+            FROM tenant te
+            WHERE i.tenant_id = te.id
+              AND i.organization_id IS NULL
+            """
+        )
+    )
+    remaining_invoices = conn.execute(
+        text("SELECT COUNT(*) FROM invoices WHERE organization_id IS NULL")
+    ).scalar()
+    if remaining_invoices and int(remaining_invoices) > 0:
+        raise RuntimeError(
+            "Cannot enable RLS on invoices: organization_id backfill incomplete"
+        )
+    conn.execute(
+        text("ALTER TABLE invoices ALTER COLUMN organization_id SET NOT NULL")
     )
 
     direct_tables = (
