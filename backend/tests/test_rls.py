@@ -7,14 +7,26 @@ row visibility, rowcount, and PostgreSQL RLS error messages.
 """
 from __future__ import annotations
 
-import os
 import uuid
 
 import pytest
+from datetime import date
+
 from sqlalchemy import text, update
 from sqlmodel import Session, select
 
-from db.models import Organization, Room, Tenant, Unit
+from db.models import (
+    Invoice,
+    Landlord,
+    Organization,
+    Property,
+    Room,
+    Tenancy,
+    TenancyStatus,
+    Tenant,
+    Unit,
+    UnitCost,
+)
 from db.rls import apply_pg_organization_context
 
 
@@ -33,13 +45,18 @@ def engine():
 
 def test_rls_environment_validates_database_role_and_policies(engine):
     """
-    Fail fast when the DB session bypasses RLS (superuser / BYPASSRLS) or migration 023
-    is missing. CI must connect as a dedicated app role; Alembic runs as the migration role.
+    Fail fast when the DB session bypasses RLS (superuser / BYPASSRLS) or migrations 023/025
+    are missing. CI must connect as a dedicated app role; Alembic runs as the migration role.
     """
     expected_policies = {
         ("unit", "org_isolation_unit"),
         ("tenant", "org_isolation_tenant"),
         ("room", "org_isolation_room"),
+        ("tenancies", "org_isolation_tenancies"),
+        ("invoices", "org_isolation_invoices"),
+        ("properties", "org_isolation_properties"),
+        ("landlords", "org_isolation_landlords"),
+        ("unit_costs", "org_isolation_unit_costs"),
     }
     with Session(engine) as session:
         cu, su = session.execute(text("SELECT current_user, session_user")).one()
@@ -74,14 +91,26 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                 FROM pg_class c
                 JOIN pg_namespace n ON n.oid = c.relnamespace
                 WHERE n.nspname = 'public' AND c.relkind = 'r'
-                  AND c.relname IN ('unit', 'tenant', 'room')
+                  AND c.relname IN (
+                    'invoices', 'landlords', 'properties', 'room',
+                    'tenancies', 'tenant', 'unit', 'unit_costs'
+                  )
                 ORDER BY c.relname
                 """
             )
         ).all()
         names = [r[0] for r in rls_rows]
-        assert names == ["room", "tenant", "unit"], (
-            f"expected public.unit, tenant, room; got {names}"
+        assert names == [
+            "invoices",
+            "landlords",
+            "properties",
+            "room",
+            "tenancies",
+            "tenant",
+            "unit",
+            "unit_costs",
+        ], (
+            f"expected RLS tables from migrations 023/025; got {names}"
         )
         for relname, relrowsecurity, relforcerow in rls_rows:
             assert relrowsecurity is True, f"RLS not enabled on {relname}"
@@ -92,14 +121,17 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                 """
                 SELECT tablename, policyname
                 FROM pg_policies
-                WHERE tablename IN ('unit', 'tenant', 'room')
+                WHERE tablename IN (
+                    'unit', 'tenant', 'room', 'tenancies', 'invoices',
+                    'properties', 'landlords', 'unit_costs'
+                )
                 """
             )
         ).all()
         got = {(r[0], r[1]) for r in pols}
         assert got == expected_policies, (
             f"expected policies {expected_policies}; got {got}. "
-            "Apply migration 023_rls_unit_tenant_room."
+            "Apply migrations 023_rls_unit_tenant_room and 025_rls_tenancies_invoices_properties."
         )
 
 
@@ -177,6 +209,95 @@ def seeded_tenant_rows(engine, rls_test_ids):
     with Session(engine) as session:
         session.execute(text("DELETE FROM organization WHERE id = :id"), {"id": org_a})
         session.execute(text("DELETE FROM organization WHERE id = :id"), {"id": org_b})
+        session.commit()
+
+
+@pytest.fixture
+def seeded_rls_extended_rows(engine, seeded_tenant_rows):
+    """
+    Org A: landlord, property, tenancy, invoice, unit_cost linked to existing unit/room/tenant.
+    Teardown: FK-safe deletes before base fixture removes tenant/room/unit.
+    """
+    ids = dict(seeded_tenant_rows)
+    org_a = ids["org_a"]
+    tag = uuid.uuid4().hex[:8]
+    ids["landlord_a"] = f"rls-ll-{tag}"
+    ids["property_a"] = f"rls-pr-{tag}"
+    ids["tenancy_a"] = f"rls-tn-{tag}"
+    ids["unit_cost_a"] = f"rls-uc-{tag}"
+
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.add(
+            Landlord(
+                id=ids["landlord_a"],
+                organization_id=org_a,
+                contact_name="RLS LL",
+                email=f"ll-{tag}@example.test",
+            )
+        )
+        session.add(
+            Property(
+                id=ids["property_a"],
+                organization_id=org_a,
+                title="RLS Property",
+            )
+        )
+        session.commit()
+
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.add(
+            Tenancy(
+                id=ids["tenancy_a"],
+                organization_id=org_a,
+                tenant_id=ids["tenant_a"],
+                room_id=ids["room_a"],
+                unit_id=ids["unit_a"],
+                move_in_date=date(2024, 1, 1),
+                status=TenancyStatus.active,
+            )
+        )
+        session.add(
+            UnitCost(
+                id=ids["unit_cost_a"],
+                unit_id=ids["unit_a"],
+                cost_type="rent",
+                amount_chf=250.0,
+            )
+        )
+        inv = Invoice(
+            organization_id=org_a,
+            tenant_id=ids["tenant_a"],
+            tenancy_id=ids["tenancy_a"],
+            amount=99.0,
+            issue_date=date(2024, 6, 1),
+            due_date=date(2024, 6, 15),
+        )
+        session.add(inv)
+        session.commit()
+        session.refresh(inv)
+        ids["invoice_id"] = inv.id
+
+    yield ids
+
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.execute(
+            text("DELETE FROM invoices WHERE id = :id"), {"id": ids["invoice_id"]}
+        )
+        session.execute(
+            text("DELETE FROM tenancies WHERE id = :id"), {"id": ids["tenancy_a"]}
+        )
+        session.execute(
+            text("DELETE FROM unit_costs WHERE id = :id"), {"id": ids["unit_cost_a"]}
+        )
+        session.execute(
+            text("DELETE FROM properties WHERE id = :id"), {"id": ids["property_a"]}
+        )
+        session.execute(
+            text("DELETE FROM landlords WHERE id = :id"), {"id": ids["landlord_a"]}
+        )
         session.commit()
 
 
@@ -335,3 +456,141 @@ def test_rls_get_session_uses_context_var_like_post_auth_route(engine, seeded_te
     finally:
         set_request_organization_id(None)
     assert len(rows) == 1
+
+
+def test_rls_org_a_sees_own_tenancy_invoice_property_landlord_unit_cost(
+    engine, seeded_rls_extended_rows
+):
+    """Migration 025: same organization context can read all seeded extended rows."""
+    ids = seeded_rls_extended_rows
+    org_a = ids["org_a"]
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        assert (
+            len(
+                session.exec(select(Tenancy).where(Tenancy.id == ids["tenancy_a"])).all()
+            )
+            == 1
+        )
+        assert (
+            len(
+                session.exec(
+                    select(Invoice).where(Invoice.id == ids["invoice_id"])
+                ).all()
+            )
+            == 1
+        )
+        assert (
+            len(
+                session.exec(
+                    select(Property).where(Property.id == ids["property_a"])
+                ).all()
+            )
+            == 1
+        )
+        assert (
+            len(
+                session.exec(
+                    select(Landlord).where(Landlord.id == ids["landlord_a"])
+                ).all()
+            )
+            == 1
+        )
+        assert (
+            len(
+                session.exec(
+                    select(UnitCost).where(UnitCost.id == ids["unit_cost_a"])
+                ).all()
+            )
+            == 1
+        )
+
+
+def test_rls_org_b_sees_no_extended_rows(engine, seeded_rls_extended_rows):
+    """Org B must not see org A rows on any migration 025 table."""
+    ids = seeded_rls_extended_rows
+    org_b = ids["org_b"]
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_b)
+        assert (
+            len(
+                session.exec(select(Tenancy).where(Tenancy.id == ids["tenancy_a"])).all()
+            )
+            == 0
+        )
+        assert (
+            len(
+                session.exec(
+                    select(Invoice).where(Invoice.id == ids["invoice_id"])
+                ).all()
+            )
+            == 0
+        )
+        assert (
+            len(
+                session.exec(
+                    select(Property).where(Property.id == ids["property_a"])
+                ).all()
+            )
+            == 0
+        )
+        assert (
+            len(
+                session.exec(
+                    select(Landlord).where(Landlord.id == ids["landlord_a"])
+                ).all()
+            )
+            == 0
+        )
+        assert (
+            len(
+                session.exec(
+                    select(UnitCost).where(UnitCost.id == ids["unit_cost_a"])
+                ).all()
+            )
+            == 0
+        )
+
+
+def test_rls_missing_context_sees_no_extended_rows(engine, seeded_rls_extended_rows):
+    """No SET LOCAL org id => RLS denies all extended rows."""
+    ids = seeded_rls_extended_rows
+    with Session(engine) as session:
+        assert (
+            len(
+                session.exec(select(Tenancy).where(Tenancy.id == ids["tenancy_a"])).all()
+            )
+            == 0
+        )
+        assert (
+            len(
+                session.exec(
+                    select(Invoice).where(Invoice.id == ids["invoice_id"])
+                ).all()
+            )
+            == 0
+        )
+        assert (
+            len(
+                session.exec(
+                    select(Property).where(Property.id == ids["property_a"])
+                ).all()
+            )
+            == 0
+        )
+        assert (
+            len(
+                session.exec(
+                    select(Landlord).where(Landlord.id == ids["landlord_a"])
+                ).all()
+            )
+            == 0
+        )
+        assert (
+            len(
+                session.exec(
+                    select(UnitCost).where(UnitCost.id == ids["unit_cost_a"])
+                ).all()
+            )
+            == 0
+        )
