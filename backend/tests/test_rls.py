@@ -198,10 +198,24 @@ def seeded_tenant_rows(engine, rls_test_ids):
 
     yield ids
 
-    # Teardown (FK-safe, deterministic): 1 tenant → 2 room → 3 unit → 4 organization.
-    # RLS on tenant/room/unit requires org_a context.
+    # Teardown: child tables first (FK + RLS), then tenant → room → unit → organizations.
     with Session(engine) as session:
         apply_pg_organization_context(session, org_a)
+        session.execute(
+            text("DELETE FROM invoices WHERE organization_id = :oid"), {"oid": org_a}
+        )
+        session.execute(
+            text("DELETE FROM tenancies WHERE organization_id = :oid"), {"oid": org_a}
+        )
+        session.execute(
+            text("DELETE FROM unit_costs WHERE unit_id = :uid"), {"uid": ids["unit_a"]}
+        )
+        session.execute(
+            text("DELETE FROM properties WHERE organization_id = :oid"), {"oid": org_a}
+        )
+        session.execute(
+            text("DELETE FROM landlords WHERE organization_id = :oid"), {"oid": org_a}
+        )
         session.execute(text("DELETE FROM tenant WHERE id = :id"), {"id": ids["tenant_a"]})
         session.execute(text("DELETE FROM room WHERE id = :id"), {"id": ids["room_a"]})
         session.execute(text("DELETE FROM unit WHERE id = :id"), {"id": ids["unit_a"]})
@@ -216,7 +230,8 @@ def seeded_tenant_rows(engine, rls_test_ids):
 def seeded_rls_extended_rows(engine, seeded_tenant_rows):
     """
     Org A: landlord, property, tenancy, invoice, unit_cost linked to existing unit/room/tenant.
-    Teardown: FK-safe deletes before base fixture removes tenant/room/unit.
+    Tenancy is committed before the invoice so invoices.tenancy_id FK sees a real row.
+    Teardown is handled by seeded_tenant_rows (child-first deletes for org_a).
     """
     ids = dict(seeded_tenant_rows)
     org_a = ids["org_a"]
@@ -258,6 +273,10 @@ def seeded_rls_extended_rows(engine, seeded_tenant_rows):
                 status=TenancyStatus.active,
             )
         )
+        session.commit()
+
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
         session.add(
             UnitCost(
                 id=ids["unit_cost_a"],
@@ -280,25 +299,6 @@ def seeded_rls_extended_rows(engine, seeded_tenant_rows):
         ids["invoice_id"] = inv.id
 
     yield ids
-
-    with Session(engine) as session:
-        apply_pg_organization_context(session, org_a)
-        session.execute(
-            text("DELETE FROM invoices WHERE id = :id"), {"id": ids["invoice_id"]}
-        )
-        session.execute(
-            text("DELETE FROM tenancies WHERE id = :id"), {"id": ids["tenancy_a"]}
-        )
-        session.execute(
-            text("DELETE FROM unit_costs WHERE id = :id"), {"id": ids["unit_cost_a"]}
-        )
-        session.execute(
-            text("DELETE FROM properties WHERE id = :id"), {"id": ids["property_a"]}
-        )
-        session.execute(
-            text("DELETE FROM landlords WHERE id = :id"), {"id": ids["landlord_a"]}
-        )
-        session.commit()
 
 
 def test_rls_same_org_sees_rows(engine, seeded_tenant_rows):
