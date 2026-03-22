@@ -9,6 +9,9 @@ setting yields NULL and denies rows (fail-closed).
 unit_costs has no organization_id; isolation is via parent unit.organization_id.
 
 Note: users and audit_logs are intentionally out of scope here — see project docs / task notes.
+
+Drift: some DBs have tenancies without organization_id; that column must exist and be populated
+before any tenancies RLS policy (policies reference organization_id).
 """
 
 from typing import Sequence, Union
@@ -24,6 +27,38 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     conn = op.get_bind()
+
+    # Drift repair: tenancies.organization_id required for RLS policies below.
+    conn.execute(
+        text(
+            """
+            ALTER TABLE tenancies
+            ADD COLUMN IF NOT EXISTS organization_id VARCHAR
+            REFERENCES organization(id)
+            """
+        )
+    )
+    conn.execute(
+        text(
+            """
+            UPDATE tenancies t
+            SET organization_id = u.organization_id
+            FROM unit u
+            WHERE u.id = t.unit_id
+              AND t.organization_id IS NULL
+            """
+        )
+    )
+    remaining = conn.execute(
+        text("SELECT COUNT(*) FROM tenancies WHERE organization_id IS NULL")
+    ).scalar()
+    if remaining and int(remaining) > 0:
+        raise RuntimeError(
+            "Cannot enable RLS on tenancies: organization_id backfill incomplete"
+        )
+    conn.execute(
+        text("ALTER TABLE tenancies ALTER COLUMN organization_id SET NOT NULL")
+    )
 
     direct_tables = (
         ("tenancies", "org_isolation_tenancies"),
