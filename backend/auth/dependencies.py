@@ -2,9 +2,10 @@ from typing import Tuple
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
 from sqlmodel import select
 
-from db.database import get_session
+from db.database import get_session as _db_get_session
 from db.models import User, Tenant, Landlord, UserCredentials
 from app.core.request_logging import set_log_user_id
 from db.rls import apply_pg_organization_context, set_request_organization_id
@@ -16,12 +17,12 @@ http_bearer = HTTPBearer(auto_error=True)
 
 
 def get_db_session():
-    """Yield a DB session for auth; closed after request."""
-    session = get_session()
+    """Request-scoped DB session; closed after the request."""
+    db = _db_get_session()
     try:
-        yield session
+        yield db
     finally:
-        session.close()
+        db.close()
 
 
 def _user_role_value(user: User) -> str:
@@ -34,7 +35,7 @@ def _user_role_value(user: User) -> str:
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(http_bearer),
-    session=Depends(get_db_session),
+    db: Session = Depends(get_db_session),
 ) -> User:
     """Resolve current user from Bearer JWT. 401 if invalid or inactive."""
     token = credentials.credentials
@@ -50,7 +51,7 @@ def get_current_user(
         )
 
     statement = select(User).where(User.id == user_id)
-    user = session.exec(statement).first()
+    user = db.exec(statement).first()
 
     if not user or not user.is_active:
         raise HTTPException(
@@ -61,7 +62,7 @@ def get_current_user(
     set_log_user_id(str(user.id))
 
     # Invalidate access tokens issued before last password change (`pv` claim).
-    creds = session.exec(
+    creds = db.exec(
         select(UserCredentials).where(UserCredentials.user_id == str(user.id))
     ).first()
     if creds is not None and "pv" in payload:
@@ -82,7 +83,7 @@ def get_current_user(
     if _oid is not None and str(_oid).strip():
         _s = str(_oid).strip()
         set_request_organization_id(_s)
-        apply_pg_organization_context(session, _s)
+        apply_pg_organization_context(db, _s)
     else:
         set_request_organization_id(None)
 
@@ -127,13 +128,13 @@ def require_role(role: str):
 
 def get_current_tenant(
     user: User = Depends(require_role("tenant")),
-    session=Depends(get_db_session),
+    db: Session = Depends(get_db_session),
 ) -> Tuple[User, Tenant]:
     """
     Require role=tenant and resolve the Tenant record by direct FK: tenant.user_id = user.id.
     Safe: one-to-one enforced by UNIQUE on tenant.user_id; no email matching.
     """
-    tenant = session.exec(
+    tenant = db.exec(
         select(Tenant).where(Tenant.user_id == str(user.id))
     ).first()
     if not tenant:
@@ -146,13 +147,13 @@ def get_current_tenant(
 
 def get_current_landlord(
     user: User = Depends(require_role("landlord")),
-    session=Depends(get_db_session),
+    db: Session = Depends(get_db_session),
 ) -> Tuple[User, Landlord]:
     """
     Require role=landlord and resolve the Landlord record by user_id.
     Returns 401 if unauthenticated (from get_current_user), 403 if wrong role or no landlord record.
     """
-    landlord = session.exec(
+    landlord = db.exec(
         select(Landlord).where(Landlord.user_id == str(user.id))
     ).first()
     if not landlord:

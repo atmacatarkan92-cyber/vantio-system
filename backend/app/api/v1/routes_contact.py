@@ -3,9 +3,11 @@ import os
 from typing import List
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from sqlalchemy.orm import Session
+from sqlmodel import Session as SQLModelSession
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.database import get_session, engine
+from db.database import engine
 from db.models import Inquiry, Listing, Unit
 from email_service import send_contact_notification, EmailServiceError
 from models import ContactInquiryCreate, ContactResponse
@@ -21,7 +23,7 @@ NOTIFICATION_EMAIL = os.environ.get("NOTIFICATION_EMAIL", "info@feelathomenow.ch
 def submit_contact(
     inquiry: ContactInquiryCreate,
     background_tasks: BackgroundTasks,
-    session=Depends(get_db_session),
+    db: Session = Depends(get_db_session),
 ):
     """
     Public contact intake (unauthenticated). Persists Inquiry rows without organization_id;
@@ -38,9 +40,9 @@ def submit_contact(
         language=inquiry.language or "de",
         apartment_id=inquiry.apartment_id,
     )
-    session.add(obj)
-    session.commit()
-    session.refresh(obj)
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
     inquiry_id = obj.id
     background_tasks.add_task(send_email_notification_sync, inquiry_id)
     return ContactResponse(
@@ -53,9 +55,8 @@ def send_email_notification_sync(inquiry_id: str):
     """Background task: send notification email and mark inquiry.email_sent in PostgreSQL."""
     if engine is None:
         return
-    session = get_session()
-    try:
-        inquiry = session.get(Inquiry, inquiry_id)
+    with SQLModelSession(engine) as db:
+        inquiry = db.get(Inquiry, inquiry_id)
         if not inquiry:
             return
         try:
@@ -69,19 +70,17 @@ def send_email_notification_sync(inquiry_id: str):
                 language=inquiry.language or "de",
             )
             inquiry.email_sent = True
-            session.add(inquiry)
-            session.commit()
+            db.add(inquiry)
+            db.commit()
         except EmailServiceError as e:
             logger.error(str(e))
-    finally:
-        session.close()
 
 
 @router.get("/admin/inquiries", response_model=List[dict])
 def get_inquiries(
     _: None = Depends(require_roles("admin", "manager")),
     org_id: str = Depends(get_current_organization),
-    session=Depends(get_db_session),
+    db: Session = Depends(get_db_session),
 ):
     """
     Organization-scoped: only inquiries linked to a listing whose unit belongs to the
@@ -103,7 +102,7 @@ def get_inquiries(
         .order_by(Inquiry.created_at.desc())
         .limit(500)
     )
-    rows = session.exec(stmt).all()
+    rows = db.exec(stmt).all()
     return [
         {
             "id": r.id,
