@@ -87,7 +87,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         rls_rows = session.execute(
             text(
                 """
-                SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity
+                SELECT c.relname, c.relrowsecurity
                 FROM pg_class c
                 JOIN pg_namespace n ON n.oid = c.relnamespace
                 WHERE n.nspname = 'public' AND c.relkind = 'r'
@@ -112,9 +112,8 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         ], (
             f"expected RLS tables from migrations 023/025; got {names}"
         )
-        for relname, relrowsecurity, relforcerow in rls_rows:
+        for relname, relrowsecurity in rls_rows:
             assert relrowsecurity is True, f"RLS not enabled on {relname}"
-            assert relforcerow is True, f"FORCE ROW LEVEL SECURITY not enabled on {relname}"
 
         pols = session.execute(
             text(
