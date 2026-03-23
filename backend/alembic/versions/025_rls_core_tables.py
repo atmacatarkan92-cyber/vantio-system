@@ -111,7 +111,6 @@ def upgrade() -> None:
     for table, policy in direct_tables:
         conn.execute(text(f"DROP POLICY IF EXISTS {policy} ON {table}"))
         conn.execute(text(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"))
-        conn.execute(text(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY"))
         conn.execute(
             text(
                 f"""
@@ -124,7 +123,6 @@ def upgrade() -> None:
 
     conn.execute(text("DROP POLICY IF EXISTS org_isolation_unit_costs ON unit_costs"))
     conn.execute(text("ALTER TABLE unit_costs ENABLE ROW LEVEL SECURITY"))
-    conn.execute(text("ALTER TABLE unit_costs FORCE ROW LEVEL SECURITY"))
     conn.execute(
         text(
             """
@@ -152,7 +150,6 @@ def downgrade() -> None:
     conn = op.get_bind()
 
     conn.execute(text("DROP POLICY IF EXISTS org_isolation_unit_costs ON unit_costs"))
-    conn.execute(text("ALTER TABLE unit_costs NO FORCE ROW LEVEL SECURITY"))
     conn.execute(text("ALTER TABLE unit_costs DISABLE ROW LEVEL SECURITY"))
 
     for table, policy in (
@@ -162,5 +159,4 @@ def downgrade() -> None:
         ("tenancies", "org_isolation_tenancies"),
     ):
         conn.execute(text(f"DROP POLICY IF EXISTS {policy} ON {table}"))
-        conn.execute(text(f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY"))
         conn.execute(text(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY"))
