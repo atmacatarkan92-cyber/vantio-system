@@ -25,8 +25,8 @@ def upgrade() -> None:
     conn.execute(
         text("""
             CREATE POLICY org_isolation_tenant_notes ON tenant_notes FOR ALL
-            USING (organization_id = current_setting('app.current_organization_id', true))
-            WITH CHECK (organization_id = current_setting('app.current_organization_id', true))
+            USING (organization_id::text = current_setting('app.current_organization_id', true))
+            WITH CHECK (organization_id::text = current_setting('app.current_organization_id', true))
         """)
     )
 
@@ -35,8 +35,8 @@ def upgrade() -> None:
     conn.execute(
         text("""
             CREATE POLICY org_isolation_tenant_events ON tenant_events FOR ALL
-            USING (organization_id = current_setting('app.current_organization_id', true))
-            WITH CHECK (organization_id = current_setting('app.current_organization_id', true))
+            USING (organization_id::text = current_setting('app.current_organization_id', true))
+            WITH CHECK (organization_id::text = current_setting('app.current_organization_id', true))
         """)
     )
 
