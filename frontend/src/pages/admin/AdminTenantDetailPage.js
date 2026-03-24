@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   fetchAdminTenant,
@@ -8,8 +8,30 @@ import {
   fetchAdminTenantEvents,
   fetchAdminInvoices,
   fetchAdminTenancies,
+  fetchAdminUnits,
+  fetchAdminRooms,
+  normalizeUnit,
+  normalizeRoom,
 } from "../../api/adminData";
+import { API_BASE_URL, getApiHeaders } from "../../config";
 import { tenantDisplayName } from "../../utils/tenantDisplayName";
+
+async function parseAdminErrorFromResponse(res) {
+  const text = await res.text();
+  try {
+    const j = JSON.parse(text);
+    if (Array.isArray(j.detail)) {
+      return j.detail
+        .map((d) => (typeof d === "string" ? d : d.msg || d.message || ""))
+        .filter(Boolean)
+        .join(" ");
+    }
+    if (typeof j.detail === "string") return j.detail;
+  } catch (_) {
+    /* ignore */
+  }
+  return text || "Die Anfrage ist fehlgeschlagen.";
+}
 
 function formatDateTime(iso) {
   if (!iso) return "—";
@@ -404,6 +426,37 @@ export default function AdminTenantDetailPage() {
   const [tenancies, setTenancies] = useState([]);
   const [shouldRefreshTenantList, setShouldRefreshTenantList] = useState(false);
 
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignUnits, setAssignUnits] = useState([]);
+  const [assignUnitsLoading, setAssignUnitsLoading] = useState(false);
+  const [assignUnitsErr, setAssignUnitsErr] = useState(null);
+  const [assignRooms, setAssignRooms] = useState([]);
+  const [assignRoomsLoading, setAssignRoomsLoading] = useState(false);
+  const [assignUnitId, setAssignUnitId] = useState("");
+  const [assignRoomId, setAssignRoomId] = useState("");
+  const [assignMoveIn, setAssignMoveIn] = useState("");
+  const [assignMoveOut, setAssignMoveOut] = useState("");
+  const [assignMonthlyRent, setAssignMonthlyRent] = useState("");
+  const [assignStatus, setAssignStatus] = useState("active");
+  const [assignErr, setAssignErr] = useState(null);
+  const [assignSaving, setAssignSaving] = useState(false);
+
+  const reloadTenanciesForTenant = useCallback(async () => {
+    const res = await fetch(
+      `${API_BASE_URL}/api/admin/tenancies?limit=200`,
+      { headers: getApiHeaders() }
+    );
+    if (!res.ok) {
+      const fallback = await fetchAdminTenancies().catch(() => []);
+      const arr = Array.isArray(fallback) ? fallback : [];
+      setTenancies(arr.filter((x) => String(x.tenant_id) === String(tenantId)));
+      return;
+    }
+    const data = await res.json();
+    const items = Array.isArray(data?.items) ? data.items : [];
+    setTenancies(items.filter((x) => String(x.tenant_id) === String(tenantId)));
+  }, [tenantId]);
+
   const goToTenantList = () =>
     navigate(
       "/admin/tenants",
@@ -471,6 +524,32 @@ export default function AdminTenantDetailPage() {
     };
   }, [tenantId]);
 
+  useEffect(() => {
+    if (!assignOpen || !tenantId) return;
+    setAssignUnitsErr(null);
+    setAssignUnitsLoading(true);
+    fetchAdminUnits()
+      .then((data) => setAssignUnits((data || []).map(normalizeUnit)))
+      .catch((e) => setAssignUnitsErr(e?.message ?? "Einheiten konnten nicht geladen werden."))
+      .finally(() => setAssignUnitsLoading(false));
+  }, [assignOpen, tenantId]);
+
+  useEffect(() => {
+    if (!assignUnitId) {
+      setAssignRooms([]);
+      setAssignRoomId("");
+      return;
+    }
+    setAssignRoomsLoading(true);
+    fetchAdminRooms(assignUnitId)
+      .then((raw) => {
+        const arr = Array.isArray(raw) ? raw : [];
+        setAssignRooms(arr.map(normalizeRoom));
+      })
+      .catch(() => setAssignRooms([]))
+      .finally(() => setAssignRoomsLoading(false));
+  }, [assignUnitId]);
+
   const saveNote = () => {
     const text = noteDraft.trim();
     if (!text) {
@@ -524,6 +603,67 @@ export default function AdminTenantDetailPage() {
     }
     const v = e.target.value;
     setForm((f) => ({ ...f, [key]: v }));
+  };
+
+  const resetAssignForm = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    setAssignUnitId("");
+    setAssignRoomId("");
+    setAssignMoveIn(today);
+    setAssignMoveOut("");
+    setAssignMonthlyRent("");
+    setAssignStatus("active");
+    setAssignErr(null);
+  };
+
+  const openAssignForm = () => {
+    resetAssignForm();
+    setAssignOpen(true);
+  };
+
+  const handleAssignSubmit = (e) => {
+    e.preventDefault();
+    setAssignErr(null);
+    if (!assignUnitId || !assignRoomId || !assignMoveIn.trim()) {
+      setAssignErr("Einheit, Zimmer und Einzugsdatum sind erforderlich.");
+      return;
+    }
+    if (assignMonthlyRent === "" || assignMonthlyRent == null) {
+      setAssignErr("Bitte eine gültige Monatsmiete angeben.");
+      return;
+    }
+    const rent = Number(String(assignMonthlyRent).replace(",", "."));
+    if (Number.isNaN(rent) || rent < 0) {
+      setAssignErr("Bitte eine gültige Monatsmiete angeben.");
+      return;
+    }
+    const apiStatus = assignStatus === "upcoming" ? "reserved" : assignStatus;
+    setAssignSaving(true);
+    const body = {
+      tenant_id: String(tenantId),
+      unit_id: String(assignUnitId),
+      room_id: String(assignRoomId),
+      move_in_date: assignMoveIn.trim(),
+      move_out_date: assignMoveOut.trim() ? assignMoveOut.trim() : null,
+      monthly_rent: rent,
+      status: apiStatus,
+    };
+    fetch(`${API_BASE_URL}/api/admin/tenancies`, {
+      method: "POST",
+      headers: getApiHeaders(),
+      body: JSON.stringify(body),
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(await parseAdminErrorFromResponse(res));
+        return res.json();
+      })
+      .then(() => reloadTenanciesForTenant())
+      .then(() => {
+        setAssignOpen(false);
+        resetAssignForm();
+      })
+      .catch((err) => setAssignErr(err?.message || "Speichern fehlgeschlagen."))
+      .finally(() => setAssignSaving(false));
   };
 
   const handleSave = (e) => {
@@ -1049,6 +1189,188 @@ export default function AdminTenantDetailPage() {
                     </table>
                   </div>
                 )}
+                <button
+                  type="button"
+                  onClick={openAssignForm}
+                  style={{
+                    marginTop: "14px",
+                    padding: "8px 14px",
+                    borderRadius: "10px",
+                    border: "1px solid #E2E8F0",
+                    background: "#FFFFFF",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Mietverhältnis zuweisen
+                </button>
+                {assignOpen ? (
+                  <form
+                    onSubmit={handleAssignSubmit}
+                    style={{
+                      marginTop: "14px",
+                      paddingTop: "14px",
+                      borderTop: "1px solid #F1F5F9",
+                    }}
+                  >
+                    {assignUnitsErr ? (
+                      <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#B91C1C" }}>
+                        {assignUnitsErr}
+                      </p>
+                    ) : null}
+                    {assignErr ? (
+                      <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#B91C1C" }}>
+                        {assignErr}
+                      </p>
+                    ) : null}
+                    <div style={gridTwoCol}>
+                      <div>
+                        <label htmlFor="assign-unit" style={labelStyle}>
+                          Einheit *
+                        </label>
+                        <select
+                          id="assign-unit"
+                          style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
+                          value={assignUnitId}
+                          onChange={(e) => {
+                            setAssignUnitId(e.target.value);
+                            setAssignRoomId("");
+                          }}
+                          disabled={assignSaving || assignUnitsLoading}
+                        >
+                          <option value="">
+                            {assignUnitsLoading ? "Lade Einheiten …" : "— Einheit wählen"}
+                          </option>
+                          {assignUnits.map((u) => (
+                            <option key={String(u.id)} value={String(u.id)}>
+                              {(u.unitId ?? u.id) + (u.address || u.place ? ` — ${u.address || u.place}` : "")}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label htmlFor="assign-room" style={labelStyle}>
+                          Zimmer *
+                        </label>
+                        <select
+                          id="assign-room"
+                          style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
+                          value={assignRoomId}
+                          onChange={(e) => setAssignRoomId(e.target.value)}
+                          disabled={assignSaving || !assignUnitId || assignRoomsLoading}
+                        >
+                          <option value="">
+                            {!assignUnitId
+                              ? "— Zuerst Einheit wählen"
+                              : assignRoomsLoading
+                                ? "Lade Zimmer …"
+                                : "— Zimmer wählen"}
+                          </option>
+                          {assignRooms.map((r) => (
+                            <option key={String(r.id)} value={String(r.id)}>
+                              {r.roomName || r.name || r.room_number || r.id}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label htmlFor="assign-move-in" style={labelStyle}>
+                          Einzugsdatum *
+                        </label>
+                        <input
+                          id="assign-move-in"
+                          type="date"
+                          style={inputStyle}
+                          value={assignMoveIn}
+                          onChange={(e) => setAssignMoveIn(e.target.value)}
+                          disabled={assignSaving}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="assign-move-out" style={labelStyle}>
+                          Auszugsdatum
+                        </label>
+                        <input
+                          id="assign-move-out"
+                          type="date"
+                          style={inputStyle}
+                          value={assignMoveOut}
+                          onChange={(e) => setAssignMoveOut(e.target.value)}
+                          disabled={assignSaving}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="assign-rent" style={labelStyle}>
+                          Monatsmiete (CHF) *
+                        </label>
+                        <input
+                          id="assign-rent"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          style={inputStyle}
+                          value={assignMonthlyRent}
+                          onChange={(e) => setAssignMonthlyRent(e.target.value)}
+                          disabled={assignSaving}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="assign-status" style={labelStyle}>
+                          Status
+                        </label>
+                        <select
+                          id="assign-status"
+                          style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
+                          value={assignStatus}
+                          onChange={(e) => setAssignStatus(e.target.value)}
+                          disabled={assignSaving}
+                        >
+                          <option value="active">Aktiv</option>
+                          <option value="upcoming">Bevorstehend</option>
+                          <option value="ended">Beendet</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "12px" }}>
+                      <button
+                        type="submit"
+                        disabled={assignSaving}
+                        style={{
+                          padding: "8px 14px",
+                          borderRadius: "10px",
+                          border: "none",
+                          background: assignSaving ? "#94A3B8" : "#f97316",
+                          color: "#FFF",
+                          fontWeight: 700,
+                          cursor: assignSaving ? "default" : "pointer",
+                        }}
+                      >
+                        {assignSaving ? "Speichern …" : "Speichern"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={assignSaving}
+                        onClick={() => {
+                          setAssignOpen(false);
+                          resetAssignForm();
+                        }}
+                        style={{
+                          padding: "8px 14px",
+                          borderRadius: "10px",
+                          border: "1px solid #E2E8F0",
+                          background: "#FFF",
+                          fontWeight: 600,
+                          cursor: assignSaving ? "default" : "pointer",
+                        }}
+                      >
+                        Abbrechen
+                      </button>
+                    </div>
+                  </form>
+                ) : null}
               </div>
               <div style={sectionCard}>
                 <div style={sectionTitle}>Rechnungen</div>
