@@ -10,6 +10,7 @@ import {
 } from "../../api/adminData";
 import TenantCreateModal from "../../components/admin/tenants/TenantCreateModal";
 import TenantDetailDrawer from "../../components/admin/tenants/TenantDetailDrawer";
+import { tenantDisplayName } from "../../utils/tenantDisplayName";
 
 function formatCurrency(value) {
   const amount = Number(value || 0);
@@ -159,11 +160,7 @@ function buildTenantRows(tenants, tenancies, rooms, units, invoices) {
 
     return {
       id: tenant.id,
-      fullName:
-        tenant.full_name ||
-        tenant.name ||
-        `${tenant.first_name || ""} ${tenant.last_name || ""}`.trim() ||
-        `Mieter ${tenant.id}`,
+      fullName: tenantDisplayName(tenant) || `Mieter ${tenant.id}`,
       email: tenant.email || "-",
       phone: tenant.phone || tenant.mobile || "-",
       status: activeTenancy?.status || tenant.status || "Offen",

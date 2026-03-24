@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { fetchAdminTenant, updateAdminTenant } from "../../../api/adminData";
+import { tenantDisplayName } from "../../../utils/tenantDisplayName";
 
 function formatDateTime(iso) {
   if (!iso) return "—";
@@ -14,6 +15,17 @@ function formatDateTime(iso) {
   });
 }
 
+function formatDateOnly(iso) {
+  if (!iso) return "—";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [y, m, d] = iso.split("-");
+    return `${d}.${m}.${y}`;
+  }
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) return iso;
+  return dt.toLocaleDateString("de-CH");
+}
+
 const backdropStyle = {
   position: "fixed",
   inset: 0,
@@ -26,7 +38,7 @@ const drawerStyle = {
   top: 0,
   right: 0,
   bottom: 0,
-  width: "min(480px, 100vw)",
+  width: "min(520px, 100vw)",
   background: "#F8FAFC",
   zIndex: 1001,
   boxShadow: "-8px 0 32px rgba(15, 23, 42, 0.12)",
@@ -68,6 +80,15 @@ const inputStyle = {
   boxSizing: "border-box",
 };
 
+const sectionTitle = {
+  fontSize: "11px",
+  fontWeight: 700,
+  color: "#f97316",
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+  margin: "0 0 10px 0",
+};
+
 function PlaceholderSection({ title }) {
   return (
     <div style={placeholderStyle}>
@@ -77,9 +98,57 @@ function PlaceholderSection({ title }) {
   );
 }
 
+function Row({ label, value }) {
+  return (
+    <div style={{ marginBottom: "12px" }}>
+      <span style={labelStyle}>{label}</span>
+      <div style={{ fontSize: "15px", color: "#0F172A" }}>{value || "—"}</div>
+    </div>
+  );
+}
+
+const emptyForm = {
+  firstName: "",
+  lastName: "",
+  birthDate: "",
+  nationality: "",
+  isSwiss: false,
+  residencePermit: "",
+  email: "",
+  phone: "",
+  company: "",
+  street: "",
+  postalCode: "",
+  city: "",
+  country: "",
+};
+
+function tenantToForm(t) {
+  if (!t) return { ...emptyForm };
+  const bd = t.birth_date;
+  const birthDate =
+    bd && typeof bd === "string" && /^\d{4}-\d{2}-\d{2}/.test(bd)
+      ? bd.slice(0, 10)
+      : "";
+  return {
+    firstName: (t.first_name || "").trim(),
+    lastName: (t.last_name || "").trim(),
+    birthDate,
+    nationality: t.nationality || "",
+    isSwiss: t.is_swiss === true,
+    residencePermit: t.residence_permit || "",
+    email: t.email || "",
+    phone: t.phone || "",
+    company: t.company || "",
+    street: t.street || "",
+    postalCode: t.postal_code || "",
+    city: t.city || "",
+    country: t.country || "",
+  };
+}
+
 /**
- * Right-side drawer: tenant detail, edit, and future CRM sections (placeholders).
- * @param {{ open: boolean, tenantId: string | null, statusMeta: object, onClose: () => void, onTenantUpdated: (tenant: object) => void }} props
+ * Right-side drawer: tenant master data + future CRM placeholders.
  */
 export default function TenantDetailDrawer({
   open,
@@ -94,12 +163,7 @@ export default function TenantDetailDrawer({
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    company: "",
-  });
+  const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
     if (!open || !tenantId) {
@@ -119,12 +183,7 @@ export default function TenantDetailDrawer({
           return;
         }
         setTenant(t);
-        setForm({
-          name: t.name || t.full_name || "",
-          email: t.email || "",
-          phone: t.phone || "",
-          company: t.company || "",
-        });
+        setForm(tenantToForm(t));
       })
       .catch((e) => setLoadError(e?.message || "Laden fehlgeschlagen."))
       .finally(() => setLoading(false));
@@ -134,29 +193,43 @@ export default function TenantDetailDrawer({
 
   const applyUpdate = (updated) => {
     setTenant(updated);
-    setForm({
-      name: updated.name || updated.full_name || "",
-      email: updated.email || "",
-      phone: updated.phone || "",
-      company: updated.company || "",
-    });
+    setForm(tenantToForm(updated));
     onTenantUpdated?.(updated);
+  };
+
+  const setField = (key) => (e) => {
+    const v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+    setForm((f) => {
+      const next = { ...f, [key]: v };
+      if (key === "isSwiss" && v === true) next.residencePermit = "";
+      return next;
+    });
   };
 
   const handleSave = (e) => {
     e.preventDefault();
     setSaveError(null);
-    const trimmedName = form.name.trim();
-    if (!trimmedName) {
-      setSaveError("Name ist erforderlich.");
+    const fn = form.firstName.trim();
+    const ln = form.lastName.trim();
+    if (!fn || !ln) {
+      setSaveError("Vor- und Nachname sind erforderlich.");
       return;
     }
     setSaving(true);
     updateAdminTenant(tenantId, {
-      name: trimmedName,
+      first_name: fn,
+      last_name: ln,
+      birth_date: form.birthDate.trim() || null,
+      nationality: form.nationality.trim() || null,
+      is_swiss: form.isSwiss,
+      residence_permit: form.isSwiss ? null : form.residencePermit.trim() || null,
       email: form.email.trim(),
       phone: form.phone.trim() || null,
       company: form.company.trim() || null,
+      street: form.street.trim() || null,
+      postal_code: form.postalCode.trim() || null,
+      city: form.city.trim() || null,
+      country: form.country.trim() || null,
     })
       .then((updated) => {
         applyUpdate(updated);
@@ -166,7 +239,7 @@ export default function TenantDetailDrawer({
       .finally(() => setSaving(false));
   };
 
-  const displayName = tenant?.name || tenant?.full_name || "—";
+  const displayName = tenant ? tenantDisplayName(tenant) : "—";
 
   return (
     <>
@@ -275,25 +348,29 @@ export default function TenantDetailDrawer({
               <div style={sectionCard}>
                 {!editing ? (
                   <>
-                    <div style={{ marginBottom: "12px" }}>
-                      <span style={labelStyle}>E-Mail</span>
-                      <div style={{ fontSize: "15px", color: "#0F172A" }}>
-                        {tenant.email || "—"}
-                      </div>
-                    </div>
-                    <div style={{ marginBottom: "12px" }}>
-                      <span style={labelStyle}>Telefon</span>
-                      <div style={{ fontSize: "15px", color: "#0F172A" }}>
-                        {tenant.phone || "—"}
-                      </div>
-                    </div>
-                    <div style={{ marginBottom: "12px" }}>
-                      <span style={labelStyle}>Firma</span>
-                      <div style={{ fontSize: "15px", color: "#0F172A" }}>
-                        {tenant.company || "—"}
-                      </div>
-                    </div>
-                    <div>
+                    <div style={sectionTitle}>Person</div>
+                    <Row label="Vorname" value={tenant.first_name} />
+                    <Row label="Nachname" value={tenant.last_name} />
+                    <Row label="Geburtsdatum" value={formatDateOnly(tenant.birth_date)} />
+                    <Row label="Nationalität" value={tenant.nationality} />
+                    <div style={sectionTitle}>Aufenthalt</div>
+                    <Row
+                      label="Schweizer/in"
+                      value={tenant.is_swiss === true ? "Ja" : tenant.is_swiss === false ? "Nein" : "—"}
+                    />
+                    {tenant.is_swiss !== true ? (
+                      <Row label="Aufenthaltsbewilligung" value={tenant.residence_permit} />
+                    ) : null}
+                    <div style={sectionTitle}>Kontakt</div>
+                    <Row label="E-Mail" value={tenant.email} />
+                    <Row label="Telefon" value={tenant.phone} />
+                    <Row label="Firma" value={tenant.company} />
+                    <div style={sectionTitle}>Adresse</div>
+                    <Row label="Strasse" value={tenant.street} />
+                    <Row label="PLZ" value={tenant.postal_code} />
+                    <Row label="Ort" value={tenant.city} />
+                    <Row label="Land" value={tenant.country} />
+                    <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #F1F5F9" }}>
                       <span style={labelStyle}>Erfasst am</span>
                       <div style={{ fontSize: "15px", color: "#0F172A" }}>
                         {formatDateTime(tenant.created_at)}
@@ -302,21 +379,95 @@ export default function TenantDetailDrawer({
                   </>
                 ) : (
                   <form onSubmit={handleSave}>
-                    <div style={{ marginBottom: "12px" }}>
-                      <label htmlFor="td-name" style={labelStyle}>
-                        Name *
+                    <div style={sectionTitle}>Person</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                      <div>
+                        <label htmlFor="td-fn" style={labelStyle}>
+                          Vorname *
+                        </label>
+                        <input
+                          id="td-fn"
+                          style={inputStyle}
+                          value={form.firstName}
+                          onChange={setField("firstName")}
+                          disabled={saving}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="td-ln" style={labelStyle}>
+                          Nachname *
+                        </label>
+                        <input
+                          id="td-ln"
+                          style={inputStyle}
+                          value={form.lastName}
+                          onChange={setField("lastName")}
+                          disabled={saving}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ marginTop: "10px" }}>
+                      <label htmlFor="td-bd" style={labelStyle}>
+                        Geburtsdatum
                       </label>
                       <input
-                        id="td-name"
+                        id="td-bd"
+                        type="date"
                         style={inputStyle}
-                        value={form.name}
-                        onChange={(e) =>
-                          setForm((f) => ({ ...f, name: e.target.value }))
-                        }
+                        value={form.birthDate}
+                        onChange={setField("birthDate")}
                         disabled={saving}
                       />
                     </div>
-                    <div style={{ marginBottom: "12px" }}>
+                    <div style={{ marginTop: "10px" }}>
+                      <label htmlFor="td-nat" style={labelStyle}>
+                        Nationalität
+                      </label>
+                      <input
+                        id="td-nat"
+                        style={inputStyle}
+                        value={form.nationality}
+                        onChange={setField("nationality")}
+                        disabled={saving}
+                      />
+                    </div>
+
+                    <div style={{ ...sectionTitle, marginTop: "14px" }}>Aufenthalt</div>
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        color: "#334155",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.isSwiss}
+                        onChange={setField("isSwiss")}
+                        disabled={saving}
+                      />
+                      Schweizer/in
+                    </label>
+                    {!form.isSwiss ? (
+                      <div style={{ marginTop: "10px" }}>
+                        <label htmlFor="td-permit" style={labelStyle}>
+                          Aufenthaltsbewilligung
+                        </label>
+                        <input
+                          id="td-permit"
+                          style={inputStyle}
+                          value={form.residencePermit}
+                          onChange={setField("residencePermit")}
+                          disabled={saving}
+                        />
+                      </div>
+                    ) : null}
+
+                    <div style={{ ...sectionTitle, marginTop: "14px" }}>Kontakt</div>
+                    <div style={{ marginBottom: "10px" }}>
                       <label htmlFor="td-email" style={labelStyle}>
                         E-Mail
                       </label>
@@ -325,13 +476,11 @@ export default function TenantDetailDrawer({
                         type="email"
                         style={inputStyle}
                         value={form.email}
-                        onChange={(e) =>
-                          setForm((f) => ({ ...f, email: e.target.value }))
-                        }
+                        onChange={setField("email")}
                         disabled={saving}
                       />
                     </div>
-                    <div style={{ marginBottom: "12px" }}>
+                    <div style={{ marginBottom: "10px" }}>
                       <label htmlFor="td-phone" style={labelStyle}>
                         Telefon
                       </label>
@@ -339,13 +488,11 @@ export default function TenantDetailDrawer({
                         id="td-phone"
                         style={inputStyle}
                         value={form.phone}
-                        onChange={(e) =>
-                          setForm((f) => ({ ...f, phone: e.target.value }))
-                        }
+                        onChange={setField("phone")}
                         disabled={saving}
                       />
                     </div>
-                    <div style={{ marginBottom: "14px" }}>
+                    <div style={{ marginBottom: "10px" }}>
                       <label htmlFor="td-company" style={labelStyle}>
                         Firma
                       </label>
@@ -353,20 +500,65 @@ export default function TenantDetailDrawer({
                         id="td-company"
                         style={inputStyle}
                         value={form.company}
-                        onChange={(e) =>
-                          setForm((f) => ({ ...f, company: e.target.value }))
-                        }
+                        onChange={setField("company")}
                         disabled={saving}
                       />
                     </div>
+
+                    <div style={{ ...sectionTitle, marginTop: "14px" }}>Adresse</div>
+                    <div style={{ marginBottom: "10px" }}>
+                      <label htmlFor="td-street" style={labelStyle}>
+                        Strasse
+                      </label>
+                      <input
+                        id="td-street"
+                        style={inputStyle}
+                        value={form.street}
+                        onChange={setField("street")}
+                        disabled={saving}
+                      />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "10px" }}>
+                      <div>
+                        <label htmlFor="td-plz" style={labelStyle}>
+                          PLZ
+                        </label>
+                        <input
+                          id="td-plz"
+                          style={inputStyle}
+                          value={form.postalCode}
+                          onChange={setField("postalCode")}
+                          disabled={saving}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="td-city" style={labelStyle}>
+                          Ort
+                        </label>
+                        <input
+                          id="td-city"
+                          style={inputStyle}
+                          value={form.city}
+                          onChange={setField("city")}
+                          disabled={saving}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ marginTop: "10px", marginBottom: "12px" }}>
+                      <label htmlFor="td-country" style={labelStyle}>
+                        Land
+                      </label>
+                      <input
+                        id="td-country"
+                        style={inputStyle}
+                        value={form.country}
+                        onChange={setField("country")}
+                        disabled={saving}
+                      />
+                    </div>
+
                     {saveError ? (
-                      <div
-                        style={{
-                          marginBottom: "12px",
-                          fontSize: "13px",
-                          color: "#B91C1C",
-                        }}
-                      >
+                      <div style={{ marginBottom: "12px", fontSize: "13px", color: "#B91C1C" }}>
                         {saveError}
                       </div>
                     ) : null}
@@ -392,12 +584,7 @@ export default function TenantDetailDrawer({
                         onClick={() => {
                           setEditing(false);
                           setSaveError(null);
-                          setForm({
-                            name: tenant.name || tenant.full_name || "",
-                            email: tenant.email || "",
-                            phone: tenant.phone || "",
-                            company: tenant.company || "",
-                          });
+                          setForm(tenantToForm(tenant));
                         }}
                         style={{
                           padding: "8px 14px",
