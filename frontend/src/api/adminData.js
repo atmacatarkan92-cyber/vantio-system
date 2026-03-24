@@ -156,6 +156,47 @@ export async function updateAdminTenant(tenantId, body) {
   return res.json();
 }
 
+export function fetchAdminTenantNotes(tenantId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/tenants/${encodeURIComponent(tenantId)}/notes`,
+    { headers: getApiHeaders() }
+  ).then((res) => {
+    if (!res.ok) {
+      if (res.status === 404) return { items: [] };
+      throw new Error("Notizen konnten nicht geladen werden.");
+    }
+    return res.json();
+  });
+}
+
+export async function createAdminTenantNote(tenantId, content) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/tenants/${encodeURIComponent(tenantId)}/notes`,
+    {
+      method: "POST",
+      headers: getApiHeaders(),
+      body: JSON.stringify({ content }),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
+
+export function fetchAdminTenantEvents(tenantId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/tenants/${encodeURIComponent(tenantId)}/events`,
+    { headers: getApiHeaders() }
+  ).then((res) => {
+    if (!res.ok) {
+      if (res.status === 404) return { items: [] };
+      throw new Error("Verlauf konnte nicht geladen werden.");
+    }
+    return res.json();
+  });
+}
+
 /**
  * Fetch all tenancies (for AdminTenantsPage). Optional params: room_id, unit_id, status.
  */

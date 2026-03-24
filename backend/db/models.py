@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel, Field
-from sqlalchemy import Column
+from sqlalchemy import Column, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime, date
 from enum import Enum
@@ -212,6 +212,40 @@ class Tenant(SQLModel, table=True):
     phone: Optional[str] = Field(default=None, max_length=50)
     company: Optional[str] = Field(default=None, max_length=200)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class TenantNote(SQLModel, table=True):
+    """Internal CRM note on a tenant (organization-scoped)."""
+
+    __tablename__ = "tenant_notes"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    tenant_id: str = Field(foreign_key="tenant.id", index=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
+    content: str = Field(sa_column=Column(Text, nullable=False))
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_by_user_id: Optional[str] = Field(
+        default=None, foreign_key="users.id", index=True, nullable=True
+    )
+
+
+class TenantEvent(SQLModel, table=True):
+    """Lightweight activity / audit row for tenant CRM timeline."""
+
+    __tablename__ = "tenant_events"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    tenant_id: str = Field(foreign_key="tenant.id", index=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
+    action_type: str = Field(max_length=64, index=True)
+    field_name: Optional[str] = Field(default=None, max_length=128)
+    old_value: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
+    new_value: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
+    summary: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_by_user_id: Optional[str] = Field(
+        default=None, foreign_key="users.id", index=True, nullable=True
+    )
 
 
 class TenancyStatus(str, Enum):

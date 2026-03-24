@@ -57,6 +57,8 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         ("properties", "org_isolation_properties"),
         ("landlords", "org_isolation_landlords"),
         ("unit_costs", "org_isolation_unit_costs"),
+        ("tenant_notes", "org_isolation_tenant_notes"),
+        ("tenant_events", "org_isolation_tenant_events"),
     }
     with Session(engine) as session:
         cu, su = session.execute(text("SELECT current_user, session_user")).one()
@@ -93,7 +95,8 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                 WHERE n.nspname = 'public' AND c.relkind = 'r'
                   AND c.relname IN (
                     'invoices', 'landlords', 'properties', 'room',
-                    'tenancies', 'tenant', 'unit', 'unit_costs'
+                    'tenancies', 'tenant', 'tenant_events', 'tenant_notes',
+                    'unit', 'unit_costs'
                   )
                 ORDER BY c.relname
                 """
@@ -107,10 +110,12 @@ def test_rls_environment_validates_database_role_and_policies(engine):
             "room",
             "tenancies",
             "tenant",
+            "tenant_events",
+            "tenant_notes",
             "unit",
             "unit_costs",
         ], (
-            f"expected RLS tables from migrations 023/025; got {names}"
+            f"expected RLS tables from migrations 023/025/030; got {names}"
         )
         for relname, relrowsecurity in rls_rows:
             assert relrowsecurity is True, f"RLS not enabled on {relname}"
@@ -122,7 +127,8 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                 FROM pg_policies
                 WHERE tablename IN (
                     'unit', 'tenant', 'room', 'tenancies', 'invoices',
-                    'properties', 'landlords', 'unit_costs'
+                    'properties', 'landlords', 'unit_costs',
+                    'tenant_notes', 'tenant_events'
                 )
                 """
             )
@@ -130,7 +136,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         got = {(r[0], r[1]) for r in pols}
         assert got == expected_policies, (
             f"expected policies {expected_policies}; got {got}. "
-            "Apply migrations 023_rls_unit_tenant_room and 025_rls_core_tables."
+            "Apply migrations 023_rls_unit_tenant_room, 025_rls_core_tables, and 030_rls_tenant_crm."
         )
 
 

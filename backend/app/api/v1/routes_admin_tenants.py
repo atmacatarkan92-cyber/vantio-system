@@ -8,12 +8,18 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, EmailStr, TypeAdapter, field_validator, model_validator
-from sqlalchemy import func, or_
+from sqlalchemy import desc, func, or_
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Tenant, User, Room, Unit
+from db.models import Tenant, TenantEvent, TenantNote, User, Room, Unit
 from db.audit import create_audit_log, model_snapshot
+from app.services.tenant_crm import (
+    append_tenant_updated_events_from_snapshots,
+    author_display,
+    load_users_by_ids,
+    record_tenant_event,
+)
 from app.core.rate_limit import limiter
 
 
@@ -297,6 +303,49 @@ class TenantListResponse(BaseModel):
     limit: int
 
 
+class TenantNoteCreate(BaseModel):
+    content: str
+
+    @field_validator("content")
+    @classmethod
+    def _trim_nonempty(cls, v: str) -> str:
+        s = (v or "").strip()
+        if not s:
+            raise ValueError("Notiz darf nicht leer sein.")
+        return s
+
+
+def _tenant_in_org_or_404(session, tenant_id: str, org_id: str) -> Tenant:
+    tenant = session.get(Tenant, tenant_id)
+    if not tenant or str(getattr(tenant, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    return tenant
+
+
+def _note_to_dict(note: TenantNote, user: Optional[User]) -> dict:
+    return {
+        "id": note.id,
+        "content": note.content,
+        "created_at": note.created_at.isoformat(),
+        "created_by_user_id": note.created_by_user_id,
+        "author_name": author_display(user, note.created_by_user_id),
+    }
+
+
+def _event_to_dict(ev: TenantEvent, user: Optional[User]) -> dict:
+    return {
+        "id": ev.id,
+        "action_type": ev.action_type,
+        "field_name": ev.field_name,
+        "old_value": ev.old_value,
+        "new_value": ev.new_value,
+        "summary": ev.summary or ev.action_type,
+        "created_at": ev.created_at.isoformat(),
+        "created_by_user_id": ev.created_by_user_id,
+        "author_name": author_display(user, ev.created_by_user_id),
+    }
+
+
 @router.get("/tenants", response_model=TenantListResponse)
 def admin_list_tenants(
     skip: int = Query(0, ge=0),
@@ -380,6 +429,14 @@ def admin_create_tenant(
         company=body.company,
     )
     session.add(tenant)
+    record_tenant_event(
+        session,
+        tenant_id=str(tenant.id),
+        organization_id=org_id,
+        action_type="tenant_created",
+        created_by_user_id=str(current_user.id),
+        summary="Mieter angelegt",
+    )
     create_audit_log(
         session, str(current_user.id), "create", "tenant", str(tenant.id),
         old_values=None, new_values=model_snapshot(tenant),
@@ -429,13 +486,100 @@ def admin_patch_tenant(
     if getattr(tenant, "is_swiss", None) is True:
         tenant.residence_permit = None
     session.add(tenant)
+    new_snapshot = model_snapshot(tenant)
+    append_tenant_updated_events_from_snapshots(
+        session,
+        tenant_id=str(tenant_id),
+        organization_id=org_id,
+        actor_user_id=str(current_user.id),
+        old_snapshot=old_snapshot or {},
+        new_snapshot=new_snapshot or {},
+    )
     create_audit_log(
         session, str(current_user.id), "update", "tenant", str(tenant_id),
-        old_values=old_snapshot, new_values=model_snapshot(tenant),
+        old_values=old_snapshot, new_values=new_snapshot,
     )
     session.commit()
     session.refresh(tenant)
     return _tenant_to_dict(tenant)
+
+
+@router.get("/tenants/{tenant_id}/notes", response_model=dict)
+def admin_list_tenant_notes(
+    tenant_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    _tenant_in_org_or_404(session, tenant_id, org_id)
+    rows = session.exec(
+        select(TenantNote)
+        .where(
+            TenantNote.tenant_id == tenant_id,
+            TenantNote.organization_id == org_id,
+        )
+        .order_by(desc(TenantNote.created_at))
+        .limit(200)
+    ).all()
+    uids = {n.created_by_user_id for n in rows if n.created_by_user_id}
+    users = load_users_by_ids(session, uids)
+    items = [_note_to_dict(n, users.get(n.created_by_user_id)) for n in rows]
+    return {"items": items}
+
+
+@router.post("/tenants/{tenant_id}/notes", response_model=dict)
+@limiter.limit("30/minute")
+def admin_create_tenant_note(
+    request: Request,
+    tenant_id: str,
+    body: TenantNoteCreate,
+    org_id: str = Depends(get_current_organization),
+    current_user: User = Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    _tenant_in_org_or_404(session, tenant_id, org_id)
+    note = TenantNote(
+        tenant_id=tenant_id,
+        organization_id=org_id,
+        content=body.content,
+        created_by_user_id=str(current_user.id),
+    )
+    session.add(note)
+    record_tenant_event(
+        session,
+        tenant_id=tenant_id,
+        organization_id=org_id,
+        action_type="tenant_note_added",
+        created_by_user_id=str(current_user.id),
+        summary="Notiz hinzugefügt",
+    )
+    session.commit()
+    session.refresh(note)
+    u = session.get(User, note.created_by_user_id) if note.created_by_user_id else None
+    return _note_to_dict(note, u)
+
+
+@router.get("/tenants/{tenant_id}/events", response_model=dict)
+def admin_list_tenant_events(
+    tenant_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    _tenant_in_org_or_404(session, tenant_id, org_id)
+    rows = session.exec(
+        select(TenantEvent)
+        .where(
+            TenantEvent.tenant_id == tenant_id,
+            TenantEvent.organization_id == org_id,
+        )
+        .order_by(desc(TenantEvent.created_at))
+        .limit(300)
+    ).all()
+    uids = {e.created_by_user_id for e in rows if e.created_by_user_id}
+    users = load_users_by_ids(session, uids)
+    items = [_event_to_dict(e, users.get(e.created_by_user_id)) for e in rows]
+    return {"items": items}
 
 
 @router.delete("/tenants/{tenant_id}")

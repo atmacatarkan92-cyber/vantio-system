@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { fetchAdminTenant, updateAdminTenant } from "../../../api/adminData";
+import {
+  fetchAdminTenant,
+  updateAdminTenant,
+  fetchAdminTenantNotes,
+  createAdminTenantNote,
+  fetchAdminTenantEvents,
+} from "../../../api/adminData";
 import { tenantDisplayName } from "../../../utils/tenantDisplayName";
 
 function formatDateTime(iso) {
@@ -80,6 +86,13 @@ const inputStyle = {
   boxSizing: "border-box",
 };
 
+const textareaStyle = {
+  ...inputStyle,
+  minHeight: "88px",
+  resize: "vertical",
+  fontFamily: "inherit",
+};
+
 const sectionTitle = {
   fontSize: "11px",
   fontWeight: 700,
@@ -94,6 +107,127 @@ function PlaceholderSection({ title }) {
     <div style={placeholderStyle}>
       <div style={{ fontWeight: 700, color: "#334155", marginBottom: "6px" }}>{title}</div>
       <div>Wird in einer späteren Phase ergänzt.</div>
+    </div>
+  );
+}
+
+function TenantNotesBlock({
+  notes,
+  noteDraft,
+  setNoteDraft,
+  noteSaving,
+  noteErr,
+  noteSubmitError,
+  onSubmit,
+}) {
+  return (
+    <div style={sectionCard}>
+      <div style={sectionTitle}>Notizen</div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit();
+        }}
+      >
+        <label htmlFor="td-note" style={{ ...labelStyle, marginBottom: "6px" }}>
+          Neue Notiz
+        </label>
+        <textarea
+          id="td-note"
+          style={textareaStyle}
+          value={noteDraft}
+          onChange={(e) => setNoteDraft(e.target.value)}
+          disabled={noteSaving}
+          placeholder="Interne Notiz …"
+        />
+        {noteErr ? (
+          <div style={{ marginTop: "8px", fontSize: "13px", color: "#B91C1C" }}>{noteErr}</div>
+        ) : null}
+        {noteSubmitError ? (
+          <div style={{ marginTop: "8px", fontSize: "13px", color: "#B91C1C" }}>{noteSubmitError}</div>
+        ) : null}
+        <div style={{ marginTop: "10px" }}>
+          <button
+            type="submit"
+            disabled={noteSaving}
+            style={{
+              padding: "8px 14px",
+              borderRadius: "10px",
+              border: "none",
+              background: noteSaving ? "#94A3B8" : "#f97316",
+              color: "#FFF",
+              fontWeight: 700,
+              cursor: noteSaving ? "default" : "pointer",
+            }}
+          >
+            {noteSaving ? "Speichern …" : "Notiz speichern"}
+          </button>
+        </div>
+      </form>
+      <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid #F1F5F9" }}>
+        <div style={{ ...labelStyle, marginBottom: "8px" }}>Alle Notizen</div>
+        {!notes.length ? (
+          <p style={{ margin: 0, fontSize: "0.875rem", color: "#64748B" }}>Noch keine Notizen</p>
+        ) : (
+          <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+            {notes.map((n) => (
+              <li
+                key={n.id}
+                style={{
+                  marginBottom: "12px",
+                  paddingBottom: "12px",
+                  borderBottom: "1px solid #F1F5F9",
+                }}
+              >
+                <div style={{ fontSize: "14px", color: "#0F172A", whiteSpace: "pre-wrap" }}>{n.content}</div>
+                <div style={{ fontSize: "12px", color: "#94A3B8", marginTop: "6px" }}>
+                  {formatDateTime(n.created_at)} · {n.author_name || "—"}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TenantHistoryBlock({ events }) {
+  return (
+    <div style={sectionCard}>
+      <div style={sectionTitle}>Verlauf / Aktivität</div>
+      {!events.length ? (
+        <p style={{ margin: 0, fontSize: "0.875rem", color: "#64748B" }}>Noch kein Verlauf</p>
+      ) : (
+        <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+          {events.map((ev) => {
+            const showDiff =
+              ev.action_type === "tenant_updated" &&
+              ev.field_name &&
+              (ev.old_value != null || ev.new_value != null);
+            return (
+              <li
+                key={ev.id}
+                style={{
+                  marginBottom: "12px",
+                  paddingLeft: "12px",
+                  borderLeft: "3px solid #E2E8F0",
+                }}
+              >
+                <div style={{ fontWeight: 600, fontSize: "14px", color: "#0F172A" }}>{ev.summary}</div>
+                {showDiff ? (
+                  <div style={{ fontSize: "12px", color: "#64748B", marginTop: "4px" }}>
+                    {ev.old_value ?? "—"} → {ev.new_value ?? "—"}
+                  </div>
+                ) : null}
+                <div style={{ fontSize: "12px", color: "#94A3B8", marginTop: "6px" }}>
+                  {formatDateTime(ev.created_at)} · {ev.author_name || "—"}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
@@ -168,6 +302,12 @@ export default function TenantDetailDrawer({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [notes, setNotes] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [noteValidationErr, setNoteValidationErr] = useState(null);
+  const [noteSubmitError, setNoteSubmitError] = useState(null);
 
   useEffect(() => {
     if (!open || !tenantId) {
@@ -175,23 +315,68 @@ export default function TenantDetailDrawer({
       setLoadError(null);
       setEditing(false);
       setSaveError(null);
+      setNotes([]);
+      setEvents([]);
+      setNoteDraft("");
+      setNoteValidationErr(null);
+      setNoteSubmitError(null);
       return;
     }
+    let cancelled = false;
     setLoading(true);
     setLoadError(null);
-    fetchAdminTenant(tenantId)
-      .then((t) => {
+    (async () => {
+      try {
+        const t = await fetchAdminTenant(tenantId);
+        if (cancelled) return;
         if (!t) {
           setLoadError("Mieter nicht gefunden.");
           setTenant(null);
+          setNotes([]);
+          setEvents([]);
           return;
         }
         setTenant(t);
         setForm(tenantToForm(t));
-      })
-      .catch((e) => setLoadError(e?.message || "Laden fehlgeschlagen."))
-      .finally(() => setLoading(false));
+        const [nData, eData] = await Promise.all([
+          fetchAdminTenantNotes(tenantId),
+          fetchAdminTenantEvents(tenantId),
+        ]);
+        if (cancelled) return;
+        setNotes(nData?.items || []);
+        setEvents(eData?.items || []);
+      } catch (e) {
+        if (!cancelled) setLoadError(e?.message || "Laden fehlgeschlagen.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [open, tenantId]);
+
+  const saveNote = () => {
+    const text = noteDraft.trim();
+    if (!text) {
+      setNoteValidationErr("Bitte eine Notiz eingeben.");
+      return;
+    }
+    setNoteValidationErr(null);
+    setNoteSubmitError(null);
+    setNoteSaving(true);
+    createAdminTenantNote(tenantId, text)
+      .then(() => {
+        setNoteDraft("");
+        return Promise.all([fetchAdminTenantNotes(tenantId), fetchAdminTenantEvents(tenantId)]);
+      })
+      .then(([nData, eData]) => {
+        setNotes(nData?.items || []);
+        setEvents(eData?.items || []);
+      })
+      .catch((err) => setNoteSubmitError(err?.message || "Notiz konnte nicht gespeichert werden."))
+      .finally(() => setNoteSaving(false));
+  };
 
   if (!open) return null;
 
@@ -249,6 +434,10 @@ export default function TenantDetailDrawer({
       .then((updated) => {
         applyUpdate(updated);
         setEditing(false);
+        return fetchAdminTenantEvents(tenantId).catch(() => null);
+      })
+      .then((eData) => {
+        if (eData?.items) setEvents(eData.items);
       })
       .catch((err) => setSaveError(err?.message || "Speichern fehlgeschlagen."))
       .finally(() => setSaving(false));
@@ -647,8 +836,19 @@ export default function TenantDetailDrawer({
               </div>
               <PlaceholderSection title="Mietverhältnisse" />
               <PlaceholderSection title="Rechnungen" />
-              <PlaceholderSection title="Notizen" />
-              <PlaceholderSection title="Verlauf / Audit" />
+              <TenantNotesBlock
+                notes={notes}
+                noteDraft={noteDraft}
+                setNoteDraft={(v) => {
+                  setNoteDraft(v);
+                  setNoteValidationErr(null);
+                }}
+                noteSaving={noteSaving}
+                noteErr={noteValidationErr}
+                noteSubmitError={noteSubmitError}
+                onSubmit={saveNote}
+              />
+              <TenantHistoryBlock events={events} />
               <PlaceholderSection title="Dokumente" />
             </>
           ) : null}
