@@ -402,6 +402,13 @@ export default function AdminTenantDetailPage() {
   const [noteSubmitError, setNoteSubmitError] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [tenancies, setTenancies] = useState([]);
+  const [shouldRefreshTenantList, setShouldRefreshTenantList] = useState(false);
+
+  const goToTenantList = () =>
+    navigate(
+      "/admin/tenants",
+      shouldRefreshTenantList ? { state: { refreshTenants: true } } : undefined
+    );
 
   useEffect(() => {
     if (!tenantId) {
@@ -421,6 +428,7 @@ export default function AdminTenantDetailPage() {
     let cancelled = false;
     setLoading(true);
     setLoadError(null);
+    setShouldRefreshTenantList(false);
     (async () => {
       try {
         const t = await fetchAdminTenant(tenantId);
@@ -551,6 +559,7 @@ export default function AdminTenantDetailPage() {
       .then((updated) => {
         applyUpdate(updated);
         setEditing(false);
+        setShouldRefreshTenantList(true);
         return fetchAdminTenantEvents(tenantId).catch(() => null);
       })
       .then((eData) => {
@@ -585,7 +594,7 @@ export default function AdminTenantDetailPage() {
           <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", flexWrap: "wrap", minWidth: 0 }}>
             <button
               type="button"
-              onClick={() => navigate("/admin/tenants")}
+              onClick={goToTenantList}
               style={{
                 padding: "8px 12px",
                 borderRadius: "10px",
@@ -670,7 +679,7 @@ export default function AdminTenantDetailPage() {
               <p style={{ margin: "0 0 12px 0" }}>{loadError}</p>
               <button
                 type="button"
-                onClick={() => navigate("/admin/tenants")}
+                onClick={goToTenantList}
                 style={{
                   padding: "8px 14px",
                   borderRadius: "10px",

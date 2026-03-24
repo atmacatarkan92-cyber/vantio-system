@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   fetchAdminUnits,
   fetchAdminRooms,
@@ -210,6 +210,7 @@ function getCardStyle(accentColor) {
 
 function AdminTenantsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [units, setUnits] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [tenants, setTenants] = useState([]);
@@ -246,6 +247,13 @@ function AdminTenantsPage() {
     setLoading(true);
     reloadData().finally(() => setLoading(false));
   }, [reloadData]);
+
+  useEffect(() => {
+    if (!location.state?.refreshTenants) return;
+    setLoading(true);
+    reloadData().finally(() => setLoading(false));
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.state?.refreshTenants, navigate, reloadData, location.pathname]);
 
   const rows = useMemo(() => {
     return buildTenantRows(tenants, tenancies, rooms, units, invoices);
