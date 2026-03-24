@@ -230,15 +230,31 @@ export function fetchAdminTenancies(params = {}) {
 }
 
 /**
- * Fetch all invoices (same as GET /api/invoices). Returns items array. Used by admin pages for list/summary.
+ * Fetch invoices (GET /api/invoices).
+ * Without args: all org invoices; returns items array (paginated shape normalized).
+ * With { tenantId, limit }: filtered by tenant; returns full JSON { items, total, skip, limit }.
  */
-export function fetchAdminInvoices() {
-  return fetch(`${API_BASE_URL}/api/invoices`, { headers: getApiHeaders() })
-    .then((res) => {
-      if (!res.ok) throw new Error("Rechnungen konnten nicht geladen werden.");
-      return res.json();
-    })
-    .then((data) => expectPaginatedItems(data, "GET /api/invoices"));
+export async function fetchAdminInvoices(options) {
+  if (
+    options != null &&
+    typeof options === "object" &&
+    options.tenantId != null &&
+    options.tenantId !== ""
+  ) {
+    const { tenantId, limit = 20 } = options;
+    const url = `${API_BASE_URL}/api/invoices?tenant_id=${encodeURIComponent(tenantId)}&limit=${limit}`;
+    const res = await fetch(url, { headers: getApiHeaders() });
+    if (!res.ok) {
+      throw new Error("Failed to fetch invoices");
+    }
+    return res.json();
+  }
+  const res = await fetch(`${API_BASE_URL}/api/invoices`, { headers: getApiHeaders() });
+  if (!res.ok) {
+    throw new Error("Rechnungen konnten nicht geladen werden.");
+  }
+  const data = await res.json();
+  return expectPaginatedItems(data, "GET /api/invoices");
 }
 
 /**

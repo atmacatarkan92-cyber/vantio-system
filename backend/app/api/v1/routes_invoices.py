@@ -42,6 +42,7 @@ class MarkInvoicePaidBody(BaseModel):
 def get_invoices_route(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
+    tenant_id: Optional[str] = Query(None),
     org_id: str = Depends(get_current_organization),
     _=Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
@@ -53,16 +54,20 @@ def get_invoices_route(
     Operational follow-up: run alembic 021 backfill and/or
     SELECT id, tenant_id, tenancy_id FROM invoices WHERE organization_id IS NULL;
     """
-    _total_rows = session.exec(
+    count_q = (
         select(func.count())
         .select_from(Invoice)
         .where(Invoice.organization_id == org_id)
-    ).all()
+    )
+    if tenant_id is not None:
+        count_q = count_q.where(Invoice.tenant_id == tenant_id)
+    _total_rows = session.exec(count_q).all()
     total = int(_total_rows[0]) if _total_rows else 0
+    stmt = select(Invoice).where(Invoice.organization_id == org_id)
+    if tenant_id is not None:
+        stmt = stmt.where(Invoice.tenant_id == tenant_id)
     stmt = (
-        select(Invoice)
-        .where(Invoice.organization_id == org_id)
-        .order_by(Invoice.issue_date.desc())
+        stmt.order_by(Invoice.issue_date.desc())
         .offset(skip)
         .limit(limit)
     )

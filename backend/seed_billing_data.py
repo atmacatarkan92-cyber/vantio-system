@@ -3,7 +3,7 @@
 DEPRECATED — Do not use.
 
 This script inserts tenancies with the old schema (start_date, end_date, monthly_rent,
-billing_cycle). The current Tenancy model uses move_in_date, move_out_date, rent_chf, status.
+billing_cycle). The current Tenancy model uses move_in_date, move_out_date, monthly_rent, status.
 Running this against the current database will fail or corrupt data.
 
 Use the admin API to create tenancies and POST /api/admin/invoices/generate for invoices.

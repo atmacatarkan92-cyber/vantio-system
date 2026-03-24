@@ -5,6 +5,8 @@ import {
   fetchAdminTenantNotes,
   createAdminTenantNote,
   fetchAdminTenantEvents,
+  fetchAdminInvoices,
+  fetchAdminTenancies,
 } from "../../../api/adminData";
 import { tenantDisplayName } from "../../../utils/tenantDisplayName";
 
@@ -30,6 +32,43 @@ function formatDateOnly(iso) {
   const dt = new Date(iso);
   if (Number.isNaN(dt.getTime())) return iso;
   return dt.toLocaleDateString("de-CH");
+}
+
+function formatInvoiceAmount(amount, currency) {
+  const cur = currency || "CHF";
+  const n = Number(amount);
+  if (Number.isNaN(n)) return `${cur} —`;
+  const num = n.toLocaleString("de-CH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${cur} ${num}`;
+}
+
+const INVOICE_STATUS_BADGE = {
+  paid: { bg: "#DCFCE7", color: "#166534", border: "#BBF7D0" },
+  open: { bg: "#DBEAFE", color: "#1D4ED8", border: "#BFDBFE" },
+  overdue: { bg: "#FEE2E2", color: "#991B1B", border: "#FECACA" },
+  unpaid: { bg: "#F1F5F9", color: "#64748B", border: "#E2E8F0" },
+  cancelled: { bg: "#F1F5F9", color: "#64748B", border: "#E2E8F0" },
+};
+
+const TENANCY_STATUS_BADGE = {
+  active: { bg: "#DCFCE7", color: "#166534", border: "#BBF7D0" },
+  upcoming: { bg: "#DBEAFE", color: "#1D4ED8", border: "#BFDBFE" },
+  ended: { bg: "#F1F5F9", color: "#64748B", border: "#E2E8F0" },
+};
+
+function formatChfRent(amount) {
+  const n = Number(amount);
+  if (Number.isNaN(n)) return "CHF —";
+  return `CHF ${n.toLocaleString("de-CH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function tenancyDateRangeLabel(tn) {
+  const mi = tn.move_in_date;
+  const mo = tn.move_out_date;
+  if (mo == null || mo === "") {
+    return `seit ${formatDateOnly(mi)}`;
+  }
+  return `${formatDateOnly(mi)} – ${formatDateOnly(mo)}`;
 }
 
 const backdropStyle = {
@@ -308,6 +347,8 @@ export default function TenantDetailDrawer({
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteValidationErr, setNoteValidationErr] = useState(null);
   const [noteSubmitError, setNoteSubmitError] = useState(null);
+  const [invoices, setInvoices] = useState([]);
+  const [tenancies, setTenancies] = useState([]);
 
   useEffect(() => {
     if (!open || !tenantId) {
@@ -317,6 +358,8 @@ export default function TenantDetailDrawer({
       setSaveError(null);
       setNotes([]);
       setEvents([]);
+      setInvoices([]);
+      setTenancies([]);
       setNoteDraft("");
       setNoteValidationErr(null);
       setNoteSubmitError(null);
@@ -334,17 +377,28 @@ export default function TenantDetailDrawer({
           setTenant(null);
           setNotes([]);
           setEvents([]);
+          setInvoices([]);
+          setTenancies([]);
           return;
         }
         setTenant(t);
         setForm(tenantToForm(t));
-        const [nData, eData] = await Promise.all([
+        const roomId = t.room_id != null && String(t.room_id).trim() !== "" ? t.room_id : null;
+        const tenanciesFetch =
+          roomId != null
+            ? fetchAdminTenancies({ room_id: roomId }).catch(() => [])
+            : Promise.resolve([]);
+        const [nData, eData, invData, tenancyItems] = await Promise.all([
           fetchAdminTenantNotes(tenantId),
           fetchAdminTenantEvents(tenantId),
+          fetchAdminInvoices({ tenantId, limit: 20 }).catch(() => ({ items: [] })),
+          tenanciesFetch,
         ]);
         if (cancelled) return;
         setNotes(nData?.items || []);
         setEvents(eData?.items || []);
+        setInvoices(invData?.items || []);
+        setTenancies(Array.isArray(tenancyItems) ? tenancyItems : []);
       } catch (e) {
         if (!cancelled) setLoadError(e?.message || "Laden fehlgeschlagen.");
       } finally {
@@ -842,8 +896,108 @@ export default function TenantDetailDrawer({
               <div style={{ marginTop: "8px", marginBottom: "8px", fontWeight: 700, color: "#334155", fontSize: "13px" }}>
                 Verknüpfungen &amp; CRM
               </div>
-              <PlaceholderSection title="Mietverhältnisse" />
-              <PlaceholderSection title="Rechnungen" />
+              <div style={sectionCard}>
+                <div style={sectionTitle}>Mietverhältnisse</div>
+                {!tenancies.length ? (
+                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#64748B" }}>
+                    Keine Mietverhältnisse vorhanden
+                  </p>
+                ) : (
+                  <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+                    {tenancies.map((tn) => {
+                      const st = (tn.status || "").toLowerCase();
+                      const badge =
+                        TENANCY_STATUS_BADGE[st] ||
+                        (st === "reserved" ? TENANCY_STATUS_BADGE.upcoming : TENANCY_STATUS_BADGE.ended);
+                      return (
+                        <li
+                          key={tn.id != null ? String(tn.id) : `${tn.move_in_date}-${tn.room_id}`}
+                          style={{
+                            marginBottom: "12px",
+                            paddingBottom: "12px",
+                            borderBottom: "1px solid #F1F5F9",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
+                            <span style={{ fontSize: "13px", color: "#0F172A" }}>
+                              {tenancyDateRangeLabel(tn)}
+                            </span>
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                padding: "4px 8px",
+                                borderRadius: "999px",
+                                fontSize: "11px",
+                                fontWeight: 700,
+                                background: badge.bg,
+                                color: badge.color,
+                                border: `1px solid ${badge.border}`,
+                              }}
+                            >
+                              {tn.status || "—"}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "14px", color: "#0F172A", marginTop: "6px" }}>
+                            {formatChfRent(tn.monthly_rent)}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+              <div style={sectionCard}>
+                <div style={sectionTitle}>Rechnungen</div>
+                {!invoices.length ? (
+                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#64748B" }}>
+                    Keine Rechnungen vorhanden
+                  </p>
+                ) : (
+                  <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+                    {invoices.map((inv) => {
+                      const st = (inv.status || "").toLowerCase();
+                      const badge =
+                        INVOICE_STATUS_BADGE[st] || INVOICE_STATUS_BADGE.unpaid;
+                      return (
+                        <li
+                          key={inv.id != null ? String(inv.id) : `${inv.invoice_number}-${inv.due_date}`}
+                          style={{
+                            marginBottom: "12px",
+                            paddingBottom: "12px",
+                            borderBottom: "1px solid #F1F5F9",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
+                            <span style={{ fontWeight: 700, fontSize: "14px", color: "#0F172A" }}>
+                              {inv.invoice_number || "—"}
+                            </span>
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                padding: "4px 8px",
+                                borderRadius: "999px",
+                                fontSize: "11px",
+                                fontWeight: 700,
+                                background: badge.bg,
+                                color: badge.color,
+                                border: `1px solid ${badge.border}`,
+                              }}
+                            >
+                              {inv.status || "—"}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "14px", color: "#0F172A", marginTop: "6px" }}>
+                            {formatInvoiceAmount(inv.amount, inv.currency)}
+                          </div>
+                          <div style={{ fontSize: "12px", color: "#94A3B8", marginTop: "4px" }}>
+                            Fällig: {formatDateOnly(inv.due_date)}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
               <TenantNotesBlock
                 notes={notes}
                 noteDraft={noteDraft}

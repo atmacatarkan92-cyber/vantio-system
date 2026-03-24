@@ -73,7 +73,7 @@ jobs:
             echo "::error::Computed backup filename is empty"
             exit 1
           fi
-          pg_dump -v -Fc -f "$FILE" "$URL"
+          pg_dump -v -Fc --no-row-security -f "$FILE" "$URL"
           LS=$(ls -la "$FILE")
           echo "==> Backup completed: $LS"
           echo "backup_file=$FILE" >> $GITHUB_ENV
