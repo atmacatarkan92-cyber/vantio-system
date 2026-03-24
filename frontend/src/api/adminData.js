@@ -112,8 +112,10 @@ export function fetchAdminTenant(tenantId) {
   });
 }
 
-async function parseAdminErrorResponse(res) {
-  const text = await res.text();
+/**
+ * Parse FastAPI-style error JSON from a response body string (already read once).
+ */
+function parseAdminErrorBodyText(text) {
   try {
     const j = JSON.parse(text);
     if (Array.isArray(j.detail)) {
@@ -127,6 +129,11 @@ async function parseAdminErrorResponse(res) {
     /* ignore */
   }
   return text || "Die Anfrage ist fehlgeschlagen.";
+}
+
+async function parseAdminErrorResponse(res) {
+  const text = await res.text();
+  return parseAdminErrorBodyText(text);
 }
 
 export async function createAdminTenant(body) {
@@ -178,10 +185,17 @@ export async function createAdminTenantNote(tenantId, content) {
       body: JSON.stringify({ content }),
     }
   );
+  // Read body exactly once — avoids "body stream already read" if anything else touched the stream.
+  const text = await res.text();
   if (!res.ok) {
-    throw new Error(await parseAdminErrorResponse(res));
+    throw new Error(parseAdminErrorBodyText(text));
   }
-  return res.json();
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch (e) {
+    console.warn("createAdminTenantNote: unexpected response body", e);
+    throw new Error("Notiz konnte nicht gespeichert werden.");
+  }
 }
 
 export function fetchAdminTenantEvents(tenantId) {

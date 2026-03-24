@@ -374,7 +374,15 @@ export default function TenantDetailDrawer({
         setNotes(nData?.items || []);
         setEvents(eData?.items || []);
       })
-      .catch((err) => setNoteSubmitError(err?.message || "Notiz konnte nicht gespeichert werden."))
+      .catch((err) => {
+        console.warn("tenant note save failed", err);
+        const m = String(err?.message || "");
+        const technical =
+          /body stream already read|Failed to execute ['"]text['"]/i.test(m);
+        setNoteSubmitError(
+          technical ? "Notiz konnte nicht gespeichert werden." : m || "Notiz konnte nicht gespeichert werden."
+        );
+      })
       .finally(() => setNoteSaving(false));
   };
 
