@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   fetchAdminUnits,
@@ -34,6 +34,21 @@ function parseRoomsTotal(raw) {
   const n = Number(raw);
   if (!Number.isFinite(n) || n < 0) return 0;
   return Math.floor(n);
+}
+
+/** One row per room; preserves existing row state when count changes. */
+function ensureCoLivingRoomRows(n, prev) {
+  const safe = Array.isArray(prev) ? prev : [];
+  return Array.from({ length: n }, (_, i) => {
+    if (safe[i]) return safe[i];
+    return {
+      name: `Zimmer ${i + 1}`,
+      price: "",
+      floor: "",
+      size_m2: "",
+      status: "Frei",
+    };
+  });
 }
 
 function roundCurrency(value) {
@@ -440,7 +455,8 @@ function AdminApartmentsPage() {
     return `FAH-U-${String(maxNumber + 1).padStart(4, "0")}`;
   }, [units]);
 
-  useEffect(() => {
+  // useLayoutEffect: must run before paint so room blocks exist before submit (Enter) in the same tick as the last rooms change.
+  useLayoutEffect(() => {
     if (!isModalOpen || editingId) return;
     if (!isCoLivingType) {
       setCoLivingRoomRows([]);
@@ -451,18 +467,7 @@ function AdminApartmentsPage() {
       setCoLivingRoomRows([]);
       return;
     }
-    setCoLivingRoomRows((prev) =>
-      Array.from({ length: n }, (_, i) => {
-        if (prev[i]) return prev[i];
-        return {
-          name: `Zimmer ${i + 1}`,
-          price: "",
-          floor: "",
-          size_m2: "",
-          status: "Frei",
-        };
-      })
-    );
+    setCoLivingRoomRows((prev) => ensureCoLivingRoomRows(n, prev));
   }, [isModalOpen, editingId, isCoLivingType, parsedRoomsTotal]);
 
   const filteredUnits = useMemo(() => {
@@ -596,10 +601,15 @@ function AdminApartmentsPage() {
     event.preventDefault();
     setSaveError("");
 
+    const coLivingRowsForSubmit =
+      !editingId && isCoLivingType && parsedRoomsTotal > 0
+        ? ensureCoLivingRoomRows(parsedRoomsTotal, coLivingRoomRows)
+        : coLivingRoomRows;
+
     if (!editingId && isCoLivingType) {
       const n = parsedRoomsTotal;
       if (n > 0) {
-        if (coLivingRoomRows.length !== n) {
+        if (coLivingRowsForSubmit.length !== n) {
           setSaveError(
             "Bei Co-Living muss die Anzahl Zimmer mit den ausgefüllten Zimmerzeilen übereinstimmen."
           );
@@ -607,7 +617,7 @@ function AdminApartmentsPage() {
         }
         const allowedStatus = ["Frei", "Belegt", "Reserviert"];
         for (let i = 0; i < n; i++) {
-          const row = coLivingRoomRows[i];
+          const row = coLivingRowsForSubmit[i];
           if (!row || !String(row.name || "").trim()) {
             setSaveError(`Zimmer ${i + 1}: Name ist erforderlich.`);
             return;
@@ -659,7 +669,7 @@ function AdminApartmentsPage() {
     if (!editingId && isCoLivingType) {
       const n = parsedRoomsTotal;
       if (n > 0) {
-        apiPayload.co_living_rooms = coLivingRoomRows.map((row) => {
+        apiPayload.co_living_rooms = coLivingRowsForSubmit.map((row) => {
           const floorRaw = row.floor;
           const floor =
             floorRaw === "" || floorRaw == null

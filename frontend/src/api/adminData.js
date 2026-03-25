@@ -26,16 +26,30 @@ function expectPaginatedItems(data, endpointLabel) {
 /**
  * Parse FastAPI-style error JSON from a response body string (already read once).
  */
+function detailItemToMessage(d) {
+  if (typeof d === "string") return d;
+  if (d && typeof d === "object") {
+    if (typeof d.msg === "string" && d.msg) return d.msg;
+    if (typeof d.message === "string" && d.message) return d.message;
+  }
+  return "";
+}
+
 function parseAdminErrorBodyText(text) {
   try {
     const j = JSON.parse(text);
     if (Array.isArray(j.detail)) {
-      return j.detail
-        .map((d) => (typeof d === "string" ? d : d.msg || d.message || ""))
+      const joined = j.detail
+        .map(detailItemToMessage)
         .filter(Boolean)
         .join(" ");
+      if (joined) return joined;
     }
     if (typeof j.detail === "string") return j.detail;
+    if (j.detail && typeof j.detail === "object" && !Array.isArray(j.detail)) {
+      const m = detailItemToMessage(j.detail);
+      if (m) return m;
+    }
   } catch (_) {
     /* ignore */
   }
