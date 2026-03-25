@@ -970,6 +970,11 @@ function AdminApartmentsPage() {
                   <label className="block text-sm text-slate-600 mb-2">
                     Zimmer gesamt
                   </label>
+                  {formData.type === "Co-Living" ? (
+                    <p className="text-xs text-slate-500 mb-2">
+                      Zimmer-Details erscheinen, sobald «Zimmer gesamt» größer als 0 ist.
+                    </p>
+                  ) : null}
                   <input
                     type="number"
                     name="rooms"

@@ -23,6 +23,30 @@ function expectPaginatedItems(data, endpointLabel) {
   );
 }
 
+/**
+ * Parse FastAPI-style error JSON from a response body string (already read once).
+ */
+function parseAdminErrorBodyText(text) {
+  try {
+    const j = JSON.parse(text);
+    if (Array.isArray(j.detail)) {
+      return j.detail
+        .map((d) => (typeof d === "string" ? d : d.msg || d.message || ""))
+        .filter(Boolean)
+        .join(" ");
+    }
+    if (typeof j.detail === "string") return j.detail;
+  } catch (_) {
+    /* ignore */
+  }
+  return text || "Die Anfrage ist fehlgeschlagen.";
+}
+
+async function parseAdminErrorResponse(res) {
+  const text = await res.text();
+  return parseAdminErrorBodyText(text);
+}
+
 export function fetchAdminUnits() {
   return fetch(`${API_BASE_URL}/api/admin/units`, { headers: getApiHeaders() })
     .then((res) => {
@@ -44,26 +68,28 @@ export function fetchAdminUnit(id) {
   });
 }
 
-export function createAdminUnit(body) {
-  return fetch(`${API_BASE_URL}/api/admin/units`, {
+export async function createAdminUnit(body) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/units`, {
     method: "POST",
     headers: getApiHeaders(),
     body: JSON.stringify(body),
-  }).then((res) => {
-    if (!res.ok) throw new Error("Unit konnte nicht erstellt werden.");
-    return res.json();
   });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
 }
 
-export function updateAdminUnit(id, body) {
-  return fetch(`${API_BASE_URL}/api/admin/units/${encodeURIComponent(id)}`, {
+export async function updateAdminUnit(id, body) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/units/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: getApiHeaders(),
     body: JSON.stringify(body),
-  }).then((res) => {
-    if (!res.ok) throw new Error("Unit konnte nicht gespeichert werden.");
-    return res.json();
   });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
 }
 
 export async function deleteAdminUnit(id) {
@@ -125,30 +151,6 @@ export function fetchAdminTenant(tenantId) {
     }
     return res.json();
   });
-}
-
-/**
- * Parse FastAPI-style error JSON from a response body string (already read once).
- */
-function parseAdminErrorBodyText(text) {
-  try {
-    const j = JSON.parse(text);
-    if (Array.isArray(j.detail)) {
-      return j.detail
-        .map((d) => (typeof d === "string" ? d : d.msg || d.message || ""))
-        .filter(Boolean)
-        .join(" ");
-    }
-    if (typeof j.detail === "string") return j.detail;
-  } catch (_) {
-    /* ignore */
-  }
-  return text || "Die Anfrage ist fehlgeschlagen.";
-}
-
-async function parseAdminErrorResponse(res) {
-  const text = await res.text();
-  return parseAdminErrorBodyText(text);
 }
 
 export async function createAdminTenant(body) {

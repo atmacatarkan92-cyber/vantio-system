@@ -8,7 +8,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func
-from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
@@ -324,12 +324,22 @@ def admin_delete_unit(
     if not unit or str(getattr(unit, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Unit not found")
     old_snapshot = model_snapshot(unit)
-    session.delete(unit)
-    create_audit_log(
-        session, str(current_user.id), "delete", "unit", str(unit_id),
-        old_values=old_snapshot, new_values=None,
-    )
-    session.commit()
+    try:
+        session.delete(unit)
+        create_audit_log(
+            session, str(current_user.id), "delete", "unit", str(unit_id),
+            old_values=old_snapshot, new_values=None,
+        )
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Diese Unit kann nicht gelöscht werden, weil noch abhängige Daten existieren "
+                "(z. B. Listings, Mietverträge oder Kosten)."
+            ),
+        ) from None
     return {"status": "ok", "message": "Unit deleted"}
 
 
