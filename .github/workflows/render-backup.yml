@@ -10,24 +10,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Trigger Render export
+      - name: Verify Render Postgres ID
         run: |
           set -euo pipefail
 
-          echo "Triggering Render backup export..."
-          echo "Using Postgres ID: ${{ secrets.RENDER_POSTGRES_ID }}"
+          echo "Verifying Render Postgres instance..."
 
-          RESPONSE=$(curl -sS -f -X POST "https://api.render.com/v1/postgres/${{ secrets.RENDER_POSTGRES_ID }}/export" \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json")
+          RESPONSE=$(curl -sS -f "https://api.render.com/v1/postgres/${{ secrets.RENDER_POSTGRES_ID }}" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}")
 
-          echo "Response:"
           echo "$RESPONSE"
-
-          # Fail if response contains error
-          if echo "$RESPONSE" | grep -q '"error"'; then
-            echo "::error::Render API returned an error"
-            exit 1
-          fi
-
-          echo "Backup trigger completed."
