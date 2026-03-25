@@ -8,6 +8,7 @@ import {
   fetchAdminTenantEvents,
   fetchAdminInvoices,
   fetchAdminTenancies,
+  patchAdminTenancy,
   fetchAdminUnits,
   fetchAdminRooms,
   normalizeUnit,
@@ -442,6 +443,12 @@ export default function AdminTenantDetailPage() {
   const [assignSaving, setAssignSaving] = useState(false);
   const assignRentUserEditedRef = useRef(false);
 
+  const [tenancyEditingId, setTenancyEditingId] = useState(null);
+  const [tenancyEditMoveOut, setTenancyEditMoveOut] = useState("");
+  const [tenancyEditStatus, setTenancyEditStatus] = useState("active");
+  const [tenancyEditSaving, setTenancyEditSaving] = useState(false);
+  const [tenancyEditErr, setTenancyEditErr] = useState(null);
+
   useEffect(() => {
     if (!assignRoomId || !assignRooms.length) return;
     const room = assignRooms.find((r) => String(r.id) === String(assignRoomId));
@@ -454,20 +461,52 @@ export default function AdminTenantDetailPage() {
   }, [assignRoomId, assignRooms]);
 
   const reloadTenanciesForTenant = useCallback(async () => {
-    const res = await fetch(
-      `${API_BASE_URL}/api/admin/tenancies?limit=200`,
-      { headers: getApiHeaders() }
-    );
-    if (!res.ok) {
-      const fallback = await fetchAdminTenancies().catch(() => []);
-      const arr = Array.isArray(fallback) ? fallback : [];
-      setTenancies(arr.filter((x) => String(x.tenant_id) === String(tenantId)));
-      return;
+    try {
+      const items = await fetchAdminTenancies({ tenant_id: tenantId, limit: 200 });
+      setTenancies(Array.isArray(items) ? items : []);
+    } catch {
+      setTenancies([]);
     }
-    const data = await res.json();
-    const items = Array.isArray(data?.items) ? data.items : [];
-    setTenancies(items.filter((x) => String(x.tenant_id) === String(tenantId)));
   }, [tenantId]);
+
+  const cancelTenancyEdit = () => {
+    setTenancyEditingId(null);
+    setTenancyEditErr(null);
+    setTenancyEditMoveOut("");
+    setTenancyEditStatus("active");
+  };
+
+  const startTenancyEdit = (tn) => {
+    setTenancyEditingId(String(tn.id));
+    setTenancyEditErr(null);
+    const raw = tn.move_out_date;
+    const s = raw != null && raw !== "" ? String(raw) : "";
+    setTenancyEditMoveOut(/^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : "");
+    const st = String(tn.status || "").toLowerCase();
+    if (st === "reserved" || st === "reserviert") setTenancyEditStatus("reserved");
+    else if (st === "ended" || st === "beendet") setTenancyEditStatus("ended");
+    else setTenancyEditStatus("active");
+  };
+
+  const submitTenancyEdit = () => {
+    if (!tenancyEditingId || !tenantId) return;
+    setTenancyEditErr(null);
+    setTenancyEditSaving(true);
+    const body = {
+      move_out_date: tenancyEditMoveOut.trim() ? tenancyEditMoveOut.trim() : null,
+      status: tenancyEditStatus,
+    };
+    patchAdminTenancy(tenancyEditingId, body)
+      .then(() => Promise.all([reloadTenanciesForTenant(), fetchAdminTenantEvents(tenantId)]))
+      .then(([, eData]) => {
+        if (eData?.items) setEvents(eData.items);
+        cancelTenancyEdit();
+      })
+      .catch((err) => {
+        setTenancyEditErr(err?.message || "Speichern fehlgeschlagen.");
+      })
+      .finally(() => setTenancyEditSaving(false));
+  };
 
   const goToTenantList = () =>
     navigate(
@@ -509,12 +548,8 @@ export default function AdminTenantDetailPage() {
         }
         setTenant(t);
         setForm(tenantToForm(t));
-        const tenanciesFetch = fetchAdminTenancies({ limit: 200 })
-          .then((items) =>
-            Array.isArray(items)
-              ? items.filter((x) => String(x.tenant_id) === String(tenantId))
-              : []
-          )
+        const tenanciesFetch = fetchAdminTenancies({ tenant_id: tenantId, limit: 200 })
+          .then((items) => (Array.isArray(items) ? items : []))
           .catch(() => []);
         const [nData, eData, invData, tenancyItems] = await Promise.all([
           fetchAdminTenantNotes(tenantId),
@@ -1160,12 +1195,18 @@ export default function AdminTenantDetailPage() {
                   </p>
                 ) : (
                   <div style={{ overflowX: "auto" }}>
+                    {tenancyEditErr ? (
+                      <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#B91C1C" }}>
+                        {tenancyEditErr}
+                      </p>
+                    ) : null}
                     <table style={tableStyle}>
                       <thead>
                         <tr>
                           <th style={thCell}>Zeitraum</th>
                           <th style={thCell}>Status</th>
                           <th style={{ ...thCell, textAlign: "right" }}>Monatsmiete</th>
+                          <th style={{ ...thCell, textAlign: "right", whiteSpace: "nowrap" }}>Aktion</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1174,33 +1215,129 @@ export default function AdminTenantDetailPage() {
                           const badge =
                             TENANCY_STATUS_BADGE[st] ||
                             (st === "reserved" ? TENANCY_STATUS_BADGE.upcoming : TENANCY_STATUS_BADGE.ended);
+                          const rowKey = tn.id != null ? String(tn.id) : `${tn.move_in_date}-${tn.room_id}`;
                           return (
-                            <tr key={tn.id != null ? String(tn.id) : `${tn.move_in_date}-${tn.room_id}`}>
-                              <td style={tdCell}>
-                                <span style={{ fontSize: "13px", color: "#0F172A" }}>
-                                  {tenancyDateRangeLabel(tn)}
-                                </span>
-                              </td>
-                              <td style={tdCell}>
-                                <span
-                                  style={{
-                                    display: "inline-flex",
-                                    padding: "4px 8px",
-                                    borderRadius: "999px",
-                                    fontSize: "11px",
-                                    fontWeight: 700,
-                                    background: badge.bg,
-                                    color: badge.color,
-                                    border: `1px solid ${badge.border}`,
-                                  }}
-                                >
-                                  {tn.status || "—"}
-                                </span>
-                              </td>
-                              <td style={{ ...tdCell, textAlign: "right", fontWeight: 600, color: "#0F172A" }}>
-                                {formatChfRent(tn.monthly_rent)}
-                              </td>
-                            </tr>
+                            <React.Fragment key={rowKey}>
+                              <tr>
+                                <td style={tdCell}>
+                                  <span style={{ fontSize: "13px", color: "#0F172A" }}>
+                                    {tenancyDateRangeLabel(tn)}
+                                  </span>
+                                </td>
+                                <td style={tdCell}>
+                                  <span
+                                    style={{
+                                      display: "inline-flex",
+                                      padding: "4px 8px",
+                                      borderRadius: "999px",
+                                      fontSize: "11px",
+                                      fontWeight: 700,
+                                      background: badge.bg,
+                                      color: badge.color,
+                                      border: `1px solid ${badge.border}`,
+                                    }}
+                                  >
+                                    {tn.status || "—"}
+                                  </span>
+                                </td>
+                                <td style={{ ...tdCell, textAlign: "right", fontWeight: 600, color: "#0F172A" }}>
+                                  {formatChfRent(tn.monthly_rent)}
+                                </td>
+                                <td style={{ ...tdCell, textAlign: "right" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => startTenancyEdit(tn)}
+                                    disabled={tenancyEditSaving}
+                                    style={{
+                                      padding: "4px 10px",
+                                      borderRadius: "8px",
+                                      border: "1px solid #E2E8F0",
+                                      background: "#FFF",
+                                      fontSize: "12px",
+                                      fontWeight: 600,
+                                      cursor: tenancyEditSaving ? "default" : "pointer",
+                                    }}
+                                  >
+                                    Bearbeiten
+                                  </button>
+                                </td>
+                              </tr>
+                              {String(tenancyEditingId) === String(tn.id) ? (
+                                <tr>
+                                  <td colSpan={4} style={{ ...tdCell, background: "#F8FAFC", verticalAlign: "top" }}>
+                                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "8px" }}>
+                                      Mietverhältnis bearbeiten
+                                    </div>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "flex-end" }}>
+                                      <div>
+                                        <label htmlFor={`ten-out-${rowKey}`} style={labelStyle}>
+                                          Auszug / Kündigung (Datum)
+                                        </label>
+                                        <input
+                                          id={`ten-out-${rowKey}`}
+                                          type="date"
+                                          style={inputStyle}
+                                          value={tenancyEditMoveOut}
+                                          onChange={(e) => setTenancyEditMoveOut(e.target.value)}
+                                          disabled={tenancyEditSaving}
+                                        />
+                                      </div>
+                                      <div>
+                                        <label htmlFor={`ten-st-${rowKey}`} style={labelStyle}>
+                                          Status
+                                        </label>
+                                        <select
+                                          id={`ten-st-${rowKey}`}
+                                          style={{ ...inputStyle, cursor: tenancyEditSaving ? "default" : "pointer" }}
+                                          value={tenancyEditStatus}
+                                          onChange={(e) => setTenancyEditStatus(e.target.value)}
+                                          disabled={tenancyEditSaving}
+                                        >
+                                          <option value="active">Aktiv</option>
+                                          <option value="reserved">Reserviert</option>
+                                          <option value="ended">Beendet</option>
+                                        </select>
+                                      </div>
+                                      <div style={{ display: "flex", gap: "8px" }}>
+                                        <button
+                                          type="button"
+                                          onClick={submitTenancyEdit}
+                                          disabled={tenancyEditSaving}
+                                          style={{
+                                            padding: "6px 12px",
+                                            borderRadius: "8px",
+                                            border: "none",
+                                            background: tenancyEditSaving ? "#94A3B8" : "#f97316",
+                                            color: "#FFF",
+                                            fontWeight: 700,
+                                            fontSize: "12px",
+                                            cursor: tenancyEditSaving ? "default" : "pointer",
+                                          }}
+                                        >
+                                          {tenancyEditSaving ? "Speichern …" : "Speichern"}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={cancelTenancyEdit}
+                                          disabled={tenancyEditSaving}
+                                          style={{
+                                            padding: "6px 12px",
+                                            borderRadius: "8px",
+                                            border: "1px solid #E2E8F0",
+                                            background: "#FFF",
+                                            fontWeight: 600,
+                                            fontSize: "12px",
+                                            cursor: tenancyEditSaving ? "default" : "pointer",
+                                          }}
+                                        >
+                                          Abbrechen
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ) : null}
+                            </React.Fragment>
                           );
                         })}
                       </tbody>

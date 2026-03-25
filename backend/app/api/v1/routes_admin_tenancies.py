@@ -126,6 +126,7 @@ class TenancyListResponse(BaseModel):
 def admin_list_tenancies(
     room_id: Optional[str] = None,
     unit_id: Optional[str] = None,
+    tenant_id: Optional[str] = None,
     status: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -133,7 +134,7 @@ def admin_list_tenancies(
     _=Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
-    """List tenancies, optionally filtered by room_id, unit_id, status."""
+    """List tenancies, optionally filtered by room_id, unit_id, tenant_id, status."""
     base_query = (
         select(Tenancy)
         .where(Tenancy.organization_id == org_id)
@@ -143,6 +144,8 @@ def admin_list_tenancies(
         base_query = base_query.where(Tenancy.room_id == room_id)
     if unit_id:
         base_query = base_query.where(Tenancy.unit_id == unit_id)
+    if tenant_id:
+        base_query = base_query.where(Tenancy.tenant_id == tenant_id)
     if status:
         base_query = base_query.where(Tenancy.status == status)
     count_query = (
@@ -154,6 +157,8 @@ def admin_list_tenancies(
         count_query = count_query.where(Tenancy.room_id == room_id)
     if unit_id:
         count_query = count_query.where(Tenancy.unit_id == unit_id)
+    if tenant_id:
+        count_query = count_query.where(Tenancy.tenant_id == tenant_id)
     if status:
         count_query = count_query.where(Tenancy.status == status)
     _total_rows = session.exec(count_query).all()

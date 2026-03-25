@@ -258,6 +258,7 @@ export function fetchAdminTenancies(params = {}) {
   const sp = new URLSearchParams();
   if (params.room_id) sp.set("room_id", params.room_id);
   if (params.unit_id) sp.set("unit_id", params.unit_id);
+  if (params.tenant_id) sp.set("tenant_id", params.tenant_id);
   if (params.status) sp.set("status", params.status);
   if (params.limit != null) sp.set("limit", String(params.limit));
   if (params.skip != null) sp.set("skip", String(params.skip));
@@ -269,6 +270,21 @@ export function fetchAdminTenancies(params = {}) {
       return res.json();
     })
     .then((data) => expectPaginatedItems(data, "GET /api/admin/tenancies"));
+}
+
+export async function patchAdminTenancy(tenancyId, body) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/tenancies/${encodeURIComponent(tenancyId)}`,
+    {
+      method: "PATCH",
+      headers: getApiHeaders(),
+      body: JSON.stringify(body),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
 }
 
 /**
