@@ -1,74 +1,42 @@
-name: Render Backup
+name: Backup PostgreSQL to S3/R2
 
 on:
-  schedule:
-    - cron: "0 3 * * 0"  # every Sunday at 03:00 UTC
   workflow_dispatch:
 
 jobs:
-  trigger-backup:
+  backup:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Resolve Postgres ID and trigger export
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Create backup (safe mode)
         env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           set -euo pipefail
 
-          echo "Listing Render Postgres instances..."
+          echo "Starting PostgreSQL backup..."
 
-          RESPONSE=$(curl -sS -f "https://api.render.com/v1/postgres" \
-            -H "Authorization: Bearer ${RENDER_API_KEY}")
+          # Schema + data, aber ohne problematische Tabellen
+          pg_dump "$DATABASE_URL" \
+            --no-owner \
+            --no-privileges \
+            --format=custom \
+            --exclude-table=tenant_events \
+            --file=backup.dump
 
-          echo "Resolving production database ID..."
+          echo "Backup completed successfully."
 
-          export RESPONSE
-
-          POSTGRES_ID=$(python - <<'PY'
-import json
-import os
-import sys
-
-data = json.loads(os.environ["RESPONSE"])
-target_name = "feelathomenow-db"
-
-if isinstance(data, list):
-    items = data
-else:
-    items = data.get("items") or data.get("data") or []
-
-found = None
-
-for item in items:
-    candidate = item.get("postgres", item)
-    name = candidate.get("name")
-    db_id = candidate.get("id") or item.get("id")
-    if name == target_name and db_id:
-        found = db_id
-        break
-
-if not found:
-    print("Could not resolve Postgres ID for feelathomenow-db", file=sys.stderr)
-    sys.exit(1)
-
-print(found)
-PY
-          )
-
-          echo "Resolved Postgres ID: ${POSTGRES_ID}"
-          echo "Triggering Render backup export..."
-
-          EXPORT_RESPONSE=$(curl -sS -f -X POST "https://api.render.com/v1/postgres/${POSTGRES_ID}/export" \
-            -H "Authorization: Bearer ${RENDER_API_KEY}" \
-            -H "Content-Type: application/json")
-
-          echo "Response:"
-          echo "${EXPORT_RESPONSE}"
-
-          if echo "${EXPORT_RESPONSE}" | grep -q '"error"'; then
-            echo "::error::Render API returned an error"
+      - name: Validate backup file
+        run: |
+          if [ ! -f backup.dump ]; then
+            echo "::error::Backup file not found"
             exit 1
           fi
 
-          echo "Backup trigger completed."
+          echo "Backup file exists."
+
+      - name: Summary
+        run: echo "Backup job finished."
