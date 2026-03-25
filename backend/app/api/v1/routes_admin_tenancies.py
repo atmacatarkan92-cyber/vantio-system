@@ -16,6 +16,7 @@ from auth.dependencies import get_current_organization, get_db_session, require_
 from db.models import Tenancy, TenancyStatus, Tenant, Room, Unit, User
 from db.audit import create_audit_log, model_snapshot
 from app.core.rate_limit import limiter
+from app.services.tenant_crm import record_tenant_event
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-tenancies"])
@@ -211,6 +212,22 @@ def admin_create_tenancy(
         status=status,
     )
     session.add(tenancy)
+    room_row = session.get(Room, body.room_id)
+    unit_row = session.get(Unit, body.unit_id)
+    room_nm = (getattr(room_row, "name", None) or "").strip() or str(body.room_id)
+    unit_nm = (getattr(unit_row, "title", None) or "").strip() or str(body.unit_id)
+    summary = (
+        f"Mietverhältnis zugewiesen: {unit_nm} · {room_nm} · "
+        f"{body.move_in_date.isoformat()} · {body.monthly_rent:g} CHF/Monat"
+    )
+    record_tenant_event(
+        session,
+        tenant_id=str(body.tenant_id),
+        organization_id=org_id,
+        action_type="tenancy_assigned",
+        created_by_user_id=str(current_user.id),
+        summary=summary,
+    )
     create_audit_log(
         session, str(current_user.id), "create", "tenancy", str(tenancy.id),
         old_values=None, new_values=model_snapshot(tenancy),

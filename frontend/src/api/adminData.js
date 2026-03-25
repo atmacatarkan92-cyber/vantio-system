@@ -259,6 +259,8 @@ export function fetchAdminTenancies(params = {}) {
   if (params.room_id) sp.set("room_id", params.room_id);
   if (params.unit_id) sp.set("unit_id", params.unit_id);
   if (params.status) sp.set("status", params.status);
+  if (params.limit != null) sp.set("limit", String(params.limit));
+  if (params.skip != null) sp.set("skip", String(params.skip));
   const qs = sp.toString();
   const url = `${API_BASE_URL}/api/admin/tenancies${qs ? `?${qs}` : ""}`;
   return fetch(url, { headers: getApiHeaders() })

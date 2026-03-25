@@ -509,11 +509,13 @@ export default function AdminTenantDetailPage() {
         }
         setTenant(t);
         setForm(tenantToForm(t));
-        const roomId = t.room_id != null && String(t.room_id).trim() !== "" ? t.room_id : null;
-        const tenanciesFetch =
-          roomId != null
-            ? fetchAdminTenancies({ room_id: roomId }).catch(() => [])
-            : Promise.resolve([]);
+        const tenanciesFetch = fetchAdminTenancies({ limit: 200 })
+          .then((items) =>
+            Array.isArray(items)
+              ? items.filter((x) => String(x.tenant_id) === String(tenantId))
+              : []
+          )
+          .catch(() => []);
         const [nData, eData, invData, tenancyItems] = await Promise.all([
           fetchAdminTenantNotes(tenantId),
           fetchAdminTenantEvents(tenantId),
@@ -670,8 +672,11 @@ export default function AdminTenantDetailPage() {
         if (!res.ok) throw new Error(await parseAdminErrorFromResponse(res));
         return res.json();
       })
-      .then(() => reloadTenanciesForTenant())
-      .then(() => {
+      .then(() =>
+        Promise.all([reloadTenanciesForTenant(), fetchAdminTenantEvents(tenantId)])
+      )
+      .then(([, eData]) => {
+        if (eData?.items) setEvents(eData.items);
         setAssignOpen(false);
         resetAssignForm();
       })
