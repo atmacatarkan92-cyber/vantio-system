@@ -31,7 +31,8 @@ const emptyForm = {
 /** Stable room count from number input (avoids `|| 0` turning "" into 0 incorrectly for parsing). */
 function parseRoomsTotal(raw) {
   if (raw === "" || raw === null || raw === undefined) return 0;
-  const n = Number(raw);
+  const s = String(raw).replace(/\u00a0/g, " ").trim();
+  const n = Number(s);
   if (!Number.isFinite(n) || n < 0) return 0;
   return Math.floor(n);
 }
@@ -51,13 +52,18 @@ function ensureCoLivingRoomRows(n, prev) {
   });
 }
 
-/** Match backend `Co-Living` even when the select/copy uses Unicode hyphens (U+2011, U+2013). */
+/** Match backend `Co-Living` even when the select/copy uses Unicode hyphens or spacing variants. */
 function normalizeUnitTypeLabel(raw) {
   const t = String(raw ?? "").trim();
   if (!t) return "";
-  const hyphenNorm = t.replace(/\u2011/g, "-").replace(/\u2013/g, "-");
+  const hyphenNorm = t
+    .replace(/\u2011/g, "-")
+    .replace(/\u2013/g, "-")
+    .replace(/\u2010/g, "-")
+    .replace(/\u2012/g, "-")
+    .replace(/\u2212/g, "-");
   const compact = hyphenNorm.replace(/\s+/g, "");
-  if (/^co[-]?living$/i.test(compact)) return "Co-Living";
+  if (/^co[-]?living$/i.test(compact) || /^coliving$/i.test(compact)) return "Co-Living";
   return hyphenNorm;
 }
 
@@ -459,6 +465,8 @@ function AdminApartmentsPage() {
     if (!isCoLivingType || editingId || parsedRoomsTotal <= 0) return [];
     return ensureCoLivingRoomRows(parsedRoomsTotal, coLivingRoomRows);
   }, [isCoLivingType, editingId, parsedRoomsTotal, coLivingRoomRows]);
+
+  console.log("DEBUG CO-LIVING:", formData.type, typeof formData.type, formData.rooms);
 
   const nextUnitId = useMemo(() => {
     const maxNumber = units.reduce((max, item) => {
