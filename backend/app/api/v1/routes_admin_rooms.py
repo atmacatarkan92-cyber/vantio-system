@@ -7,6 +7,8 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
+
+ALLOWED_ROOM_STATUS = frozenset({"Frei", "Belegt", "Reserviert"})
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
@@ -19,6 +21,7 @@ router = APIRouter(prefix="/api/admin", tags=["admin-rooms"])
 
 def _room_to_dict(r: Room) -> dict:
     price = getattr(r, "price", 0)
+    status = getattr(r, "status", None) or "Frei"
     return {
         "id": str(r.id),
         "unit_id": r.unit_id,
@@ -28,6 +31,8 @@ def _room_to_dict(r: Room) -> dict:
         "base_rent_chf": price,
         "floor": getattr(r, "floor", None),
         "is_active": getattr(r, "is_active", True),
+        "size_m2": getattr(r, "size_m2", None),
+        "status": status,
     }
 
 
@@ -37,6 +42,8 @@ class RoomCreate(BaseModel):
     price: int = Field(default=0, ge=0)
     floor: Optional[int] = Field(default=None, ge=0)
     is_active: bool = True
+    size_m2: Optional[float] = Field(default=None, ge=0)
+    status: str = Field(default="Frei")
 
     @model_validator(mode="after")
     def _no_whitespace_only(self):
@@ -44,6 +51,10 @@ class RoomCreate(BaseModel):
             raise ValueError("unit_id must not be empty")
         if not self.name or not self.name.strip():
             raise ValueError("name must not be empty")
+        if self.status not in ALLOWED_ROOM_STATUS:
+            raise ValueError(
+                f"status must be one of: {', '.join(sorted(ALLOWED_ROOM_STATUS))}"
+            )
         return self
 
 
@@ -53,6 +64,8 @@ class RoomPatch(BaseModel):
     price: Optional[int] = Field(default=None, ge=0)
     floor: Optional[int] = Field(default=None, ge=0)
     is_active: Optional[bool] = None
+    size_m2: Optional[float] = Field(default=None, ge=0)
+    status: Optional[str] = None
 
     @model_validator(mode="after")
     def _no_whitespace_only(self):
@@ -60,6 +73,10 @@ class RoomPatch(BaseModel):
             raise ValueError("unit_id must not be empty")
         if self.name is not None and not self.name.strip():
             raise ValueError("name must not be empty")
+        if self.status is not None and self.status not in ALLOWED_ROOM_STATUS:
+            raise ValueError(
+                f"status must be one of: {', '.join(sorted(ALLOWED_ROOM_STATUS))}"
+            )
         return self
 
 
@@ -102,6 +119,8 @@ def admin_create_room(
         price=body.price,
         floor=body.floor,
         is_active=body.is_active,
+        size_m2=body.size_m2,
+        status=body.status,
     )
     session.add(room)
     session.commit()

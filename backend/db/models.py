@@ -102,6 +102,8 @@ class Room(SQLModel, table=True):
     price: int = Field(default=0)
     floor: Optional[int] = Field(default=None)
     is_active: bool = Field(default=True)
+    size_m2: Optional[float] = Field(default=None)
+    status: str = Field(default="Frei", max_length=32)
 
 
 # ---------------------------------------------------------------------------

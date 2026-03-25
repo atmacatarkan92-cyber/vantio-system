@@ -16,6 +16,8 @@ jobs:
 
           echo "Triggering Render backup export..."
 
+          echo "Using Postgres ID: ${{ secrets.RENDER_POSTGRES_ID }}"
+
           RESPONSE=$(curl -sS -f -X POST "https://api.render.com/v1/postgres/${{ secrets.RENDER_POSTGRES_ID }}/export" \
             -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
             -H "Content-Type: application/json")

@@ -6,7 +6,7 @@ Protected by require_roles("admin", "manager").
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlmodel import select
@@ -50,8 +50,12 @@ def _unit_to_dict(u: Unit, property_title: Optional[str] = None) -> dict:
     }
 
 
+ALLOWED_ROOM_STATUS = frozenset({"Frei", "Belegt", "Reserviert"})
+
+
 def _room_to_dict(r: Room) -> dict:
     price = getattr(r, "price", 0)
+    status = getattr(r, "status", None) or "Frei"
     return {
         "id": str(r.id),
         "unit_id": r.unit_id,
@@ -61,7 +65,29 @@ def _room_to_dict(r: Room) -> dict:
         "base_rent_chf": getattr(r, "base_rent_chf", None) or price,
         "floor": getattr(r, "floor", None),
         "is_active": getattr(r, "is_active", True),
+        "size_m2": getattr(r, "size_m2", None),
+        "status": status,
     }
+
+
+class CoLivingRoomInput(BaseModel):
+    name: str
+    price: int = Field(default=0, ge=0)
+    floor: Optional[int] = Field(default=None, ge=0)
+    size_m2: Optional[float] = Field(default=None, ge=0)
+    status: str = Field(default="Frei")
+
+    @model_validator(mode="after")
+    def _normalize(self) -> "CoLivingRoomInput":
+        n = self.name.strip()
+        if not n:
+            raise ValueError("name must not be empty")
+        self.name = n
+        if self.status not in ALLOWED_ROOM_STATUS:
+            raise ValueError(
+                f"status must be one of: {', '.join(sorted(ALLOWED_ROOM_STATUS))}"
+            )
+        return self
 
 
 class UnitCreate(BaseModel):
@@ -73,6 +99,20 @@ class UnitCreate(BaseModel):
     type: Optional[str] = None
     rooms: int = Field(default=0, ge=0)
     property_id: Optional[str] = None
+    co_living_rooms: Optional[List[CoLivingRoomInput]] = None
+
+    @model_validator(mode="after")
+    def _co_living_rooms_match_count(self) -> "UnitCreate":
+        t = (self.type or "").strip()
+        if t == "Co-Living":
+            if self.rooms > 0:
+                if not self.co_living_rooms or len(self.co_living_rooms) != self.rooms:
+                    raise ValueError(
+                        "co_living_rooms must have exactly one entry per room (rooms) for Co-Living"
+                    )
+            elif self.co_living_rooms:
+                raise ValueError("co_living_rooms must be omitted when rooms is 0")
+        return self
 
 
 class UnitPatch(BaseModel):
@@ -91,6 +131,38 @@ class UnitListResponse(BaseModel):
     total: int
     skip: int
     limit: int
+
+
+def _create_initial_rooms_for_unit(session, unit: Unit, body: UnitCreate) -> None:
+    """Apartment: one synthetic room. Co-Living: N rooms from body (validated)."""
+    ut = (unit.type or "").strip()
+    if ut == "Apartment":
+        existing = session.exec(select(Room).where(Room.unit_id == unit.id)).first()
+        if existing is None:
+            session.add(
+                Room(
+                    unit_id=unit.id,
+                    name="Gesamte Wohnung",
+                    price=0,
+                    floor=None,
+                    is_active=True,
+                    size_m2=None,
+                    status="Frei",
+                )
+            )
+    elif ut == "Co-Living" and body.rooms > 0 and body.co_living_rooms:
+        for r in body.co_living_rooms:
+            session.add(
+                Room(
+                    unit_id=unit.id,
+                    name=r.name.strip(),
+                    price=r.price,
+                    floor=r.floor,
+                    is_active=True,
+                    size_m2=r.size_m2,
+                    status=r.status,
+                )
+            )
 
 
 @router.get("/units", response_model=UnitListResponse)
@@ -184,6 +256,8 @@ def admin_create_unit(
         property_id=body.property_id,
     )
     session.add(unit)
+    session.flush()
+    _create_initial_rooms_for_unit(session, unit, body)
     create_audit_log(
         session, str(current_user.id), "create", "unit", str(unit.id),
         old_values=None, new_values=model_snapshot(unit),

@@ -278,8 +278,11 @@ export function normalizeRoom(r) {
     ...r,
     unitId: r.unitId ?? r.unit_id,
     priceMonthly: r.priceMonthly ?? r.price ?? r.base_rent_chf ?? 0,
-    status: r.status ?? (r.is_active ? "Frei" : "Inaktiv"),
+    status:
+      r.status ??
+      (r.is_active === false ? "Inaktiv" : "Frei"),
     roomName: r.roomName ?? r.name,
+    size_m2: r.size_m2 ?? null,
   };
 }
 

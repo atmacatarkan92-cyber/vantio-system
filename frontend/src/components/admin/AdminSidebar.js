@@ -115,19 +115,15 @@ function AdminSidebar() {
 
         <Bereich title="Betrieb" defaultOpen={true}>
           <NavLink to="/admin/objekte-dashboard" style={hauptLinkStyle}>
-            Objekte
-          </NavLink>
-
-          <NavLink to="/admin/apartments" style={unterLinkStyle}>
-            Apartments / Units
+            Objekte-Dashboard
           </NavLink>
 
           <NavLink to="/admin/properties" style={unterLinkStyle}>
             Liegenschaften
           </NavLink>
 
-          <NavLink to="/admin/listings" style={unterLinkStyle}>
-            Website Listings
+          <NavLink to="/admin/apartments" style={unterLinkStyle}>
+            Apartments / Units
           </NavLink>
 
           <NavLink to="/admin/rooms" style={unterLinkStyle}>
@@ -136,6 +132,10 @@ function AdminSidebar() {
 
           <NavLink to="/admin/occupancy" style={unterLinkStyle}>
             Belegung
+          </NavLink>
+
+          <NavLink to="/admin/listings" style={unterLinkStyle}>
+            Website Listings
           </NavLink>
         </Bereich>
 

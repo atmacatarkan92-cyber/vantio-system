@@ -411,6 +411,7 @@ function AdminApartmentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
+  const [coLivingRoomRows, setCoLivingRoomRows] = useState([]);
 
   const nextUnitId = useMemo(() => {
     const maxNumber = units.reduce((max, item) => {
@@ -421,6 +422,31 @@ function AdminApartmentsPage() {
     }, 0);
     return `FAH-U-${String(maxNumber + 1).padStart(4, "0")}`;
   }, [units]);
+
+  useEffect(() => {
+    if (!isModalOpen || editingId) return;
+    if (formData.type !== "Co-Living") {
+      setCoLivingRoomRows([]);
+      return;
+    }
+    const n = Math.max(0, parseInt(String(formData.rooms || 0), 10) || 0);
+    if (n === 0) {
+      setCoLivingRoomRows([]);
+      return;
+    }
+    setCoLivingRoomRows((prev) =>
+      Array.from({ length: n }, (_, i) => {
+        if (prev[i]) return prev[i];
+        return {
+          name: `Zimmer ${i + 1}`,
+          price: "",
+          floor: "",
+          size_m2: "",
+          status: "Frei",
+        };
+      })
+    );
+  }, [isModalOpen, editingId, formData.type, formData.rooms]);
 
   const filteredUnits = useMemo(() => {
     let result = units;
@@ -478,6 +504,7 @@ function AdminApartmentsPage() {
   function handleOpenCreateModal() {
     setEditingId(null);
     setFormData(emptyForm);
+    setCoLivingRoomRows([]);
     setIsModalOpen(true);
   }
 
@@ -507,6 +534,16 @@ function AdminApartmentsPage() {
     setIsModalOpen(false);
     setEditingId(null);
     setFormData(emptyForm);
+    setCoLivingRoomRows([]);
+  }
+
+  function handleCoLivingRoomChange(index, field, rawValue) {
+    setCoLivingRoomRows((prev) => {
+      const next = [...prev];
+      if (!next[index]) return prev;
+      next[index] = { ...next[index], [field]: rawValue };
+      return next;
+    });
   }
 
   function handleChange(event) {
@@ -541,6 +578,55 @@ function AdminApartmentsPage() {
   function handleSubmit(event) {
     event.preventDefault();
     setSaveError("");
+
+    if (!editingId && formData.type === "Co-Living") {
+      const n = Number(formData.rooms || 0);
+      if (n > 0) {
+        if (coLivingRoomRows.length !== n) {
+          setSaveError(
+            "Bei Co-Living muss die Anzahl Zimmer mit den ausgefüllten Zimmerzeilen übereinstimmen."
+          );
+          return;
+        }
+        const allowedStatus = ["Frei", "Belegt", "Reserviert"];
+        for (let i = 0; i < n; i++) {
+          const row = coLivingRoomRows[i];
+          if (!row || !String(row.name || "").trim()) {
+            setSaveError(`Zimmer ${i + 1}: Name ist erforderlich.`);
+            return;
+          }
+          if (row.price === "" || row.price === null || row.price === undefined) {
+            setSaveError(`Zimmer ${i + 1}: Preis ist erforderlich.`);
+            return;
+          }
+          const prn = Number(String(row.price).replace(",", "."));
+          if (Number.isNaN(prn) || prn < 0) {
+            setSaveError(`Zimmer ${i + 1}: Ungültiger Preis.`);
+            return;
+          }
+          const st = row.status || "Frei";
+          if (!allowedStatus.includes(st)) {
+            setSaveError(`Zimmer ${i + 1}: Ungültiger Status.`);
+            return;
+          }
+          if (row.floor !== "" && row.floor != null) {
+            const fl = Number(String(row.floor).replace(",", "."));
+            if (Number.isNaN(fl) || fl < 0) {
+              setSaveError(`Zimmer ${i + 1}: Ungültige Etage.`);
+              return;
+            }
+          }
+          if (row.size_m2 !== "" && row.size_m2 != null) {
+            const sm = Number(String(row.size_m2).replace(",", "."));
+            if (Number.isNaN(sm) || sm < 0) {
+              setSaveError(`Zimmer ${i + 1}: Ungültige Fläche (m²).`);
+              return;
+            }
+          }
+        }
+      }
+    }
+
     setSaving(true);
 
     const apiPayload = {
@@ -552,6 +638,31 @@ function AdminApartmentsPage() {
       rooms: Number(formData.rooms || 0) || 0,
       property_id: (formData.property_id || "").trim() || null,
     };
+
+    if (!editingId && formData.type === "Co-Living") {
+      const n = Number(formData.rooms || 0);
+      if (n > 0) {
+        apiPayload.co_living_rooms = coLivingRoomRows.map((row) => {
+          const floorRaw = row.floor;
+          const floor =
+            floorRaw === "" || floorRaw == null
+              ? null
+              : Math.round(Number(String(floorRaw).replace(",", ".")));
+          const sizeRaw = row.size_m2;
+          const size_m2 =
+            sizeRaw === "" || sizeRaw == null
+              ? null
+              : Number(String(sizeRaw).replace(",", "."));
+          return {
+            name: String(row.name).trim(),
+            price: Math.round(Number(String(row.price).replace(",", "."))),
+            floor,
+            size_m2,
+            status: row.status || "Frei",
+          };
+        });
+      }
+    }
 
     const promise = editingId
       ? updateAdminUnit(editingId, apiPayload)
@@ -853,6 +964,86 @@ function AdminApartmentsPage() {
                     className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
+
+                {formData.type === "Co-Living" &&
+                  !editingId &&
+                  Number(formData.rooms || 0) > 0 &&
+                  coLivingRoomRows.map((row, idx) => (
+                    <div
+                      key={idx}
+                      className="md:col-span-2 border border-slate-200 rounded-xl p-4 bg-slate-50/90"
+                    >
+                      <p className="text-sm font-semibold text-slate-800 mb-3">
+                        Zimmer {idx + 1}
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs text-slate-600 mb-1">Name</label>
+                          <input
+                            type="text"
+                            value={row.name}
+                            onChange={(e) =>
+                              handleCoLivingRoomChange(idx, "name", e.target.value)
+                            }
+                            required
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-600 mb-1">Preis (CHF)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={row.price}
+                            onChange={(e) =>
+                              handleCoLivingRoomChange(idx, "price", e.target.value)
+                            }
+                            required
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-600 mb-1">Etage</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={row.floor}
+                            onChange={(e) =>
+                              handleCoLivingRoomChange(idx, "floor", e.target.value)
+                            }
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-600 mb-1">Fläche (m²)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={row.size_m2}
+                            onChange={(e) =>
+                              handleCoLivingRoomChange(idx, "size_m2", e.target.value)
+                            }
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-600 mb-1">Status</label>
+                          <select
+                            value={row.status}
+                            onChange={(e) =>
+                              handleCoLivingRoomChange(idx, "status", e.target.value)
+                            }
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                          >
+                            <option>Frei</option>
+                            <option>Belegt</option>
+                            <option>Reserviert</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
 
                 {formData.type === "Co-Living" && (
                   <div>
