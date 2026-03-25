@@ -1,12 +1,10 @@
 # FeelAtHomeNow - Daily PostgreSQL backup to S3/R2
-# Runs at 03:00 UTC daily; can be triggered manually.
+# Runs manually only.
 # Secrets: BACKUP_DATABASE_URL, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, S3_ENDPOINT
 
 name: Database Backup
 
 on:
-  schedule:
-    - cron: "0 3 * * *"
   workflow_dispatch:
 
 env:
@@ -60,17 +58,12 @@ jobs:
         run: |
           set -euo pipefail
           echo "==> Backup started at $(date -u -Iseconds)"
-          # Application DATABASE_URL may use a role restricted by RLS; pg_dump would then
-          # fail on RLS-protected tables. Backup jobs must use a dedicated backup-capable DB
-          # user (BYPASSRLS or superuser as appropriate)—never by weakening RLS on app tables.
           if [ -z "${BACKUP_DATABASE_URL}" ]; then
             echo "::error::BACKUP_DATABASE_URL secret is missing or empty"
             exit 1
           fi
-          # pg_dump expects postgresql:// or postgres:// (not postgresql+psycopg2://)
           RAW="${BACKUP_DATABASE_URL}"
           URL="$RAW"
-          # Normalize only the prefix (avoid global replacement that can affect other parts)
           if [[ "$RAW" == postgresql+psycopg2://* ]]; then
             URL="postgresql://${RAW#postgresql+psycopg2://}"
           elif [[ "$RAW" == postgres://* ]]; then
@@ -144,7 +137,6 @@ jobs:
             exit 1
           fi
           echo "==> Listing existing backups (keeping last ${KEEP})..."
-          # List only .dump objects under backups/ (extract just the object keys)
           if [ -n "$ENDPOINT_URL" ]; then
             OBJECT_LIST="$(aws s3 ls "s3://${S3_BUCKET}/backups/" --recursive --endpoint-url "$ENDPOINT_URL" || true)"
           else
@@ -154,7 +146,6 @@ jobs:
             echo "No previous backups found; skip retention."
             exit 0
           fi
-          # Extract keys under backups/ and sort by key (YYYY/MM/DD/... lexicographic order)
           mapfile -t KEYS < <(
             printf '%s\n' "$OBJECT_LIST" \
               | awk 'NF >= 4 && $4 ~ /^backups\/.*\.dump$/ { print $4 }' \
