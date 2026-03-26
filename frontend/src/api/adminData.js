@@ -136,10 +136,20 @@ export async function deleteAdminUnit(id) {
   } catch (_) {}
 
   if (!res.ok) {
-    const msg =
+    let msg =
       responseData && typeof responseData.detail === "string"
         ? responseData.detail
-        : `HTTP ${res.status}`;
+        : "";
+
+    if (!msg && res.status === 400) {
+      msg =
+        "Unit kann nicht gelöscht werden, da noch Zimmer oder Mietverhältnisse vorhanden sind.";
+    }
+
+    if (!msg) {
+      msg = `HTTP ${res.status}`;
+    }
+
     throw new Error(msg);
   }
 
