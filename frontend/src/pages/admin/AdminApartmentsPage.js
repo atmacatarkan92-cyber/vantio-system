@@ -1249,7 +1249,7 @@ function AdminApartmentsPage() {
                       name="availableFrom"
                       value={formData.availableFrom}
                       onChange={handleChange}
-                      required
+                      required={formData.status === "Frei"}
                       className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
