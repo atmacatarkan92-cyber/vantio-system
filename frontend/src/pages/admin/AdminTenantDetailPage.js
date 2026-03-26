@@ -1281,11 +1281,7 @@ export default function AdminTenantDetailPage() {
                                     {tn.unit_id ? (
                                       <button
                                         type="button"
-                                        onClick={() =>
-                                          navigate("/admin/apartments", {
-                                            state: { editUnitId: String(tn.unit_id) },
-                                          })
-                                        }
+                                        onClick={() => navigate(`/admin/units/${tn.unit_id}`)}
                                         disabled={tenancyEditSaving}
                                         style={{
                                           padding: "4px 10px",
