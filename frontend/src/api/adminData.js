@@ -62,7 +62,16 @@ function parseAdminErrorBodyText(text) {
 }
 
 async function parseAdminErrorResponse(res) {
-  const text = await res.text();
+  let text;
+  try {
+    text = await res.text();
+  } catch (e) {
+    const m = e && e.message;
+    if (typeof m === "string" && m.includes("body stream already read")) {
+      return `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
+    }
+    throw e;
+  }
   let msg = parseAdminErrorBodyText(text).trim();
   if (!msg || msg === "Die Anfrage ist fehlgeschlagen.") {
     msg = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
