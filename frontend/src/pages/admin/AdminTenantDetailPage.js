@@ -92,6 +92,25 @@ function formatChfRent(amount) {
   return `CHF ${n.toLocaleString("de-CH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+const TENANT_DEPOSIT_TYPE_LABELS = {
+  bank: "Bank",
+  insurance: "Versicherung",
+  cash: "Bar",
+  none: "Keine",
+};
+
+function tenantDepositTypeLabel(raw) {
+  if (!raw || typeof raw !== "string") return "—";
+  const k = String(raw).toLowerCase();
+  return TENANT_DEPOSIT_TYPE_LABELS[k] || raw;
+}
+
+function parseOptionalTenantDepositFloat(value) {
+  if (value === "" || value == null) return null;
+  const n = Number(String(value).replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
 function tenancyDateRangeLabel(tn) {
   const mi = tn.move_in_date;
   const mo = tn.move_out_date;
@@ -439,6 +458,9 @@ export default function AdminTenantDetailPage() {
   const [assignMoveIn, setAssignMoveIn] = useState("");
   const [assignMoveOut, setAssignMoveOut] = useState("");
   const [assignMonthlyRent, setAssignMonthlyRent] = useState("");
+  const [assignTenantDepositType, setAssignTenantDepositType] = useState("");
+  const [assignTenantDepositAmount, setAssignTenantDepositAmount] = useState("");
+  const [assignTenantDepositAnnualPremium, setAssignTenantDepositAnnualPremium] = useState("");
   const [assignStatus, setAssignStatus] = useState("active");
   const [assignErr, setAssignErr] = useState(null);
   const [assignSaving, setAssignSaving] = useState(false);
@@ -447,6 +469,10 @@ export default function AdminTenantDetailPage() {
   const [tenancyEditingId, setTenancyEditingId] = useState(null);
   const [tenancyEditMoveOut, setTenancyEditMoveOut] = useState("");
   const [tenancyEditStatus, setTenancyEditStatus] = useState("active");
+  const [tenancyEditTenantDepositType, setTenancyEditTenantDepositType] = useState("");
+  const [tenancyEditTenantDepositAmount, setTenancyEditTenantDepositAmount] = useState("");
+  const [tenancyEditTenantDepositAnnualPremium, setTenancyEditTenantDepositAnnualPremium] =
+    useState("");
   const [tenancyEditSaving, setTenancyEditSaving] = useState(false);
   const [tenancyEditErr, setTenancyEditErr] = useState(null);
 
@@ -491,6 +517,9 @@ export default function AdminTenantDetailPage() {
     setTenancyEditErr(null);
     setTenancyEditMoveOut("");
     setTenancyEditStatus("active");
+    setTenancyEditTenantDepositType("");
+    setTenancyEditTenantDepositAmount("");
+    setTenancyEditTenantDepositAnnualPremium("");
   };
 
   const startTenancyEdit = (tn) => {
@@ -503,15 +532,32 @@ export default function AdminTenantDetailPage() {
     if (st === "reserved" || st === "reserviert") setTenancyEditStatus("reserved");
     else if (st === "ended" || st === "beendet") setTenancyEditStatus("ended");
     else setTenancyEditStatus("active");
+    const tdt = String(tn.tenant_deposit_type || "").toLowerCase();
+    setTenancyEditTenantDepositType(tdt || "");
+    const tda = tn.tenant_deposit_amount;
+    setTenancyEditTenantDepositAmount(
+      tda != null && tda !== "" ? String(tda) : ""
+    );
+    const tdp = tn.tenant_deposit_annual_premium;
+    setTenancyEditTenantDepositAnnualPremium(
+      tdp != null && tdp !== "" ? String(tdp) : ""
+    );
   };
 
   const submitTenancyEdit = () => {
     if (!tenancyEditingId || !tenantId) return;
     setTenancyEditErr(null);
     setTenancyEditSaving(true);
+    const tdt = String(tenancyEditTenantDepositType || "").trim().toLowerCase();
     const body = {
       move_out_date: tenancyEditMoveOut.trim() ? tenancyEditMoveOut.trim() : null,
       status: tenancyEditStatus,
+      tenant_deposit_type: tdt || null,
+      tenant_deposit_amount: parseOptionalTenantDepositFloat(tenancyEditTenantDepositAmount),
+      tenant_deposit_annual_premium:
+        tdt === "insurance"
+          ? parseOptionalTenantDepositFloat(tenancyEditTenantDepositAnnualPremium)
+          : null,
     };
     patchAdminTenancy(tenancyEditingId, body)
       .then(() => Promise.all([reloadTenanciesForTenant(), fetchAdminTenantEvents(tenantId)]))
@@ -679,6 +725,9 @@ export default function AdminTenantDetailPage() {
     setAssignMoveIn(today);
     setAssignMoveOut("");
     setAssignMonthlyRent("");
+    setAssignTenantDepositType("");
+    setAssignTenantDepositAmount("");
+    setAssignTenantDepositAnnualPremium("");
     setAssignStatus("active");
     setAssignErr(null);
   };
@@ -706,6 +755,7 @@ export default function AdminTenantDetailPage() {
     }
     const apiStatus = assignStatus === "upcoming" ? "reserved" : assignStatus;
     setAssignSaving(true);
+    const tdt = String(assignTenantDepositType || "").trim().toLowerCase();
     const body = {
       tenant_id: String(tenantId),
       unit_id: String(assignUnitId),
@@ -715,6 +765,13 @@ export default function AdminTenantDetailPage() {
       monthly_rent: rent,
       status: apiStatus,
     };
+    if (tdt) body.tenant_deposit_type = tdt;
+    const tda = parseOptionalTenantDepositFloat(assignTenantDepositAmount);
+    if (tda !== null) body.tenant_deposit_amount = tda;
+    if (tdt === "insurance") {
+      const prem = parseOptionalTenantDepositFloat(assignTenantDepositAnnualPremium);
+      if (prem !== null) body.tenant_deposit_annual_premium = prem;
+    }
     fetch(`${API_BASE_URL}/api/admin/tenancies`, {
       method: "POST",
       headers: getApiHeaders(),
@@ -1223,12 +1280,16 @@ export default function AdminTenantDetailPage() {
                           <th style={thCell}>Zeitraum</th>
                           <th style={thCell}>Status</th>
                           <th style={{ ...thCell, textAlign: "right" }}>Monatsmiete</th>
+                          <th style={thCell}>Kautionsart</th>
+                          <th style={{ ...thCell, textAlign: "right" }}>Kautionsbetrag</th>
+                          <th style={{ ...thCell, textAlign: "right" }}>Jahresprämie</th>
                           <th style={{ ...thCell, textAlign: "right", whiteSpace: "nowrap" }}>Aktion</th>
                         </tr>
                       </thead>
                       <tbody>
                         {tenancies.map((tn) => {
                           const st = (tn.status || "").toLowerCase();
+                          const tenantDepType = String(tn.tenant_deposit_type || "").toLowerCase();
                           const badge =
                             TENANCY_STATUS_BADGE[st] ||
                             (st === "reserved" ? TENANCY_STATUS_BADGE.upcoming : TENANCY_STATUS_BADGE.ended);
@@ -1259,6 +1320,15 @@ export default function AdminTenantDetailPage() {
                                 </td>
                                 <td style={{ ...tdCell, textAlign: "right", fontWeight: 600, color: "#0F172A" }}>
                                   {formatChfRent(tn.monthly_rent)}
+                                </td>
+                                <td style={tdCell}>{tenantDepositTypeLabel(tn.tenant_deposit_type)}</td>
+                                <td style={{ ...tdCell, textAlign: "right" }}>
+                                  {formatChfRent(tn.tenant_deposit_amount)}
+                                </td>
+                                <td style={{ ...tdCell, textAlign: "right" }}>
+                                  {tenantDepType === "insurance"
+                                    ? formatChfRent(tn.tenant_deposit_annual_premium)
+                                    : "—"}
                                 </td>
                                 <td style={{ ...tdCell, textAlign: "right", whiteSpace: "nowrap" }}>
                                   <div style={{ display: "inline-flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -1301,7 +1371,7 @@ export default function AdminTenantDetailPage() {
                               </tr>
                               {String(tenancyEditingId) === String(tn.id) ? (
                                 <tr>
-                                  <td colSpan={4} style={{ ...tdCell, background: "#F8FAFC", verticalAlign: "top" }}>
+                                  <td colSpan={7} style={{ ...tdCell, background: "#F8FAFC", verticalAlign: "top" }}>
                                     <div style={{ fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "8px" }}>
                                       Mietverhältnis bearbeiten
                                     </div>
@@ -1335,6 +1405,62 @@ export default function AdminTenantDetailPage() {
                                           <option value="ended">Beendet</option>
                                         </select>
                                       </div>
+                                      <div>
+                                        <label htmlFor={`ten-tdt-${rowKey}`} style={labelStyle}>
+                                          Kautionsart Mieter
+                                        </label>
+                                        <select
+                                          id={`ten-tdt-${rowKey}`}
+                                          style={{ ...inputStyle, cursor: tenancyEditSaving ? "default" : "pointer" }}
+                                          value={tenancyEditTenantDepositType}
+                                          onChange={(e) => {
+                                            const v = e.target.value;
+                                            setTenancyEditTenantDepositType(v);
+                                            if (v !== "insurance") setTenancyEditTenantDepositAnnualPremium("");
+                                          }}
+                                          disabled={tenancyEditSaving}
+                                        >
+                                          <option value="">—</option>
+                                          <option value="bank">Bank</option>
+                                          <option value="insurance">Versicherung</option>
+                                          <option value="cash">Bar</option>
+                                          <option value="none">Keine</option>
+                                        </select>
+                                      </div>
+                                      <div>
+                                        <label htmlFor={`ten-tda-${rowKey}`} style={labelStyle}>
+                                          Kautionsbetrag Mieter (CHF)
+                                        </label>
+                                        <input
+                                          id={`ten-tda-${rowKey}`}
+                                          type="number"
+                                          min="0"
+                                          step="0.01"
+                                          style={inputStyle}
+                                          value={tenancyEditTenantDepositAmount}
+                                          onChange={(e) => setTenancyEditTenantDepositAmount(e.target.value)}
+                                          disabled={tenancyEditSaving}
+                                        />
+                                      </div>
+                                      {tenancyEditTenantDepositType === "insurance" ? (
+                                        <div>
+                                          <label htmlFor={`ten-tdp-${rowKey}`} style={labelStyle}>
+                                            Jahresprämie Mieter (CHF)
+                                          </label>
+                                          <input
+                                            id={`ten-tdp-${rowKey}`}
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            style={inputStyle}
+                                            value={tenancyEditTenantDepositAnnualPremium}
+                                            onChange={(e) =>
+                                              setTenancyEditTenantDepositAnnualPremium(e.target.value)
+                                            }
+                                            disabled={tenancyEditSaving}
+                                          />
+                                        </div>
+                                      ) : null}
                                       <div style={{ display: "flex", gap: "8px" }}>
                                         <button
                                           type="button"
@@ -1538,6 +1664,60 @@ export default function AdminTenantDetailPage() {
                           <option value="ended">Beendet</option>
                         </select>
                       </div>
+                      <div>
+                        <label htmlFor="assign-tenant-deposit-type" style={labelStyle}>
+                          Kautionsart Mieter
+                        </label>
+                        <select
+                          id="assign-tenant-deposit-type"
+                          style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
+                          value={assignTenantDepositType}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setAssignTenantDepositType(v);
+                            if (v !== "insurance") setAssignTenantDepositAnnualPremium("");
+                          }}
+                          disabled={assignSaving}
+                        >
+                          <option value="">—</option>
+                          <option value="bank">Bank</option>
+                          <option value="insurance">Versicherung</option>
+                          <option value="cash">Bar</option>
+                          <option value="none">Keine</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label htmlFor="assign-tenant-deposit-amount" style={labelStyle}>
+                          Kautionsbetrag Mieter (CHF)
+                        </label>
+                        <input
+                          id="assign-tenant-deposit-amount"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          style={inputStyle}
+                          value={assignTenantDepositAmount}
+                          onChange={(e) => setAssignTenantDepositAmount(e.target.value)}
+                          disabled={assignSaving}
+                        />
+                      </div>
+                      {assignTenantDepositType === "insurance" ? (
+                        <div>
+                          <label htmlFor="assign-tenant-deposit-premium" style={labelStyle}>
+                            Jahresprämie Mieter (CHF)
+                          </label>
+                          <input
+                            id="assign-tenant-deposit-premium"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            style={inputStyle}
+                            value={assignTenantDepositAnnualPremium}
+                            onChange={(e) => setAssignTenantDepositAnnualPremium(e.target.value)}
+                            disabled={assignSaving}
+                          />
+                        </div>
+                      ) : null}
                     </div>
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "12px" }}>
                       <button

@@ -8,7 +8,7 @@ from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import func
 from sqlmodel import select
 
@@ -21,6 +21,8 @@ from app.services.tenant_crm import record_tenant_event
 
 router = APIRouter(prefix="/api/admin", tags=["admin-tenancies"])
 
+ALLOWED_TENANT_DEPOSIT_TYPES = frozenset({"bank", "insurance", "cash", "none"})
+
 
 def _tenancy_to_dict(t: Tenancy) -> dict:
     return {
@@ -32,6 +34,17 @@ def _tenancy_to_dict(t: Tenancy) -> dict:
         "move_out_date": t.move_out_date.isoformat() if t.move_out_date else None,
         "monthly_rent": float(t.monthly_rent),
         "deposit_amount": float(t.deposit_amount) if t.deposit_amount is not None else None,
+        "tenant_deposit_type": getattr(t, "tenant_deposit_type", None),
+        "tenant_deposit_amount": (
+            float(getattr(t, "tenant_deposit_amount"))
+            if getattr(t, "tenant_deposit_amount", None) is not None
+            else None
+        ),
+        "tenant_deposit_annual_premium": (
+            float(getattr(t, "tenant_deposit_annual_premium"))
+            if getattr(t, "tenant_deposit_annual_premium", None) is not None
+            else None
+        ),
         "status": t.status.value if hasattr(t.status, "value") else str(t.status),
         "created_at": t.created_at.isoformat() if getattr(t, "created_at", None) else None,
     }
@@ -45,7 +58,22 @@ class TenancyCreate(BaseModel):
     move_out_date: Optional[date] = None
     monthly_rent: float = Field(default=0, ge=0)
     deposit_amount: Optional[float] = Field(default=None, ge=0)
+    tenant_deposit_type: Optional[str] = None
+    tenant_deposit_amount: Optional[float] = Field(default=None, ge=0)
+    tenant_deposit_annual_premium: Optional[float] = Field(default=None, ge=0)
     status: TenancyStatus = TenancyStatus.active
+
+    @field_validator("tenant_deposit_type", mode="before")
+    @classmethod
+    def _normalize_tenant_deposit_type_create(cls, v):
+        if v is None or v == "":
+            return None
+        s = str(v).strip().lower()
+        if s not in ALLOWED_TENANT_DEPOSIT_TYPES:
+            raise ValueError(
+                "tenant_deposit_type must be one of: bank, insurance, cash, none"
+            )
+        return s
 
     @model_validator(mode="after")
     def _validate_dates(self):
@@ -65,7 +93,22 @@ class TenancyPatch(BaseModel):
     move_out_date: Optional[date] = None
     monthly_rent: Optional[float] = Field(default=None, ge=0)
     deposit_amount: Optional[float] = Field(default=None, ge=0)
+    tenant_deposit_type: Optional[str] = None
+    tenant_deposit_amount: Optional[float] = Field(default=None, ge=0)
+    tenant_deposit_annual_premium: Optional[float] = Field(default=None, ge=0)
     status: Optional[TenancyStatus] = None
+
+    @field_validator("tenant_deposit_type", mode="before")
+    @classmethod
+    def _normalize_tenant_deposit_type_patch(cls, v):
+        if v is None or v == "":
+            return None
+        s = str(v).strip().lower()
+        if s not in ALLOWED_TENANT_DEPOSIT_TYPES:
+            raise ValueError(
+                "tenant_deposit_type must be one of: bank, insurance, cash, none"
+            )
+        return s
 
     @model_validator(mode="after")
     def _validate_dates_if_both_present(self):
@@ -214,6 +257,9 @@ def admin_create_tenancy(
         move_out_date=body.move_out_date,
         monthly_rent=body.monthly_rent,
         deposit_amount=body.deposit_amount,
+        tenant_deposit_type=body.tenant_deposit_type,
+        tenant_deposit_amount=body.tenant_deposit_amount,
+        tenant_deposit_annual_premium=body.tenant_deposit_annual_premium,
         status=status,
     )
     session.add(tenancy)
