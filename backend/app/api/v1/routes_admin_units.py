@@ -19,9 +19,28 @@ from app.core.rate_limit import limiter
 
 router = APIRouter(prefix="/api/admin", tags=["admin-units"])
 
-_UNIT_DELETE_BLOCKED_MSG = (
-    "Unit kann nicht gelöscht werden, da noch Zimmer oder Mietverhältnisse vorhanden sind."
+_UNIT_DELETE_BLOCKED_FALLBACK = (
+    "Unit kann nicht gelöscht werden, da noch verknüpfte Daten vorhanden sind."
 )
+
+
+def _unit_delete_blocked_detail(room_count: int, tenancy_count: int) -> str:
+    """Precise German reason when rooms and/or tenancies block unit delete."""
+    if room_count > 0 and tenancy_count > 0:
+        rc = "1 Zimmer" if room_count == 1 else f"{room_count} Zimmer"
+        tc = "1 Mietverhältnis" if tenancy_count == 1 else f"{tenancy_count} Mietverhältnisse"
+        return (
+            f"Unit kann nicht gelöscht werden, da noch {rc} und {tc} vorhanden sind."
+        )
+    if room_count > 0:
+        subj = "1 Zimmer" if room_count == 1 else f"{room_count} Zimmer"
+        verb = "ist" if room_count == 1 else "sind"
+        return f"Unit kann nicht gelöscht werden, da noch {subj} vorhanden {verb}."
+    if tenancy_count > 0:
+        subj = "1 Mietverhältnis" if tenancy_count == 1 else f"{tenancy_count} Mietverhältnisse"
+        verb = "ist" if tenancy_count == 1 else "sind"
+        return f"Unit kann nicht gelöscht werden, da noch {subj} vorhanden {verb}."
+    return _UNIT_DELETE_BLOCKED_FALLBACK
 
 
 def _assert_property_and_landlord_in_org(session, property_id: Optional[str], org_id: str) -> None:
@@ -327,10 +346,19 @@ def admin_delete_unit(
     unit = session.get(Unit, unit_id)
     if not unit or str(getattr(unit, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Unit not found")
-    if session.exec(select(Room.id).where(Room.unit_id == unit_id).limit(1)).first():
-        raise HTTPException(status_code=400, detail=_UNIT_DELETE_BLOCKED_MSG)
-    if session.exec(select(Tenancy.id).where(Tenancy.unit_id == unit_id).limit(1)).first():
-        raise HTTPException(status_code=400, detail=_UNIT_DELETE_BLOCKED_MSG)
+    _room_count_row = session.exec(
+        select(func.count()).select_from(Room).where(Room.unit_id == unit_id)
+    ).one()
+    room_count = int(_room_count_row[0]) if _room_count_row is not None else 0
+    _tenancy_count_row = session.exec(
+        select(func.count()).select_from(Tenancy).where(Tenancy.unit_id == unit_id)
+    ).one()
+    tenancy_count = int(_tenancy_count_row[0]) if _tenancy_count_row is not None else 0
+    if room_count > 0 or tenancy_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=_unit_delete_blocked_detail(room_count, tenancy_count),
+        )
     old_snapshot = model_snapshot(unit)
     try:
         session.delete(unit)
@@ -341,7 +369,7 @@ def admin_delete_unit(
         session.commit()
     except IntegrityError:
         session.rollback()
-        raise HTTPException(status_code=400, detail=_UNIT_DELETE_BLOCKED_MSG) from None
+        raise HTTPException(status_code=400, detail=_UNIT_DELETE_BLOCKED_FALLBACK) from None
     return {"status": "ok", "message": "Unit deleted"}
 
 

@@ -143,7 +143,7 @@ export async function deleteAdminUnit(id) {
 
     if (!msg && res.status === 400) {
       msg =
-        "Unit kann nicht gelöscht werden, da noch Zimmer oder Mietverhältnisse vorhanden sind.";
+        "Unit kann nicht gelöscht werden, da noch verknüpfte Daten vorhanden sind.";
     }
 
     if (!msg) {
