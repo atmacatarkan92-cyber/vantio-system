@@ -380,6 +380,11 @@ export function normalizeUnit(u) {
     status: u.status ?? u.occupancy_status ?? "Frei",
     occupiedRooms: u.occupiedRooms ?? u.occupied_rooms ?? 0,
     zip: u.zip ?? u.postal_code ?? "",
+    landlordDepositType: u.landlordDepositType ?? u.landlord_deposit_type ?? "",
+    landlordDepositAmount:
+      u.landlordDepositAmount ?? u.landlord_deposit_amount ?? "",
+    landlordDepositAnnualPremium:
+      u.landlordDepositAnnualPremium ?? u.landlord_deposit_annual_premium ?? "",
   };
 }
 

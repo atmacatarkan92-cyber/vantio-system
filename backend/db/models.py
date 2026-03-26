@@ -99,6 +99,9 @@ class Unit(SQLModel, table=True):
     occupancy_status: Optional[str] = Field(default=None, max_length=64)
     occupied_rooms: int = Field(default=0)
     postal_code: Optional[str] = Field(default=None, max_length=32)
+    landlord_deposit_type: Optional[str] = Field(default=None, max_length=32)
+    landlord_deposit_amount: Optional[float] = Field(default=None)
+    landlord_deposit_annual_premium: Optional[float] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

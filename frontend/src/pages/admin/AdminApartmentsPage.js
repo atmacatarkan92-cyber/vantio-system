@@ -27,12 +27,21 @@ const emptyForm = {
   cleaningCostMonthly: "",
   availableFrom: "",
   landlordLeaseStartDate: "",
+  landlordDepositType: "",
+  landlordDepositAmount: "",
+  landlordDepositAnnualPremium: "",
 };
 
 function parseMoneyChf(raw) {
   if (raw === "" || raw == null) return 0;
   const n = Number(String(raw).replace(",", "."));
   return Number.isFinite(n) ? n : 0;
+}
+
+function parseOptionalMoneyChf(raw) {
+  if (raw === "" || raw == null) return null;
+  const n = Number(String(raw).replace(",", "."));
+  return Number.isFinite(n) ? n : null;
 }
 
 function dateOnlyOrNull(raw) {
@@ -627,6 +636,9 @@ function AdminApartmentsPage() {
       cleaningCostMonthly: numFieldStr(unit.cleaningCostMonthly),
       availableFrom: numFieldStr(unit.availableFrom).slice(0, 10),
       landlordLeaseStartDate: numFieldStr(unit.landlordLeaseStartDate).slice(0, 10),
+      landlordDepositType: String(unit.landlordDepositType || "").trim(),
+      landlordDepositAmount: numFieldStr(unit.landlordDepositAmount),
+      landlordDepositAnnualPremium: numFieldStr(unit.landlordDepositAnnualPremium),
     });
     setSaveError("");
     setIsModalOpen(true);
@@ -693,6 +705,15 @@ function AdminApartmentsPage() {
         type: value,
         occupiedRooms: 0,
         status: "Frei",
+      }));
+      return;
+    }
+
+    if (name === "landlordDepositType" && value !== "insurance") {
+      setFormData((prev) => ({
+        ...prev,
+        landlordDepositType: value,
+        landlordDepositAnnualPremium: "",
       }));
       return;
     }
@@ -772,6 +793,11 @@ function AdminApartmentsPage() {
       occupancy_status: String(formData.status || "").trim() || null,
       occupied_rooms: Math.max(0, Math.floor(Number(formData.occupiedRooms) || 0)),
       postal_code: String(formData.zip || "").trim() || null,
+      landlord_deposit_type: String(formData.landlordDepositType || "").trim() || null,
+      landlord_deposit_amount: parseOptionalMoneyChf(formData.landlordDepositAmount),
+      landlord_deposit_annual_premium: parseOptionalMoneyChf(
+        formData.landlordDepositAnnualPremium
+      ),
     };
 
     const baseUnitPayload = {
@@ -1392,6 +1418,58 @@ function AdminApartmentsPage() {
                     className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    Kautionsart Vermieter
+                  </label>
+                  <select
+                    name="landlordDepositType"
+                    value={formData.landlordDepositType}
+                    onChange={handleChange}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                  >
+                    <option value="">—</option>
+                    <option value="bank">Bank</option>
+                    <option value="insurance">Versicherung</option>
+                    <option value="cash">Bar</option>
+                    <option value="none">Keine</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">
+                    Kautionsbetrag Vermieter
+                  </label>
+                  <input
+                    type="number"
+                    name="landlordDepositAmount"
+                    value={formData.landlordDepositAmount}
+                    onChange={handleChange}
+                    min="0"
+                    step="0.01"
+                    placeholder="z. B. 5000"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                {formData.landlordDepositType === "insurance" ? (
+                  <div>
+                    <label className="block text-sm text-slate-600 mb-2">
+                      Jahresprämie Vermieter
+                    </label>
+                    <input
+                      type="number"
+                      name="landlordDepositAnnualPremium"
+                      value={formData.landlordDepositAnnualPremium}
+                      onChange={handleChange}
+                      min="0"
+                      step="0.01"
+                      placeholder="z. B. 350"
+                      className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                ) : null}
               </div>
 
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">

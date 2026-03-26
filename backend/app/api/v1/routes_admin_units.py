@@ -7,7 +7,7 @@ from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from sqlmodel import select
@@ -95,10 +95,22 @@ def _unit_to_dict(u: Unit, property_title: Optional[str] = None) -> dict:
         "status": occ or "Frei",
         "occupiedRooms": int(getattr(u, "occupied_rooms", 0) or 0),
         "zip": getattr(u, "postal_code", None) or "",
+        "landlordDepositType": getattr(u, "landlord_deposit_type", None) or "",
+        "landlordDepositAmount": (
+            float(getattr(u, "landlord_deposit_amount"))
+            if getattr(u, "landlord_deposit_amount", None) is not None
+            else None
+        ),
+        "landlordDepositAnnualPremium": (
+            float(getattr(u, "landlord_deposit_annual_premium"))
+            if getattr(u, "landlord_deposit_annual_premium", None) is not None
+            else None
+        ),
     }
 
 
 ALLOWED_ROOM_STATUS = frozenset({"Frei", "Belegt", "Reserviert"})
+ALLOWED_LANDLORD_DEPOSIT_TYPES = frozenset({"bank", "insurance", "cash", "none"})
 
 
 def _room_to_dict(r: Room) -> dict:
@@ -157,6 +169,21 @@ class UnitCreate(BaseModel):
     occupancy_status: Optional[str] = None
     occupied_rooms: int = Field(default=0, ge=0)
     postal_code: Optional[str] = None
+    landlord_deposit_type: Optional[str] = None
+    landlord_deposit_amount: Optional[float] = Field(default=None, ge=0)
+    landlord_deposit_annual_premium: Optional[float] = Field(default=None, ge=0)
+
+    @field_validator("landlord_deposit_type", mode="before")
+    @classmethod
+    def _normalize_landlord_deposit_type_create(cls, v):
+        if v is None or v == "":
+            return None
+        s = str(v).strip().lower()
+        if s not in ALLOWED_LANDLORD_DEPOSIT_TYPES:
+            raise ValueError(
+                "landlord_deposit_type must be one of: bank, insurance, cash, none"
+            )
+        return s
 
     @model_validator(mode="after")
     def _co_living_rooms_match_count(self) -> "UnitCreate":
@@ -190,6 +217,21 @@ class UnitPatch(BaseModel):
     occupancy_status: Optional[str] = None
     occupied_rooms: Optional[int] = Field(default=None, ge=0)
     postal_code: Optional[str] = None
+    landlord_deposit_type: Optional[str] = None
+    landlord_deposit_amount: Optional[float] = Field(default=None, ge=0)
+    landlord_deposit_annual_premium: Optional[float] = Field(default=None, ge=0)
+
+    @field_validator("landlord_deposit_type", mode="before")
+    @classmethod
+    def _normalize_landlord_deposit_type_patch(cls, v):
+        if v is None or v == "":
+            return None
+        s = str(v).strip().lower()
+        if s not in ALLOWED_LANDLORD_DEPOSIT_TYPES:
+            raise ValueError(
+                "landlord_deposit_type must be one of: bank, insurance, cash, none"
+            )
+        return s
 
 
 class UnitListResponse(BaseModel):
@@ -329,6 +371,9 @@ def admin_create_unit(
         occupancy_status=(body.occupancy_status or "").strip() or None,
         occupied_rooms=body.occupied_rooms,
         postal_code=(body.postal_code or "").strip() or None,
+        landlord_deposit_type=body.landlord_deposit_type,
+        landlord_deposit_amount=body.landlord_deposit_amount,
+        landlord_deposit_annual_premium=body.landlord_deposit_annual_premium,
     )
     session.add(unit)
     session.flush()
