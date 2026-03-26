@@ -129,21 +129,21 @@ export async function deleteAdminUnit(id) {
     `${API_BASE_URL}/api/admin/units/${encodeURIComponent(id)}`,
     { method: "DELETE", headers: getApiHeaders() }
   );
+
+  let responseData = null;
+  try {
+    responseData = await res.json();
+  } catch (_) {}
+
   if (!res.ok) {
-    let msg = `HTTP ${res.status}`;
-    try {
-      const data = await res.clone().json();
-      if (typeof data.detail === "string" && data.detail) {
-        msg = data.detail;
-      }
-    } catch (_) {}
+    const msg =
+      responseData && typeof responseData.detail === "string"
+        ? responseData.detail
+        : `HTTP ${res.status}`;
     throw new Error(msg);
   }
-  try {
-    return await res.json();
-  } catch {
-    return { status: "ok" };
-  }
+
+  return responseData || { status: "ok" };
 }
 
 export function fetchAdminRooms(unitId = null) {
