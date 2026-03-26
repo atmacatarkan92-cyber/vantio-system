@@ -1,6 +1,6 @@
 """Unit: optional landlord deposit fields.
 
-Revision ID: 033_unit_landlord_deposit_fields
+Revision ID: 033_unit_landlord_deposit
 Revises: 032_unit_financial_fields
 """
 
@@ -9,7 +9,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-revision: str = "033_unit_landlord_deposit_fields"
+revision: str = "033_unit_landlord_deposit"
 down_revision: Union[str, None] = "032_unit_financial_fields"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
