@@ -746,14 +746,7 @@ function AdminApartmentsPage() {
 
     setSaving(true);
 
-    const apiPayload = {
-      title: (formData.place || formData.address || "Unit").trim() || "Unit",
-      address: (formData.address || "").trim() || "",
-      city: (formData.place || "").trim() || "",
-      city_id: null,
-      type: normalizedUnitType || null,
-      rooms: parsedRoomsTotal,
-      property_id: (formData.property_id || "").trim() || null,
+    const persistedUnitFields = {
       tenant_price_monthly_chf: parseMoneyChf(formData.tenantPriceMonthly),
       landlord_rent_monthly_chf: parseMoneyChf(formData.landlordRentMonthly),
       utilities_monthly_chf: parseMoneyChf(formData.utilitiesMonthly),
@@ -763,6 +756,21 @@ function AdminApartmentsPage() {
       occupancy_status: String(formData.status || "").trim() || null,
       occupied_rooms: Math.max(0, Math.floor(Number(formData.occupiedRooms) || 0)),
       postal_code: String(formData.zip || "").trim() || null,
+    };
+
+    const baseUnitPayload = {
+      title: (formData.place || formData.address || "Unit").trim() || "Unit",
+      address: (formData.address || "").trim() || "",
+      city: (formData.place || "").trim() || "",
+      city_id: null,
+      type: normalizedUnitType || null,
+      rooms: parsedRoomsTotal,
+      property_id: (formData.property_id || "").trim() || null,
+    };
+
+    const apiPayload = {
+      ...baseUnitPayload,
+      ...persistedUnitFields,
     };
 
     if (!editingId && isCoLivingType) {
@@ -791,7 +799,7 @@ function AdminApartmentsPage() {
     }
 
     const promise = editingId
-      ? updateAdminUnit(editingId, apiPayload)
+      ? updateAdminUnit(editingId, { ...baseUnitPayload, ...persistedUnitFields })
       : createAdminUnit(apiPayload);
 
     promise
