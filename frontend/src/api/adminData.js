@@ -130,25 +130,10 @@ export async function deleteAdminUnit(id) {
     { method: "DELETE", headers: getApiHeaders() }
   );
   if (!res.ok) {
-    let msg = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
-    try {
-      const data = await res.json();
-      if (data != null && typeof data === "object") {
-        if (typeof data.detail === "string") {
-          msg = data.detail;
-        } else if (Array.isArray(data.detail)) {
-          const joined = data.detail
-            .map(detailItemToMessage)
-            .filter(Boolean)
-            .join(" ");
-          if (joined) msg = joined;
-        } else if (data.detail && typeof data.detail === "object") {
-          const m = detailItemToMessage(data.detail);
-          if (m) msg = m;
-        }
-      }
-    } catch (_) {
-      /* keep HTTP fallback */
+    const text = await res.text();
+    let msg = parseAdminErrorBodyText(text).trim();
+    if (!msg || msg === "Die Anfrage ist fehlgeschlagen.") {
+      msg = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
     }
     throw new Error(msg);
   }
