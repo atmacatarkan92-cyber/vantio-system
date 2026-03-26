@@ -60,6 +60,33 @@ function formatTenancyMoveIn(iso) {
   return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : s;
 }
 
+function isUuidLike(s) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    String(s || "").trim()
+  );
+}
+
+function formatUnitHeaderLocationLine(unit) {
+  const street = String(unit.address || "").trim();
+  const zip = String(unit.zip || "").trim();
+  const city = String(unit.place || unit.city || "").trim();
+  const tail = [zip, city].filter(Boolean).join(" ");
+  if (street && tail) return `${street}, ${tail}`;
+  if (street) return street;
+  if (tail) return tail;
+  return "—";
+}
+
+function getUnitPageMainTitle(unit) {
+  if (!unit) return "—";
+  const uid = String(unit.unitId || "").trim();
+  const address = String(unit.address || "").trim();
+  if (uid && !isUuidLike(uid) && address) {
+    return `${uid} · ${address}`;
+  }
+  return formatUnitHeaderLocationLine(unit);
+}
+
 function getRoomsForUnit(unitId, allRooms) {
   return allRooms.filter((room) => room.unitId === unitId);
 }
@@ -678,10 +705,10 @@ function AdminUnitDetailPage() {
               Unit Intelligence
             </p>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900 mt-2">
-              {unit.unitId}
+              {getUnitPageMainTitle(unit)}
             </h2>
-            <p className="text-slate-500 mt-3">
-              {unit.address}, {unit.zip} {unit.place}
+            <p className="text-xs text-slate-400 mt-2 font-mono break-all">
+              {unit.id || unit.unitId}
             </p>
           </div>
 
