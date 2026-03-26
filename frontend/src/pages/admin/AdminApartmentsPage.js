@@ -29,6 +29,23 @@ const emptyForm = {
   landlordLeaseStartDate: "",
 };
 
+function parseMoneyChf(raw) {
+  if (raw === "" || raw == null) return 0;
+  const n = Number(String(raw).replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function dateOnlyOrNull(raw) {
+  const s = String(raw || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}/.test(s)) return null;
+  return s.slice(0, 10);
+}
+
+function numFieldStr(v) {
+  if (v == null || v === "") return "";
+  return String(v);
+}
+
 /** Stable room count from number input (avoids `|| 0` turning "" into 0 incorrectly for parsing). */
 function parseRoomsTotal(raw) {
   if (raw === "" || raw === null || raw === undefined) return 0;
@@ -595,19 +612,19 @@ function AdminApartmentsPage() {
     setEditingId(unit.id);
     setFormData({
       place: unit.place,
-      zip: unit.zip,
+      zip: unit.zip != null && unit.zip !== "" ? String(unit.zip) : "",
       address: unit.address,
       type: unit.type,
       rooms: unit.rooms,
       occupiedRooms: unit.occupiedRooms || 0,
       status: unit.status,
       property_id: unit.property_id || "",
-      tenantPriceMonthly: unit.tenantPriceMonthly,
-      landlordRentMonthly: unit.landlordRentMonthly,
-      utilitiesMonthly: unit.utilitiesMonthly,
-      cleaningCostMonthly: unit.cleaningCostMonthly,
-      availableFrom: unit.availableFrom,
-      landlordLeaseStartDate: unit.landlordLeaseStartDate || "",
+      tenantPriceMonthly: numFieldStr(unit.tenantPriceMonthly),
+      landlordRentMonthly: numFieldStr(unit.landlordRentMonthly),
+      utilitiesMonthly: numFieldStr(unit.utilitiesMonthly),
+      cleaningCostMonthly: numFieldStr(unit.cleaningCostMonthly),
+      availableFrom: numFieldStr(unit.availableFrom).slice(0, 10),
+      landlordLeaseStartDate: numFieldStr(unit.landlordLeaseStartDate).slice(0, 10),
     });
     setSaveError("");
     setIsModalOpen(true);
@@ -737,6 +754,15 @@ function AdminApartmentsPage() {
       type: normalizedUnitType || null,
       rooms: parsedRoomsTotal,
       property_id: (formData.property_id || "").trim() || null,
+      tenant_price_monthly_chf: parseMoneyChf(formData.tenantPriceMonthly),
+      landlord_rent_monthly_chf: parseMoneyChf(formData.landlordRentMonthly),
+      utilities_monthly_chf: parseMoneyChf(formData.utilitiesMonthly),
+      cleaning_cost_monthly_chf: parseMoneyChf(formData.cleaningCostMonthly),
+      landlord_lease_start_date: dateOnlyOrNull(formData.landlordLeaseStartDate),
+      available_from: dateOnlyOrNull(formData.availableFrom),
+      occupancy_status: String(formData.status || "").trim() || null,
+      occupied_rooms: Math.max(0, Math.floor(Number(formData.occupiedRooms) || 0)),
+      postal_code: String(formData.zip || "").trim() || null,
     };
 
     if (!editingId && isCoLivingType) {

@@ -16,7 +16,7 @@ import {
 } from "../../api/adminData";
 import { API_BASE_URL, getApiHeaders } from "../../config";
 import { tenantDisplayName } from "../../utils/tenantDisplayName";
-import { getDisplayUnitId } from "../../utils/unitDisplayId";
+import { getDisplayUnitId, normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 
 async function parseAdminErrorFromResponse(res) {
   const text = await res.text();
@@ -450,16 +450,32 @@ export default function AdminTenantDetailPage() {
   const [tenancyEditSaving, setTenancyEditSaving] = useState(false);
   const [tenancyEditErr, setTenancyEditErr] = useState(null);
 
+  const assignUnitForRent = useMemo(
+    () => assignUnits.find((x) => String(x.id) === String(assignUnitId)),
+    [assignUnits, assignUnitId]
+  );
+  const assignRentIsReadOnly =
+    assignUnitForRent != null && normalizeUnitTypeLabel(assignUnitForRent.type) === "Apartment";
+
   useEffect(() => {
+    if (!assignUnitId || !assignUnits.length) return;
+    const u = assignUnits.find((x) => String(x.id) === String(assignUnitId));
+    if (!u) return;
+    const ut = normalizeUnitTypeLabel(u.type);
+    if (ut === "Apartment") {
+      const raw = u.tenantPriceMonthly ?? u.tenant_price_monthly_chf;
+      const p = Number(raw);
+      setAssignMonthlyRent(Number.isFinite(p) && p >= 0 ? String(p) : "");
+      return;
+    }
     if (!assignRoomId || !assignRooms.length) return;
     const room = assignRooms.find((r) => String(r.id) === String(assignRoomId));
     if (!room) return;
+    if (assignRentUserEditedRef.current) return;
     const raw = room.priceMonthly ?? room.price ?? room.base_rent_chf;
     const p = Number(raw);
-    if (!assignRentUserEditedRef.current) {
-      setAssignMonthlyRent(Number.isFinite(p) && p >= 0 ? String(p) : "");
-    }
-  }, [assignRoomId, assignRooms]);
+    setAssignMonthlyRent(Number.isFinite(p) && p >= 0 ? String(p) : "");
+  }, [assignUnitId, assignUnits, assignRoomId, assignRooms]);
 
   const reloadTenanciesForTenant = useCallback(async () => {
     try {
@@ -1483,7 +1499,7 @@ export default function AdminTenantDetailPage() {
                             assignRentUserEditedRef.current = true;
                             setAssignMonthlyRent(e.target.value);
                           }}
-                          disabled={assignSaving}
+                          disabled={assignSaving || assignRentIsReadOnly}
                         />
                       </div>
                       <div>

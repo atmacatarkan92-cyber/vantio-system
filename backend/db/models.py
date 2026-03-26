@@ -90,6 +90,15 @@ class Unit(SQLModel, table=True):
     type: Optional[str] = Field(default=None, max_length=50)
     city_id: Optional[str] = Field(default=None, foreign_key="cities.id", index=True)
     property_id: Optional[str] = Field(default=None, foreign_key="properties.id", index=True)
+    tenant_price_monthly_chf: float = Field(default=0)
+    landlord_rent_monthly_chf: float = Field(default=0)
+    utilities_monthly_chf: float = Field(default=0)
+    cleaning_cost_monthly_chf: float = Field(default=0)
+    landlord_lease_start_date: Optional[date] = None
+    available_from: Optional[date] = None
+    occupancy_status: Optional[str] = Field(default=None, max_length=64)
+    occupied_rooms: int = Field(default=0)
+    postal_code: Optional[str] = Field(default=None, max_length=32)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

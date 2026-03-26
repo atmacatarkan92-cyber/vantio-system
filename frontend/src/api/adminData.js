@@ -371,6 +371,15 @@ export function normalizeUnit(u) {
     ...u,
     unitId: u.unitId ?? u.id,
     place: u.place ?? u.city ?? u.address ?? "",
+    tenantPriceMonthly: u.tenantPriceMonthly ?? u.tenant_price_monthly_chf ?? "",
+    landlordRentMonthly: u.landlordRentMonthly ?? u.landlord_rent_monthly_chf ?? "",
+    utilitiesMonthly: u.utilitiesMonthly ?? u.utilities_monthly_chf ?? "",
+    cleaningCostMonthly: u.cleaningCostMonthly ?? u.cleaning_cost_monthly_chf ?? "",
+    landlordLeaseStartDate: u.landlordLeaseStartDate ?? u.landlord_lease_start_date ?? "",
+    availableFrom: u.availableFrom ?? u.available_from ?? "",
+    status: u.status ?? u.occupancy_status ?? "Frei",
+    occupiedRooms: u.occupiedRooms ?? u.occupied_rooms ?? 0,
+    zip: u.zip ?? u.postal_code ?? "",
   };
 }
 

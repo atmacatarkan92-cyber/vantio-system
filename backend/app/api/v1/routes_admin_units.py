@@ -3,6 +3,7 @@ Admin units and rooms: CRUD + list rooms by unit.
 Protected by require_roles("admin", "manager").
 """
 
+from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -56,7 +57,22 @@ def _assert_property_and_landlord_in_org(session, property_id: Optional[str], or
             raise HTTPException(status_code=400, detail="Invalid landlord reference for property")
 
 
+def _iso_date(d: Optional[date]) -> str:
+    if d is None:
+        return ""
+    if hasattr(d, "isoformat"):
+        return d.isoformat()[:10]
+    return ""
+
+
 def _unit_to_dict(u: Unit, property_title: Optional[str] = None) -> dict:
+    tp = float(getattr(u, "tenant_price_monthly_chf", 0) or 0)
+    lr = float(getattr(u, "landlord_rent_monthly_chf", 0) or 0)
+    ut = float(getattr(u, "utilities_monthly_chf", 0) or 0)
+    cl = float(getattr(u, "cleaning_cost_monthly_chf", 0) or 0)
+    occ = getattr(u, "occupancy_status", None) or ""
+    ld = getattr(u, "landlord_lease_start_date", None)
+    af = getattr(u, "available_from", None)
     return {
         "id": str(u.id),
         "unitId": str(u.id),
@@ -70,6 +86,15 @@ def _unit_to_dict(u: Unit, property_title: Optional[str] = None) -> dict:
         "property_id": getattr(u, "property_id", None),
         "property_title": property_title,
         "created_at": u.created_at.isoformat() if getattr(u, "created_at", None) else None,
+        "tenantPriceMonthly": tp,
+        "landlordRentMonthly": lr,
+        "utilitiesMonthly": ut,
+        "cleaningCostMonthly": cl,
+        "landlordLeaseStartDate": _iso_date(ld),
+        "availableFrom": _iso_date(af),
+        "status": occ or "Frei",
+        "occupiedRooms": int(getattr(u, "occupied_rooms", 0) or 0),
+        "zip": getattr(u, "postal_code", None) or "",
     }
 
 
@@ -123,6 +148,15 @@ class UnitCreate(BaseModel):
     rooms: int = Field(default=0, ge=0)
     property_id: Optional[str] = None
     co_living_rooms: Optional[List[CoLivingRoomInput]] = None
+    tenant_price_monthly_chf: float = Field(default=0, ge=0)
+    landlord_rent_monthly_chf: float = Field(default=0, ge=0)
+    utilities_monthly_chf: float = Field(default=0, ge=0)
+    cleaning_cost_monthly_chf: float = Field(default=0, ge=0)
+    landlord_lease_start_date: Optional[date] = None
+    available_from: Optional[date] = None
+    occupancy_status: Optional[str] = None
+    occupied_rooms: int = Field(default=0, ge=0)
+    postal_code: Optional[str] = None
 
     @model_validator(mode="after")
     def _co_living_rooms_match_count(self) -> "UnitCreate":
@@ -147,6 +181,15 @@ class UnitPatch(BaseModel):
     type: Optional[str] = None
     rooms: Optional[int] = Field(default=None, ge=0)
     property_id: Optional[str] = None
+    tenant_price_monthly_chf: Optional[float] = Field(default=None, ge=0)
+    landlord_rent_monthly_chf: Optional[float] = Field(default=None, ge=0)
+    utilities_monthly_chf: Optional[float] = Field(default=None, ge=0)
+    cleaning_cost_monthly_chf: Optional[float] = Field(default=None, ge=0)
+    landlord_lease_start_date: Optional[date] = None
+    available_from: Optional[date] = None
+    occupancy_status: Optional[str] = None
+    occupied_rooms: Optional[int] = Field(default=None, ge=0)
+    postal_code: Optional[str] = None
 
 
 class UnitListResponse(BaseModel):
@@ -277,6 +320,15 @@ def admin_create_unit(
         type=body.type,
         city_id=body.city_id,
         property_id=body.property_id,
+        tenant_price_monthly_chf=body.tenant_price_monthly_chf,
+        landlord_rent_monthly_chf=body.landlord_rent_monthly_chf,
+        utilities_monthly_chf=body.utilities_monthly_chf,
+        cleaning_cost_monthly_chf=body.cleaning_cost_monthly_chf,
+        landlord_lease_start_date=body.landlord_lease_start_date,
+        available_from=body.available_from,
+        occupancy_status=(body.occupancy_status or "").strip() or None,
+        occupied_rooms=body.occupied_rooms,
+        postal_code=(body.postal_code or "").strip() or None,
     )
     session.add(unit)
     session.flush()
@@ -318,6 +370,8 @@ def admin_patch_unit(
             setattr(unit, k, v)
     if "property_id" in data and data["property_id"] == "":
         unit.property_id = None
+    if "postal_code" in data and data["postal_code"] == "":
+        unit.postal_code = None
     session.add(unit)
     create_audit_log(
         session, str(current_user.id), "update", "unit", str(unit_id),
