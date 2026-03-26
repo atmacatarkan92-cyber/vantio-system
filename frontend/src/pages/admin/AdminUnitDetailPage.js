@@ -41,12 +41,29 @@ function hasLeaseStarted(unit) {
   return unit.landlordLeaseStartDate <= getTodayDateString();
 }
 
+/** Monthly share of landlord insurance deposit premium (annual / 12). */
+function landlordDepositInsuranceMonthly(unit) {
+  const t = String(unit.landlordDepositType || "").trim().toLowerCase();
+  if (t !== "insurance") return 0;
+  const premium = Number(unit.landlordDepositAnnualPremium);
+  if (!Number.isFinite(premium) || premium <= 0) return 0;
+  return premium / 12;
+}
+
+const LANDLORD_DEPOSIT_TYPE_LABELS = {
+  bank: "Bankdepot",
+  insurance: "Versicherung",
+  cash: "Bareinzahlung",
+  none: "Keine",
+};
+
 function getRunningMonthlyCosts(unit) {
   if (!hasLeaseStarted(unit)) return 0;
   return (
     Number(unit.landlordRentMonthly || 0) +
     Number(unit.utilitiesMonthly || 0) +
-    Number(unit.cleaningCostMonthly || 0)
+    Number(unit.cleaningCostMonthly || 0) +
+    landlordDepositInsuranceMonthly(unit)
   );
 }
 
@@ -696,6 +713,16 @@ function AdminUnitDetailPage() {
     setRooms((prev) => prev.filter((room) => String(room.id) !== String(id)));
   }
 
+  const landlordDepositTypeKey = String(unit.landlordDepositType || "")
+    .trim()
+    .toLowerCase();
+  const showLandlordDepositNone =
+    !landlordDepositTypeKey || landlordDepositTypeKey === "none";
+  const landlordDepositKindLabel =
+    LANDLORD_DEPOSIT_TYPE_LABELS[landlordDepositTypeKey] ||
+    unit.landlordDepositType ||
+    "—";
+
   return (
     <div className="min-h-screen bg-slate-50 -m-6 p-6 md:p-8">
       <div className="max-w-[1800px] mx-auto space-y-8">
@@ -798,7 +825,11 @@ function AdminUnitDetailPage() {
               <SmallStatCard
                 label="Laufende Kosten"
                 value={formatChfOrDash(metrics.runningCosts)}
-                hint="Miete + NK + Reinigung"
+                hint={
+                  landlordDepositInsuranceMonthly(unit) > 0
+                    ? "Miete + NK + Reinigung + Anteil Kautionsversicherung (Jahresprämie / 12)"
+                    : "Miete + NK + Reinigung"
+                }
                 accent="slate"
               />
               <SmallStatCard
@@ -810,6 +841,36 @@ function AdminUnitDetailPage() {
             </div>
           </SectionCard>
         </div>
+
+        <SectionCard
+          title="Kaution Vermieter"
+          subtitle="Hinterlegung gegenüber dem Vermieter (nicht Mieterkaution)"
+        >
+          {showLandlordDepositNone ? (
+            <p className="text-sm text-slate-500">Keine Kaution erfasst</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-700">
+              <div>
+                <p className="text-sm text-slate-500">Kautionsart</p>
+                <p className="font-medium">{landlordDepositKindLabel}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Kautionsbetrag</p>
+                <p className="font-medium">
+                  {formatChfOrDash(unit.landlordDepositAmount)}
+                </p>
+              </div>
+              {landlordDepositTypeKey === "insurance" ? (
+                <div>
+                  <p className="text-sm text-slate-500">Jahresprämie</p>
+                  <p className="font-medium">
+                    {formatChfOrDash(unit.landlordDepositAnnualPremium)}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </SectionCard>
 
         <SectionCard
           title="Mieter"
