@@ -129,17 +129,31 @@ export async function deleteAdminUnit(id) {
     `${API_BASE_URL}/api/admin/units/${encodeURIComponent(id)}`,
     { method: "DELETE", headers: getApiHeaders() }
   );
-  const text = await res.text();
   if (!res.ok) {
-    let msg = parseAdminErrorBodyText(text).trim();
-    if (!msg || msg === "Die Anfrage ist fehlgeschlagen.") {
-      msg = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
+    let msg = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
+    try {
+      const data = await res.json();
+      if (data != null && typeof data === "object") {
+        if (typeof data.detail === "string") {
+          msg = data.detail;
+        } else if (Array.isArray(data.detail)) {
+          const joined = data.detail
+            .map(detailItemToMessage)
+            .filter(Boolean)
+            .join(" ");
+          if (joined) msg = joined;
+        } else if (data.detail && typeof data.detail === "object") {
+          const m = detailItemToMessage(data.detail);
+          if (m) msg = m;
+        }
+      }
+    } catch (_) {
+      /* keep HTTP fallback */
     }
     throw new Error(msg);
   }
-  if (!text || !text.trim()) return { status: "ok" };
   try {
-    return JSON.parse(text);
+    return await res.json();
   } catch {
     return { status: "ok" };
   }
