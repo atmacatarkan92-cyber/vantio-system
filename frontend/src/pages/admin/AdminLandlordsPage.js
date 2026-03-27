@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   fetchAdminLandlords,
+  fetchAdminLandlord,
   createAdminLandlord,
   updateAdminLandlord,
 } from "../../api/adminData";
@@ -12,6 +14,8 @@ const inputStyle = { width: "100%", padding: "8px 10px", borderRadius: "6px", bo
 const labelStyle = { display: "block", marginBottom: "4px", fontSize: "13px", fontWeight: 600 };
 
 function AdminLandlordsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const deepLinkHandled = useRef(false);
   const [landlords, setLandlords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -39,6 +43,53 @@ function AdminLandlordsPage() {
   useEffect(() => {
     load();
   }, []);
+
+  const editParam = searchParams.get("edit");
+  useEffect(() => {
+    deepLinkHandled.current = false;
+  }, [editParam]);
+
+  useEffect(() => {
+    if (loading) return;
+    const editId = searchParams.get("edit");
+    if (!editId || deepLinkHandled.current) return;
+
+    const applyRow = (row) => {
+      deepLinkHandled.current = true;
+      setEditingId(row.id);
+      setForm({
+        company_name: row.company_name || "",
+        contact_name: row.contact_name || "",
+        email: row.email || "",
+        phone: row.phone || "",
+        notes: row.notes || "",
+        status: row.status || "active",
+      });
+      setFormOpen(true);
+      setSearchParams({}, { replace: true });
+    };
+
+    const fromList = landlords.find((l) => String(l.id) === String(editId));
+    if (fromList) {
+      applyRow(fromList);
+      return;
+    }
+
+    deepLinkHandled.current = true;
+    let cancelled = false;
+    fetchAdminLandlord(editId)
+      .then((r) => {
+        if (cancelled) return;
+        if (r) applyRow(r);
+        else setSearchParams({}, { replace: true });
+      })
+      .catch(() => {
+        if (!cancelled) setSearchParams({}, { replace: true });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, landlords, searchParams, setSearchParams]);
 
   const openCreate = () => {
     setEditingId(null);

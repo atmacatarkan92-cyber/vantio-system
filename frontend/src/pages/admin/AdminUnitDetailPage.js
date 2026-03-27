@@ -9,6 +9,8 @@ import {
   fetchAdminOccupancyRooms,
   fetchAdminTenancies,
   fetchAdminTenant,
+  fetchAdminLandlord,
+  fetchAdminPropertyManagers,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
@@ -108,6 +110,23 @@ function isUuidLike(s) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
     String(s || "").trim()
   );
+}
+
+function landlordDisplayName(l) {
+  if (!l) return "—";
+  const c = String(l.company_name || "").trim();
+  const n = String(l.contact_name || "").trim();
+  if (c && n) return `${c} — ${n}`;
+  return c || n || String(l.email || "").trim() || l.id || "—";
+}
+
+function propertyManagerDisplayName(p) {
+  if (!p) return "—";
+  const n = String(p.name || "").trim();
+  if (n) return n;
+  const e = String(p.email || "").trim();
+  if (e) return e;
+  return p.id || "—";
 }
 
 function formatUnitHeaderLocationLine(unit) {
@@ -350,6 +369,9 @@ function AdminUnitDetailPage() {
   const [unit, setUnit] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [verwaltungLabel, setVerwaltungLabel] = useState("");
+  const [bewirtschafterLabel, setBewirtschafterLabel] = useState("");
+  const [linksResolving, setLinksResolving] = useState(false);
 
   useEffect(() => {
     if (!unitId) {
@@ -362,6 +384,55 @@ function AdminUnitDetailPage() {
       .catch(() => setUnit(null))
       .finally(() => setLoading(false));
   }, [unitId]);
+
+  useEffect(() => {
+    if (!unit) {
+      setVerwaltungLabel("");
+      setBewirtschafterLabel("");
+      setLinksResolving(false);
+      return;
+    }
+    const lid = unit.landlord_id;
+    const pmid = unit.property_manager_id;
+    if (!lid && !pmid) {
+      setVerwaltungLabel("");
+      setBewirtschafterLabel("");
+      setLinksResolving(false);
+      return;
+    }
+    setLinksResolving(true);
+    let cancelled = false;
+    Promise.all([
+      lid ? fetchAdminLandlord(lid) : Promise.resolve(null),
+      pmid ? fetchAdminPropertyManagers() : Promise.resolve(null),
+    ])
+      .then(([ll, pmList]) => {
+        if (cancelled) return;
+        if (lid) {
+          setVerwaltungLabel(ll ? landlordDisplayName(ll) : "—");
+        } else {
+          setVerwaltungLabel("");
+        }
+        if (pmid) {
+          const p = Array.isArray(pmList) ? pmList.find((x) => String(x.id) === String(pmid)) : null;
+          setBewirtschafterLabel(p ? propertyManagerDisplayName(p) : "—");
+        } else {
+          setBewirtschafterLabel("");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          if (lid) setVerwaltungLabel("—");
+          if (pmid) setBewirtschafterLabel("—");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLinksResolving(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [unit]);
 
   useEffect(() => {
     if (!unitId) return;
@@ -816,6 +887,46 @@ function AdminUnitDetailPage() {
               <div>
                 <p className="text-sm text-slate-500">Liegenschaft</p>
                 <p className="font-medium">{unit.property_title || "—"}</p>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-500">Verwaltung</p>
+                <p className="font-medium">
+                  {unit.landlord_id ? (
+                    linksResolving ? (
+                      "…"
+                    ) : (
+                      <Link
+                        to={`/admin/landlords?edit=${encodeURIComponent(unit.landlord_id)}`}
+                        className="text-orange-600 hover:underline"
+                      >
+                        {verwaltungLabel || "—"}
+                      </Link>
+                    )
+                  ) : (
+                    "—"
+                  )}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-500">Bewirtschafter</p>
+                <p className="font-medium">
+                  {unit.property_manager_id ? (
+                    linksResolving ? (
+                      "…"
+                    ) : (
+                      <Link
+                        to={`/admin/bewirtschafter?edit=${encodeURIComponent(unit.property_manager_id)}`}
+                        className="text-orange-600 hover:underline"
+                      >
+                        {bewirtschafterLabel || "—"}
+                      </Link>
+                    )
+                  ) : (
+                    "—"
+                  )}
+                </p>
               </div>
 
               <div>

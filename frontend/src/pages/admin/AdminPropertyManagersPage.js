@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   fetchAdminPropertyManagers,
   fetchAdminLandlords,
@@ -38,6 +39,8 @@ function getCardStyle(accentColor) {
 }
 
 function AdminPropertyManagersPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const deepLinkHandled = useRef(false);
   const [items, setItems] = useState([]);
   const [landlords, setLandlords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +83,32 @@ function AdminPropertyManagersPage() {
   useEffect(() => {
     load(true);
   }, []);
+
+  const editParam = searchParams.get("edit");
+  useEffect(() => {
+    deepLinkHandled.current = false;
+  }, [editParam]);
+
+  useEffect(() => {
+    if (loading) return;
+    const editId = searchParams.get("edit");
+    if (!editId || deepLinkHandled.current) return;
+
+    const row = items.find((x) => String(x.id) === String(editId));
+    deepLinkHandled.current = true;
+    if (row) {
+      setError("");
+      setEditingId(row.id);
+      setForm({
+        name: row.name || "",
+        email: row.email || "",
+        phone: row.phone || "",
+        landlord_id: row.landlord_id || "",
+      });
+      setFormOpen(true);
+    }
+    setSearchParams({}, { replace: true });
+  }, [loading, items, searchParams, setSearchParams]);
 
   const openCreate = () => {
     setError("");
