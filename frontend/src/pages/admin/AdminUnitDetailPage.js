@@ -39,6 +39,10 @@ import {
   getUnitRevenueForecast,
   getPhase4OperationalWarnings,
 } from "../../utils/unitOperationalIntelligence";
+import {
+  getRunningMonthlyCosts,
+  landlordDepositInsuranceMonthly,
+} from "../../utils/adminUnitRunningCosts";
 
 const UNIT_AUDIT_FIELD_LABELS = {
   landlord_id: "Verwaltung",
@@ -128,15 +132,6 @@ function getTodayDateString() {
   return new Date().toISOString().split("T")[0];
 }
 
-
-/** Monthly share of landlord insurance deposit premium (annual / 12). */
-function landlordDepositInsuranceMonthly(unit) {
-  const t = String(unit.landlordDepositType || "").trim().toLowerCase();
-  if (t !== "insurance") return 0;
-  const premium = Number(unit.landlordDepositAnnualPremium);
-  if (!Number.isFinite(premium) || premium <= 0) return 0;
-  return premium / 12;
-}
 
 const LANDLORD_DEPOSIT_TYPE_LABELS = {
   bank: "Bankdepot",
@@ -323,16 +318,6 @@ function getAuditEntryDisplayLines(entry, resolvers) {
   if (action === "delete") return ["Unit gelöscht"];
   if (action === "update") return buildAuditUpdateLines(entry, resolvers);
   return ["Unit bearbeitet"];
-}
-
-function getRunningMonthlyCosts(unit) {
-  if (!isLandlordContractLeaseStarted(unit)) return 0;
-  return (
-    Number(unit.landlordRentMonthly || 0) +
-    Number(unit.utilitiesMonthly || 0) +
-    Number(unit.cleaningCostMonthly || 0) +
-    landlordDepositInsuranceMonthly(unit)
-  );
 }
 
 function formatTenancyMoveIn(iso) {
