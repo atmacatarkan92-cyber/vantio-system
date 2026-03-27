@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import AuditLog, Unit, User
+from db.models import AuditLog, Tenant, Unit, User
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-audit-logs"])
@@ -23,18 +23,22 @@ def admin_list_audit_logs(
     _=Depends(require_roles("admin", "manager")),
     session: Session = Depends(get_db_session),
 ):
-    """Return audit log rows for an entity; for unit, verifies organization via Unit row."""
-    if entity_type != "unit":
-        raise HTTPException(status_code=400, detail="entity_type must be unit")
-
-    unit = session.get(Unit, entity_id)
-    if not unit or str(getattr(unit, "organization_id", "")) != org_id:
-        raise HTTPException(status_code=404, detail="Unit not found")
+    """Return audit log rows for an entity; verifies organization via Unit or Tenant row."""
+    if entity_type == "unit":
+        unit = session.get(Unit, entity_id)
+        if not unit or str(getattr(unit, "organization_id", "")) != org_id:
+            raise HTTPException(status_code=404, detail="Unit not found")
+    elif entity_type == "tenant":
+        tenant = session.get(Tenant, entity_id)
+        if not tenant or str(getattr(tenant, "organization_id", "")) != org_id:
+            raise HTTPException(status_code=404, detail="Tenant not found")
+    else:
+        raise HTTPException(status_code=400, detail="entity_type must be unit or tenant")
 
     logs: List[AuditLog] = list(
         session.exec(
             select(AuditLog)
-            .where(AuditLog.entity_type == "unit")
+            .where(AuditLog.entity_type == entity_type)
             .where(AuditLog.entity_id == entity_id)
             .order_by(AuditLog.created_at.desc())
             .limit(limit)

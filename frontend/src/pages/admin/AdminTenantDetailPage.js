@@ -11,6 +11,11 @@ import {
   patchAdminTenancy,
   fetchAdminUnits,
   fetchAdminRooms,
+  fetchAdminTenantDocuments,
+  uploadAdminTenantDocument,
+  fetchAdminTenantDocumentDownloadUrl,
+  deleteAdminTenantDocument,
+  fetchAdminAuditLogs,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
@@ -62,6 +67,63 @@ function formatDateOnly(iso) {
   const dt = new Date(iso);
   if (Number.isNaN(dt.getTime())) return iso;
   return dt.toLocaleDateString("de-CH");
+}
+
+function formatTenantDocumentDate(iso) {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleString("de-CH", { dateStyle: "short", timeStyle: "short" });
+  } catch {
+    return iso;
+  }
+}
+
+function formatTenantDocumentType(doc) {
+  const mime = String(doc.mime_type || "").toLowerCase();
+  const name = String(doc.file_name || "");
+  const ext = name.includes(".")
+    ? (name.split(".").pop() || "").toLowerCase()
+    : "";
+
+  if (mime.includes("pdf") || ext === "pdf") return "PDF";
+  if (mime.includes("jpeg") || mime.includes("jpg") || ext === "jpg" || ext === "jpeg") return "JPG";
+  if (mime.includes("png") || ext === "png") return "PNG";
+  if (
+    mime.includes("wordprocessingml") ||
+    mime.includes("msword") ||
+    ext === "docx" ||
+    ext === "doc"
+  ) {
+    return "DOCX";
+  }
+  if (ext && /^[a-z0-9]+$/i.test(ext)) return ext.toUpperCase();
+  return "Datei";
+}
+
+function auditLogToTenantHistoryEvent(log) {
+  const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
+  const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
+  if (nv.document_uploaded != null && String(nv.document_uploaded).trim() !== "") {
+    return {
+      id: `audit-${log.id}`,
+      summary: `Dokument hochgeladen: ${String(nv.document_uploaded)}`,
+      created_at: log.created_at,
+      author_name: log.actor_name || log.actor_email || "—",
+      action_type: "audit_document",
+    };
+  }
+  if (ov.document_deleted != null && String(ov.document_deleted).trim() !== "") {
+    return {
+      id: `audit-${log.id}`,
+      summary: `Dokument gelöscht: ${String(ov.document_deleted)}`,
+      created_at: log.created_at,
+      author_name: log.actor_name || log.actor_email || "—",
+      action_type: "audit_document",
+    };
+  }
+  return null;
 }
 
 function formatInvoiceAmount(amount, currency) {
@@ -217,14 +279,6 @@ const sectionCard = {
   marginBottom: "12px",
 };
 
-const placeholderStyle = {
-  ...sectionCard,
-  color: "#64748B",
-  fontSize: "13px",
-  textAlign: "center",
-  padding: "20px",
-};
-
 const labelStyle = {
   display: "block",
   fontSize: "12px",
@@ -257,15 +311,6 @@ const sectionTitle = {
   letterSpacing: "0.04em",
   margin: "0 0 10px 0",
 };
-
-function PlaceholderSection({ title }) {
-  return (
-    <div style={placeholderStyle}>
-      <div style={{ fontWeight: 700, color: "#334155", marginBottom: "6px" }}>{title}</div>
-      <div>Wird in einer späteren Phase ergänzt.</div>
-    </div>
-  );
-}
 
 function TenantNotesBlock({
   notes,
@@ -453,6 +498,11 @@ export default function AdminTenantDetailPage() {
   const [form, setForm] = useState(emptyForm);
   const [notes, setNotes] = useState([]);
   const [events, setEvents] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [tenantDocuments, setTenantDocuments] = useState([]);
+  const [tenantDocUploading, setTenantDocUploading] = useState(false);
+  const [tenantDocUploadError, setTenantDocUploadError] = useState("");
+  const tenantDocFileInputRef = useRef(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteValidationErr, setNoteValidationErr] = useState(null);
@@ -495,6 +545,16 @@ export default function AdminTenantDetailPage() {
   );
   const assignRentIsReadOnly =
     assignUnitForRent != null && normalizeUnitTypeLabel(assignUnitForRent.type) === "Apartment";
+
+  const mergedHistoryEvents = useMemo(() => {
+    const fromAudit = (auditLogs || []).map(auditLogToTenantHistoryEvent).filter(Boolean);
+    const combined = [...(events || []), ...fromAudit];
+    return combined.sort((a, b) => {
+      const ta = new Date(a.created_at || 0).getTime();
+      const tb = new Date(b.created_at || 0).getTime();
+      return tb - ta;
+    });
+  }, [events, auditLogs]);
 
   useEffect(() => {
     if (!assignUnitId || !assignUnits.length) return;
@@ -588,6 +648,55 @@ export default function AdminTenantDetailPage() {
       shouldRefreshTenantList ? { state: { refreshTenants: true } } : undefined
     );
 
+  function handleTenantDocPick() {
+    tenantDocFileInputRef.current?.click();
+  }
+
+  async function handleTenantDocSelected(e) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f || !tenantId) return;
+    setTenantDocUploading(true);
+    setTenantDocUploadError("");
+    try {
+      await uploadAdminTenantDocument(tenantId, f);
+      const [items, auditData] = await Promise.all([
+        fetchAdminTenantDocuments(tenantId),
+        fetchAdminAuditLogs({ entity_type: "tenant", entity_id: tenantId }),
+      ]);
+      setTenantDocuments(Array.isArray(items) ? items : []);
+      setAuditLogs(Array.isArray(auditData?.items) ? auditData.items : []);
+    } catch (err) {
+      setTenantDocUploadError(err.message || "Upload fehlgeschlagen.");
+    } finally {
+      setTenantDocUploading(false);
+    }
+  }
+
+  async function handleOpenTenantDocument(docId) {
+    try {
+      const data = await fetchAdminTenantDocumentDownloadUrl(docId);
+      if (data?.url) window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      window.alert(err.message || "Download konnte nicht gestartet werden.");
+    }
+  }
+
+  async function handleDeleteTenantDocument(docId) {
+    if (!window.confirm("Dokument wirklich löschen?")) return;
+    try {
+      await deleteAdminTenantDocument(docId);
+      const [items, auditData] = await Promise.all([
+        fetchAdminTenantDocuments(tenantId),
+        fetchAdminAuditLogs({ entity_type: "tenant", entity_id: tenantId }),
+      ]);
+      setTenantDocuments(Array.isArray(items) ? items : []);
+      setAuditLogs(Array.isArray(auditData?.items) ? auditData.items : []);
+    } catch (err) {
+      window.alert(err.message || "Löschen fehlgeschlagen.");
+    }
+  }
+
   useEffect(() => {
     if (!tenantId) {
       setTenant(null);
@@ -596,6 +705,8 @@ export default function AdminTenantDetailPage() {
       setSaveError(null);
       setNotes([]);
       setEvents([]);
+      setAuditLogs([]);
+      setTenantDocuments([]);
       setInvoices([]);
       setTenancies([]);
       setNoteDraft("");
@@ -616,6 +727,8 @@ export default function AdminTenantDetailPage() {
           setTenant(null);
           setNotes([]);
           setEvents([]);
+          setAuditLogs([]);
+          setTenantDocuments([]);
           setInvoices([]);
           setTenancies([]);
           return;
@@ -625,17 +738,23 @@ export default function AdminTenantDetailPage() {
         const tenanciesFetch = fetchAdminTenancies({ tenant_id: tenantId, limit: 200 })
           .then((items) => (Array.isArray(items) ? items : []))
           .catch(() => []);
-        const [nData, eData, invData, tenancyItems] = await Promise.all([
+        const [nData, eData, invData, tenancyItems, auditData, tdDocs] = await Promise.all([
           fetchAdminTenantNotes(tenantId),
           fetchAdminTenantEvents(tenantId),
           fetchAdminInvoices({ tenantId, limit: 20 }).catch(() => ({ items: [] })),
           tenanciesFetch,
+          fetchAdminAuditLogs({ entity_type: "tenant", entity_id: tenantId }).catch(() => ({
+            items: [],
+          })),
+          fetchAdminTenantDocuments(tenantId).catch(() => []),
         ]);
         if (cancelled) return;
         setNotes(nData?.items || []);
         setEvents(eData?.items || []);
         setInvoices(invData?.items || []);
         setTenancies(Array.isArray(tenancyItems) ? tenancyItems : []);
+        setAuditLogs(Array.isArray(auditData?.items) ? auditData.items : []);
+        setTenantDocuments(Array.isArray(tdDocs) ? tdDocs : []);
       } catch (e) {
         if (!cancelled) setLoadError(e?.message || "Laden fehlgeschlagen.");
       } finally {
@@ -1843,8 +1962,117 @@ export default function AdminTenantDetailPage() {
                 noteSubmitError={noteSubmitError}
                 onSubmit={saveNote}
               />
-              <TenantHistoryBlock events={events} />
-              <PlaceholderSection title="Dokumente" />
+              <div style={sectionCard}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: "12px",
+                    marginBottom: "10px",
+                  }}
+                >
+                  <div style={sectionTitle}>Dokumente</div>
+                  <div>
+                    <input
+                      ref={tenantDocFileInputRef}
+                      type="file"
+                      style={{ display: "none" }}
+                      onChange={handleTenantDocSelected}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleTenantDocPick}
+                      disabled={tenantDocUploading || !tenantId}
+                      style={{
+                        fontSize: "13px",
+                        border: "1px solid #CBD5E1",
+                        background: tenantDocUploading || !tenantId ? "#F1F5F9" : "#FFFFFF",
+                        color: "#334155",
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                        fontWeight: 600,
+                        cursor: tenantDocUploading || !tenantId ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {tenantDocUploading ? "Wird hochgeladen …" : "Hochladen"}
+                    </button>
+                  </div>
+                </div>
+                {tenantDocUploadError ? (
+                  <p style={{ margin: "0 0 8px 0", fontSize: "13px", color: "#DC2626" }}>
+                    {tenantDocUploadError}
+                  </p>
+                ) : null}
+                {loading ? (
+                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#64748B" }}>Lade Dokumente …</p>
+                ) : tenantDocuments.length === 0 ? (
+                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#64748B" }}>Keine Dokumente vorhanden</p>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px", color: "#0F172A" }}>
+                      <thead>
+                        <tr>
+                          <th style={thCell}>Datei</th>
+                          <th style={thCell}>Typ</th>
+                          <th style={thCell}>Datum</th>
+                          <th style={thCell}>Von</th>
+                          <th style={thCell}>Aktionen</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tenantDocuments.map((doc) => (
+                          <tr key={String(doc.id)}>
+                            <td style={{ ...tdCell, fontWeight: 600 }}>{doc.file_name || "—"}</td>
+                            <td style={{ ...tdCell, color: "#64748B" }}>{formatTenantDocumentType(doc)}</td>
+                            <td style={{ ...tdCell, color: "#64748B" }}>{formatTenantDocumentDate(doc.created_at)}</td>
+                            <td style={{ ...tdCell, color: "#64748B" }}>
+                              {doc.uploaded_by_name != null && doc.uploaded_by_name !== ""
+                                ? doc.uploaded_by_name
+                                : "—"}
+                            </td>
+                            <td style={tdCell}>
+                              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "12px" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenTenantDocument(doc.id)}
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    padding: 0,
+                                    color: "#EA580C",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    textDecoration: "underline",
+                                  }}
+                                >
+                                  Öffnen
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteTenantDocument(doc.id)}
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    padding: 0,
+                                    color: "#64748B",
+                                    fontSize: "13px",
+                                    cursor: "pointer",
+                                    textDecoration: "underline",
+                                  }}
+                                >
+                                  Löschen
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              <TenantHistoryBlock events={mergedHistoryEvents} />
             </>
           ) : (
             <p style={{ color: "#64748B" }}>Keine Daten.</p>

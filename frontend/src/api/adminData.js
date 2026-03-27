@@ -734,3 +734,56 @@ export async function deleteAdminUnitDocument(documentId) {
   }
   return res.json();
 }
+
+export function fetchAdminTenantDocuments(tenantId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/tenant-documents?tenant_id=${encodeURIComponent(tenantId)}`,
+    { headers: getApiHeaders() }
+  )
+    .then((res) => {
+      if (!res.ok) throw new Error("Dokumente konnten nicht geladen werden.");
+      return res.json();
+    })
+    .then((data) => {
+      if (data != null && typeof data === "object" && Array.isArray(data.items)) {
+        return data.items;
+      }
+      throw new Error('Ungültige Antwort: erwartet { items: [] }.');
+    });
+}
+
+export async function uploadAdminTenantDocument(tenantId, file) {
+  const fd = new FormData();
+  fd.append("tenant_id", tenantId);
+  fd.append("file", file);
+  const res = await fetch(`${API_BASE_URL}/api/admin/tenant-documents`, {
+    method: "POST",
+    headers: getApiHeadersMultipart(),
+    body: fd,
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
+
+export function fetchAdminTenantDocumentDownloadUrl(documentId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/tenant-documents/${encodeURIComponent(documentId)}/download`,
+    { headers: getApiHeaders() }
+  ).then(async (res) => {
+    if (!res.ok) throw new Error(await parseAdminErrorResponse(res));
+    return res.json();
+  });
+}
+
+export async function deleteAdminTenantDocument(documentId) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/tenant-documents/${encodeURIComponent(documentId)}`, {
+    method: "DELETE",
+    headers: getApiHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}

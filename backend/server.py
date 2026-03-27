@@ -31,6 +31,7 @@ from app.api.v1.routes_admin_landlords import router as admin_landlords_router
 from app.api.v1.routes_admin_property_managers import router as admin_property_managers_router
 from app.api.v1.routes_admin_audit_logs import router as admin_audit_logs_router
 from app.api.v1.routes_admin_unit_documents import router as admin_unit_documents_router
+from app.api.v1.routes_admin_tenant_documents import router as admin_tenant_documents_router
 from app.api.v1.routes_admin_properties import router as admin_properties_router
 from app.api.v1.routes_admin_users import router as admin_users_router
 from app.api.v1.routes_invoices import router as invoices_router
@@ -165,6 +166,7 @@ app.include_router(admin_landlords_router)
 app.include_router(admin_property_managers_router)
 app.include_router(admin_audit_logs_router)
 app.include_router(admin_unit_documents_router)
+app.include_router(admin_tenant_documents_router)
 app.include_router(admin_properties_router)
 app.include_router(admin_users_router)
 app.include_router(tenant_router)
