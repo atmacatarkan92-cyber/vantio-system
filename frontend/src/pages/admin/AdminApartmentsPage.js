@@ -19,7 +19,12 @@ import {
   formatOccupancyStatusDe,
   occupancyStatusBadgeClassName,
   isLandlordContractLeaseStarted,
+  sumActiveTenancyMonthlyRentForUnit,
 } from "../../utils/unitOccupancyStatus";
+import {
+  getCoLivingMetrics,
+  getRoomsForUnit,
+} from "../../utils/adminUnitCoLivingMetrics";
 
 function landlordSelectLabel(l) {
   const c = String(l.company_name || "").trim();
@@ -171,76 +176,6 @@ function calculateApartmentProfit(unit) {
   const tenantPrice = Number(unit.tenantPriceMonthly || 0);
   const runningCosts = getRunningMonthlyCosts(unit);
   return tenantPrice - runningCosts;
-}
-
-function getRoomsForUnit(unitId, allRooms = []) {
-  return allRooms.filter((room) => (room.unitId || room.unit_id) === unitId);
-}
-
-function getCoLivingMetrics(unit, allRooms = []) {
-  const leaseStarted = isLandlordContractLeaseStarted(unit);
-  const rooms = getRoomsForUnit(unit.unitId || unit.id, allRooms);
-
-  if (rooms.length === 0) {
-    const occupied = Number(unit.occupiedRooms || 0);
-    const total = Number(unit.rooms || 0);
-    const fullRevenue = Number(unit.tenantPriceMonthly || 0);
-
-    const currentRevenue =
-      total > 0 && leaseStarted ? (fullRevenue / total) * occupied : 0;
-
-    return {
-      occupiedCount: occupied,
-      reservedCount: 0,
-      freeCount: Math.max(total - occupied, 0),
-      totalRooms: total,
-      fullRevenue,
-      currentRevenue,
-      vacancyLoss: leaseStarted ? fullRevenue - currentRevenue : 0,
-      currentProfit: currentRevenue - getRunningMonthlyCosts(unit),
-      displayStatus:
-        occupied === 0
-          ? "Frei"
-          : occupied === total
-          ? "Belegt"
-          : "Teilbelegt",
-    };
-  }
-
-  const occupiedRooms = rooms.filter((room) => room.status === "Belegt");
-  const reservedRooms = rooms.filter((room) => room.status === "Reserviert");
-  const freeRooms = rooms.filter((room) => room.status === "Frei");
-
-  const fullRevenue = rooms.reduce(
-    (sum, room) => sum + Number(room.priceMonthly || 0),
-    0
-  );
-
-  const currentRevenue = leaseStarted
-    ? occupiedRooms.reduce(
-        (sum, room) => sum + Number(room.priceMonthly || 0),
-        0
-      )
-    : 0;
-
-  let displayStatus = "Frei";
-  if (occupiedRooms.length > 0 && occupiedRooms.length === rooms.length) {
-    displayStatus = "Belegt";
-  } else if (occupiedRooms.length > 0 || reservedRooms.length > 0) {
-    displayStatus = "Teilbelegt";
-  }
-
-  return {
-    occupiedCount: occupiedRooms.length,
-    reservedCount: reservedRooms.length,
-    freeCount: freeRooms.length,
-    totalRooms: rooms.length,
-    fullRevenue,
-    currentRevenue,
-    vacancyLoss: leaseStarted ? fullRevenue - currentRevenue : 0,
-    currentProfit: currentRevenue - getRunningMonthlyCosts(unit),
-    displayStatus,
-  };
 }
 
 function SectionCard({ title, subtitle, children }) {
@@ -402,7 +337,10 @@ function CoLivingTable({ items, rooms, tenancies, onEdit, onDelete }) {
 
           <tbody>
             {items.map((unit, index) => {
-              const metrics = getCoLivingMetrics(unit, rooms);
+              const metrics = getCoLivingMetrics(unit, rooms, tenancies);
+              const currentProfit =
+                Number(metrics.currentRevenue ?? 0) -
+                getRunningMonthlyCosts(unit);
               const occ = getUnitOccupancyStatus(unit, rooms, tenancies);
               const leaseEnded =
                 String(unit.leaseStatus ?? unit.lease_status ?? "").trim() ===
@@ -456,7 +394,7 @@ function CoLivingTable({ items, rooms, tenancies, onEdit, onDelete }) {
                     {formatCurrency(metrics.vacancyLoss)}
                   </td>
                   <td className="py-4 pr-4 font-medium">
-                    {formatCurrency(metrics.currentProfit)}
+                    {formatCurrency(currentProfit)}
                   </td>
                   <td className="py-4 pr-4">
                     {unit.leaseStartDate || "—"}
@@ -718,12 +656,12 @@ function AdminApartmentsPage() {
     const totalCoLivingUnits = coLivingUnits.length;
 
     const currentRevenue = filteredUnits.reduce((sum, unit) => {
+      if (!Array.isArray(tenancies)) return sum;
       if (unit.type === "Apartment") {
-        if (!isLandlordContractLeaseStarted(unit)) return sum;
-        return sum + Number(unit.tenantPriceMonthly || 0);
+        return sum + sumActiveTenancyMonthlyRentForUnit(unit, tenancies);
       }
 
-      const metrics = getCoLivingMetrics(unit, rooms);
+      const metrics = getCoLivingMetrics(unit, rooms, tenancies);
       return sum + Number(metrics.currentRevenue || 0);
     }, 0);
 
@@ -740,7 +678,7 @@ function AdminApartmentsPage() {
       runningCosts,
       currentProfit: currentRevenue - runningCosts,
     };
-  }, [filteredUnits, apartmentUnits.length, coLivingUnits.length, rooms]);
+  }, [filteredUnits, apartmentUnits.length, coLivingUnits.length, rooms, tenancies]);
 
   function handleOpenCreateModal() {
     setEditingId(null);
