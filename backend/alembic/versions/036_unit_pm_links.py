@@ -1,6 +1,6 @@
 """Unit: optional landlord_id (Verwaltung) and property_manager_id (Bewirtschafter); property_managers table.
 
-Revision ID: 036_unit_landlord_property_manager_links
+Revision ID: 036_unit_pm_links
 Revises: 035_tenant_deposit_provider
 """
 
@@ -10,7 +10,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import text
 
-revision: str = "036_unit_landlord_property_manager_links"
+revision: str = "036_unit_pm_links"
 down_revision: Union[str, None] = "035_tenant_deposit_provider"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
