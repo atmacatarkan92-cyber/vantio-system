@@ -3,6 +3,7 @@ Admin units and rooms: CRUD + list rooms by unit.
 Protected by require_roles("admin", "manager").
 """
 
+import logging
 from datetime import date
 from typing import List, Optional
 
@@ -20,6 +21,8 @@ from app.core.rate_limit import limiter
 
 router = APIRouter(prefix="/api/admin", tags=["admin-units"])
 
+logger = logging.getLogger(__name__)
+
 _UNIT_DELETE_BLOCKED_FALLBACK = (
     "Unit kann nicht gelöscht werden, da noch verknüpfte Daten vorhanden sind."
 )
@@ -27,21 +30,22 @@ _UNIT_DELETE_BLOCKED_FALLBACK = (
 
 def _unit_delete_blocked_detail(room_count: int, tenancy_count: int) -> str:
     """Precise German reason when rooms and/or tenancies block unit delete."""
+    suffix = f" Verknüpfte Daten: rooms={room_count}, tenancies={tenancy_count}"
     if room_count > 0 and tenancy_count > 0:
         rc = "1 Zimmer" if room_count == 1 else f"{room_count} Zimmer"
         tc = "1 Mietverhältnis" if tenancy_count == 1 else f"{tenancy_count} Mietverhältnisse"
         return (
-            f"Unit kann nicht gelöscht werden, da noch {rc} und {tc} vorhanden sind."
+            f"Unit kann nicht gelöscht werden, da noch {rc} und {tc} vorhanden sind.{suffix}"
         )
     if room_count > 0:
         subj = "1 Zimmer" if room_count == 1 else f"{room_count} Zimmer"
         verb = "ist" if room_count == 1 else "sind"
-        return f"Unit kann nicht gelöscht werden, da noch {subj} vorhanden {verb}."
+        return f"Unit kann nicht gelöscht werden, da noch {subj} vorhanden {verb}.{suffix}"
     if tenancy_count > 0:
         subj = "1 Mietverhältnis" if tenancy_count == 1 else f"{tenancy_count} Mietverhältnisse"
         verb = "ist" if tenancy_count == 1 else "sind"
-        return f"Unit kann nicht gelöscht werden, da noch {subj} vorhanden {verb}."
-    return _UNIT_DELETE_BLOCKED_FALLBACK
+        return f"Unit kann nicht gelöscht werden, da noch {subj} vorhanden {verb}.{suffix}"
+    return f"{_UNIT_DELETE_BLOCKED_FALLBACK}{suffix}"
 
 
 def _assert_property_and_landlord_in_org(session, property_id: Optional[str], org_id: str) -> None:
@@ -534,6 +538,12 @@ def admin_delete_unit(
     room_count = int(_room_count_row) if _room_count_row is not None else 0
     tenancy_count = int(_tenancy_count_row) if _tenancy_count_row is not None else 0
     if room_count > 0 or tenancy_count > 0:
+        logger.warning(
+            "admin_delete_unit blocked: unit_id=%s rooms=%s tenancies=%s",
+            unit_id,
+            room_count,
+            tenancy_count,
+        )
         raise HTTPException(
             status_code=400,
             detail=_unit_delete_blocked_detail(room_count, tenancy_count),
