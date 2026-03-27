@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchAdminUnits, normalizeUnit } from "../../api/adminData";
+import { isLandlordContractLeaseStarted, parseIsoDate } from "../../utils/unitOccupancyStatus";
 
 function formatCurrency(value, currency = "CHF") {
   const amount = Number(value || 0);
@@ -43,17 +44,8 @@ function SummaryCard({ title, value, hint, accentColor }) {
   );
 }
 
-function getTodayDateString() {
-  return new Date().toISOString().split("T")[0];
-}
-
-function hasLeaseStarted(unit) {
-  if (!unit.landlordLeaseStartDate) return true;
-  return unit.landlordLeaseStartDate <= getTodayDateString();
-}
-
 function getRunningMonthlyCosts(unit) {
-  if (!hasLeaseStarted(unit)) return 0;
+  if (!isLandlordContractLeaseStarted(unit)) return 0;
 
   return (
     Number(unit.landlordRentMonthly || 0) +
@@ -87,8 +79,9 @@ function AdminExpensesPage() {
         utilities,
         cleaning,
         total,
-        leaseStarted: hasLeaseStarted(unit),
-        leaseStartDate: unit.landlordLeaseStartDate || "-",
+        leaseStarted: isLandlordContractLeaseStarted(unit),
+        leaseStartDate:
+          parseIsoDate(unit?.leaseStartDate ?? unit?.lease_start_date) || "—",
       };
     });
   }, [units]);

@@ -6,6 +6,7 @@ import {
   fetchAdminProperties,
   fetchAdminLandlords,
   fetchAdminPropertyManagers,
+  fetchAdminTenanciesAll,
   createAdminUnit,
   updateAdminUnit,
   deleteAdminUnit,
@@ -13,6 +14,12 @@ import {
   normalizeRoom,
 } from "../../api/adminData";
 import { getDisplayUnitId, normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
+import {
+  getUnitOccupancyStatus,
+  formatOccupancyStatusDe,
+  occupancyStatusBadgeClassName,
+  isLandlordContractLeaseStarted,
+} from "../../utils/unitOccupancyStatus";
 
 function landlordSelectLabel(l) {
   const c = String(l.company_name || "").trim();
@@ -36,7 +43,6 @@ const emptyForm = {
   type: "Apartment",
   rooms: "",
   occupiedRooms: 0,
-  status: "Frei",
   property_id: "",
   landlord_id: "",
   property_manager_id: "",
@@ -45,7 +51,6 @@ const emptyForm = {
   utilitiesMonthly: "",
   cleaningCostMonthly: "",
   availableFrom: "",
-  landlordLeaseStartDate: "",
   landlordDepositType: "",
   landlordDepositAmount: "",
   landlordDepositAnnualPremium: "",
@@ -152,13 +157,8 @@ function getTodayDateString() {
   return new Date().toISOString().split("T")[0];
 }
 
-function hasLeaseStarted(unit) {
-  if (!unit.landlordLeaseStartDate) return true;
-  return unit.landlordLeaseStartDate <= getTodayDateString();
-}
-
 function getRunningMonthlyCosts(unit) {
-  if (!hasLeaseStarted(unit)) return 0;
+  if (!isLandlordContractLeaseStarted(unit)) return 0;
 
   return (
     Number(unit.landlordRentMonthly || 0) +
@@ -178,7 +178,7 @@ function getRoomsForUnit(unitId, allRooms = []) {
 }
 
 function getCoLivingMetrics(unit, allRooms = []) {
-  const leaseStarted = hasLeaseStarted(unit);
+  const leaseStarted = isLandlordContractLeaseStarted(unit);
   const rooms = getRoomsForUnit(unit.unitId || unit.id, allRooms);
 
   if (rooms.length === 0) {
@@ -255,7 +255,7 @@ function SectionCard({ title, subtitle, children }) {
   );
 }
 
-function ApartmentTable({ items, onEdit, onDelete }) {
+function ApartmentTable({ items, rooms, tenancies, onEdit, onDelete }) {
   return (
     <SectionCard
       title="Business Apartments / klassische Apartments"
@@ -277,16 +277,23 @@ function ApartmentTable({ items, onEdit, onDelete }) {
               <th className="py-3 pr-4">Mietkosten</th>
               <th className="py-3 pr-4">Gewinn aktuell</th>
               <th className="py-3 pr-4">Verfügbar ab</th>
-              <th className="py-3 pr-4">Mietstart Vermieter</th>
+              <th className="py-3 pr-4">Mietbeginn (Vertrag)</th>
               <th className="py-3 pr-4">Aktionen</th>
             </tr>
           </thead>
 
           <tbody>
-            {items.map((unit, index) => (
+            {items.map((unit, index) => {
+              const occ = getUnitOccupancyStatus(unit, rooms, tenancies);
+              const leaseEnded =
+                String(unit.leaseStatus ?? unit.lease_status ?? "").trim() ===
+                "ended";
+              return (
               <tr
                 key={unit.id}
-                className="border-b border-slate-100 text-slate-700"
+                className={`border-b border-slate-100 text-slate-700 ${
+                  leaseEnded ? "opacity-60" : ""
+                }`}
               >
                 <td className="py-4 pr-4 font-medium">
                   <Link
@@ -304,7 +311,19 @@ function ApartmentTable({ items, onEdit, onDelete }) {
                 <td className="py-4 pr-4">{unit.address}</td>
                 <td className="py-4 pr-4">{unit.type}</td>
                 <td className="py-4 pr-4">{unit.property_title || "—"}</td>
-                <td className="py-4 pr-4">{unit.status}</td>
+                <td className="py-4 pr-4">
+                  {occ == null ? (
+                    <span className="text-slate-400">—</span>
+                  ) : (
+                    <span
+                      className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${occupancyStatusBadgeClassName(
+                        occ
+                      )}`}
+                    >
+                      {formatOccupancyStatusDe(occ)}
+                    </span>
+                  )}
+                </td>
                 <td className="py-4 pr-4">{unit.rooms}</td>
                 <td className="py-4 pr-4">
                   {formatCurrency(unit.tenantPriceMonthly)}
@@ -317,7 +336,7 @@ function ApartmentTable({ items, onEdit, onDelete }) {
                 </td>
                 <td className="py-4 pr-4">{unit.availableFrom}</td>
                 <td className="py-4 pr-4">
-                  {unit.landlordLeaseStartDate || "-"}
+                  {unit.leaseStartDate || "—"}
                 </td>
                 <td className="py-4 pr-4">
                   <div className="flex gap-2">
@@ -336,7 +355,8 @@ function ApartmentTable({ items, onEdit, onDelete }) {
                   </div>
                 </td>
               </tr>
-            ))}
+            );
+            })}
 
             {items.length === 0 && (
               <tr>
@@ -352,7 +372,7 @@ function ApartmentTable({ items, onEdit, onDelete }) {
   );
 }
 
-function CoLivingTable({ items, rooms, onEdit, onDelete }) {
+function CoLivingTable({ items, rooms, tenancies, onEdit, onDelete }) {
   return (
     <SectionCard
       title="Co-Living Units"
@@ -375,7 +395,7 @@ function CoLivingTable({ items, rooms, onEdit, onDelete }) {
               <th className="py-3 pr-4">Aktuell</th>
               <th className="py-3 pr-4">Leerstand</th>
               <th className="py-3 pr-4">Gewinn aktuell</th>
-              <th className="py-3 pr-4">Mietstart Vermieter</th>
+              <th className="py-3 pr-4">Mietbeginn (Vertrag)</th>
               <th className="py-3 pr-4">Aktionen</th>
             </tr>
           </thead>
@@ -383,11 +403,17 @@ function CoLivingTable({ items, rooms, onEdit, onDelete }) {
           <tbody>
             {items.map((unit, index) => {
               const metrics = getCoLivingMetrics(unit, rooms);
+              const occ = getUnitOccupancyStatus(unit, rooms, tenancies);
+              const leaseEnded =
+                String(unit.leaseStatus ?? unit.lease_status ?? "").trim() ===
+                "ended";
 
               return (
                 <tr
                   key={unit.id}
-                  className="border-b border-slate-100 text-slate-700"
+                  className={`border-b border-slate-100 text-slate-700 ${
+                    leaseEnded ? "opacity-60" : ""
+                  }`}
                 >
                   <td className="py-4 pr-4 font-medium">
                     <Link
@@ -404,7 +430,19 @@ function CoLivingTable({ items, rooms, onEdit, onDelete }) {
                 <td className="py-4 pr-4">{unit.zip}</td>
                 <td className="py-4 pr-4">{unit.address}</td>
                 <td className="py-4 pr-4">{unit.property_title || "—"}</td>
-                <td className="py-4 pr-4">{metrics.displayStatus}</td>
+                <td className="py-4 pr-4">
+                  {occ == null ? (
+                    <span className="text-slate-400">—</span>
+                  ) : (
+                    <span
+                      className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${occupancyStatusBadgeClassName(
+                        occ
+                      )}`}
+                    >
+                      {formatOccupancyStatusDe(occ)}
+                    </span>
+                  )}
+                </td>
                   <td className="py-4 pr-4">{metrics.occupiedCount}</td>
                   <td className="py-4 pr-4">{metrics.reservedCount}</td>
                   <td className="py-4 pr-4">{metrics.freeCount}</td>
@@ -421,7 +459,7 @@ function CoLivingTable({ items, rooms, onEdit, onDelete }) {
                     {formatCurrency(metrics.currentProfit)}
                   </td>
                   <td className="py-4 pr-4">
-                    {unit.landlordLeaseStartDate || "-"}
+                    {unit.leaseStartDate || "—"}
                   </td>
                   <td className="py-4 pr-4">
                     <div className="flex gap-2">
@@ -470,6 +508,7 @@ function StatCard({ label, value, hint }) {
 function AdminApartmentsPage() {
   const [units, setUnits] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [tenancies, setTenancies] = useState(null);
   const [properties, setProperties] = useState([]);
   const [landlords, setLandlords] = useState([]);
   const [propertyManagers, setPropertyManagers] = useState([]);
@@ -492,10 +531,11 @@ function AdminApartmentsPage() {
       fetchAdminProperties(),
       fetchAdminLandlords(),
       fetchAdminPropertyManagers(),
+      fetchAdminTenanciesAll(),
     ]).then((results) => {
       if (cancelled) return;
 
-      const [unitsRes, roomsRes, propsRes, landlordsRes, pmRes] = results;
+      const [unitsRes, roomsRes, propsRes, landlordsRes, pmRes, tenRes] = results;
 
       if (unitsRes.status === "fulfilled") {
         const data = unitsRes.value;
@@ -538,6 +578,14 @@ function AdminApartmentsPage() {
       } else {
         console.error(pmRes.reason);
         setPropertyManagers([]);
+      }
+
+      if (tenRes.status === "fulfilled") {
+        const data = tenRes.value;
+        setTenancies(Array.isArray(data) ? data : []);
+      } else {
+        console.error(tenRes.reason);
+        setTenancies(null);
       }
 
       setLoading(false);
@@ -623,16 +671,25 @@ function AdminApartmentsPage() {
         const c = String(unit.zip || "").toLowerCase();
         const d = String(unit.address || "").toLowerCase();
         const e = String(unit.type || "").toLowerCase();
-        const f = String(unit.status || "").toLowerCase();
+        const occ = getUnitOccupancyStatus(unit, rooms, tenancies);
+        const f = formatOccupancyStatusDe(occ).toLowerCase();
         const g = String(unit.property_title || "").toLowerCase();
-        return a.includes(search) || b.includes(search) || c.includes(search) || d.includes(search) || e.includes(search) || f.includes(search) || g.includes(search);
+        return (
+          a.includes(search) ||
+          b.includes(search) ||
+          c.includes(search) ||
+          d.includes(search) ||
+          e.includes(search) ||
+          f.includes(search) ||
+          g.includes(search)
+        );
       });
     }
     if (propertyFilter) {
       result = result.filter((unit) => String(unit.property_id || "") === String(propertyFilter));
     }
     return result;
-  }, [units, searchTerm, propertyFilter]);
+  }, [units, searchTerm, propertyFilter, rooms, tenancies]);
 
   const filteredLandlordsForSelect = useMemo(() => {
     const q = landlordFilter.toLowerCase().trim();
@@ -704,7 +761,6 @@ function AdminApartmentsPage() {
       type: unit.type,
       rooms: unit.rooms,
       occupiedRooms: unit.occupiedRooms || 0,
-      status: unit.status,
       property_id: unit.property_id || "",
       landlord_id:
         unit.landlord_id != null && unit.landlord_id !== ""
@@ -719,7 +775,6 @@ function AdminApartmentsPage() {
       utilitiesMonthly: numFieldStr(unit.utilitiesMonthly),
       cleaningCostMonthly: numFieldStr(unit.cleaningCostMonthly),
       availableFrom: numFieldStr(unit.availableFrom).slice(0, 10),
-      landlordLeaseStartDate: numFieldStr(unit.landlordLeaseStartDate).slice(0, 10),
       landlordDepositType: String(unit.landlordDepositType || "").trim(),
       landlordDepositAmount: numFieldStr(unit.landlordDepositAmount),
       landlordDepositAnnualPremium: numFieldStr(unit.landlordDepositAnnualPremium),
@@ -801,7 +856,6 @@ function AdminApartmentsPage() {
         ...prev,
         type: value,
         occupiedRooms: 0,
-        status: "Frei",
       }));
       return;
     }
@@ -894,9 +948,7 @@ function AdminApartmentsPage() {
       landlord_rent_monthly_chf: parseMoneyChf(formData.landlordRentMonthly),
       utilities_monthly_chf: parseMoneyChf(formData.utilitiesMonthly),
       cleaning_cost_monthly_chf: parseMoneyChf(formData.cleaningCostMonthly),
-      landlord_lease_start_date: dateOnlyOrNull(formData.landlordLeaseStartDate),
       available_from: dateOnlyOrNull(formData.availableFrom),
-      occupancy_status: String(formData.status || "").trim() || null,
       occupied_rooms: Math.max(0, Math.floor(Number(formData.occupiedRooms) || 0)),
       postal_code: String(formData.zip || "").trim() || null,
       landlord_deposit_type: String(formData.landlordDepositType || "").trim() || null,
@@ -966,10 +1018,17 @@ function AdminApartmentsPage() {
       : createAdminUnit(apiPayload);
 
     promise
-      .then(() => Promise.all([fetchAdminUnits(), fetchAdminRooms()]))
-      .then(([unitsData, roomsData]) => {
+      .then(() =>
+        Promise.all([
+          fetchAdminUnits(),
+          fetchAdminRooms(),
+          fetchAdminTenanciesAll(),
+        ])
+      )
+      .then(([unitsData, roomsData, tenanciesData]) => {
         setUnits(Array.isArray(unitsData) ? unitsData.map(normalizeUnit) : []);
         setRooms(Array.isArray(roomsData) ? roomsData.map(normalizeRoom) : []);
+        setTenancies(Array.isArray(tenanciesData) ? tenanciesData : []);
         handleCloseModal();
       })
       .catch((e) => {
@@ -1002,14 +1061,19 @@ function AdminApartmentsPage() {
             (r) => String(r.unitId || r.unit_id) !== String(id)
           )
         );
-        return Promise.all([fetchAdminUnits(), fetchAdminRooms()])
-          .then(([unitsData, roomsData]) => {
+        return Promise.all([
+          fetchAdminUnits(),
+          fetchAdminRooms(),
+          fetchAdminTenanciesAll(),
+        ])
+          .then(([unitsData, roomsData, tenanciesData]) => {
             setUnits(
               Array.isArray(unitsData) ? unitsData.map(normalizeUnit) : []
             );
             setRooms(
               Array.isArray(roomsData) ? roomsData.map(normalizeRoom) : []
             );
+            setTenancies(Array.isArray(tenanciesData) ? tenanciesData : []);
           })
           .catch((refetchErr) => {
             setDeleteError(
@@ -1029,8 +1093,8 @@ function AdminApartmentsPage() {
   }
 
   const formLeaseStarted =
-    !formData.landlordLeaseStartDate ||
-    formData.landlordLeaseStartDate <= getTodayDateString();
+    !formData.leaseStartDate ||
+    formData.leaseStartDate <= getTodayDateString();
 
   const formRunningMonthlyCosts = formLeaseStarted
     ? Number(formData.landlordRentMonthly || 0) +
@@ -1145,7 +1209,7 @@ function AdminApartmentsPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Suche nach Unit ID, Ort, PLZ, Adresse oder Typ..."
+              placeholder="Suche nach Unit ID, Ort, PLZ, Adresse, Typ oder Belegung…"
               className="w-full md:w-96 border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
             />
             <select
@@ -1163,6 +1227,8 @@ function AdminApartmentsPage() {
           <div className="space-y-6">
             <ApartmentTable
               items={apartmentUnits}
+              rooms={rooms}
+              tenancies={tenancies}
               onEdit={handleOpenEditModal}
               onDelete={handleDelete}
             />
@@ -1170,6 +1236,7 @@ function AdminApartmentsPage() {
             <CoLivingTable
               items={coLivingUnits}
               rooms={rooms}
+              tenancies={tenancies}
               onEdit={handleOpenEditModal}
               onDelete={handleDelete}
             />
@@ -1463,32 +1530,14 @@ function AdminApartmentsPage() {
                     </div>
                   ))}
 
-                {!isCoLivingType ? (
-                  <div>
-                    <label className="block text-sm text-slate-600 mb-2">
-                      Status
-                    </label>
-                    <select
-                      name="status"
-                      value={formData.status}
-                      onChange={handleChange}
-                      className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                      <option>Frei</option>
-                      <option>Belegt</option>
-                      <option>Reserviert</option>
-                      <option>Teilbelegt</option>
-                      <option>In Vorbereitung</option>
-                    </select>
-                  </div>
-                ) : (
+                {isCoLivingType ? (
                   <div className="md:col-span-2">
-                    <p className="text-sm text-slate-600 mb-1">Status (Einheit)</p>
                     <p className="text-xs text-slate-500 border border-slate-200 bg-slate-50 rounded-lg px-4 py-3">
-                      Belegung und Status folgen aus Mietverhältnissen; Vorschau-KPI nutzt 0 belegte Zimmer.
+                      Belegung der Einheit folgt aus Mietverhältnissen; Vorschau-KPI nutzt 0 belegte
+                      Zimmer.
                     </p>
                   </div>
-                )}
+                ) : null}
 
                 {!isCoLivingType ? (
                   <div>
@@ -1500,25 +1549,11 @@ function AdminApartmentsPage() {
                       name="availableFrom"
                       value={formData.availableFrom}
                       onChange={handleChange}
-                      required={formData.status === "Frei"}
+                      required
                       className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
                 ) : null}
-
-                <div>
-                  <label className="block text-sm text-slate-600 mb-2">
-                    Mietbeginn an Vermieter
-                  </label>
-                  <input
-                    type="date"
-                    name="landlordLeaseStartDate"
-                    value={formData.landlordLeaseStartDate}
-                    onChange={handleChange}
-                    required
-                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
 
                 <div>
                   <label className="block text-sm text-slate-600 mb-2">
@@ -1820,7 +1855,7 @@ function AdminApartmentsPage() {
               {!formLeaseStarted && (
                 <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
                   <p className="text-sm text-amber-800">
-                    Hinweis: Der Mietbeginn an den Vermieter liegt in der Zukunft.
+                    Hinweis: Der Mietbeginn im Vertrag Vermieter liegt in der Zukunft.
                     Deshalb werden die aktuellen KPI noch ohne laufende Monatskosten gerechnet.
                   </p>
                 </div>

@@ -13,11 +13,15 @@ import {
 } from "recharts";
 import {
   fetchAdminUnits,
+  fetchAdminRooms,
+  fetchAdminTenanciesAll,
   fetchAdminProfit,
   fetchAdminOccupancy,
   normalizeUnit,
+  normalizeRoom,
   sanitizeClientErrorMessage,
 } from "../../api/adminData";
+import { getUnitOccupancyStatus } from "../../utils/unitOccupancyStatus";
 
 function roundCurrency(value) {
   return Math.round(Number(value || 0));
@@ -218,6 +222,8 @@ function AdminBusinessApartmentsDashboardPage() {
   const [selectedUnitId, setSelectedUnitId] = useState("all");
 
   const [units, setUnits] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [tenancies, setTenancies] = useState([]);
   const [chartsLoading, setChartsLoading] = useState(true);
   const [chartsError, setChartsError] = useState("");
   const [financeChartData, setFinanceChartData] = useState([]);
@@ -225,9 +231,19 @@ function AdminBusinessApartmentsDashboardPage() {
   const [latestUnitProfit, setLatestUnitProfit] = useState({});
 
   useEffect(() => {
-    fetchAdminUnits()
-      .then((data) => setUnits(Array.isArray(data) ? data.map(normalizeUnit) : []))
-      .catch(() => setUnits([]));
+    Promise.all([
+      fetchAdminUnits()
+        .then((data) => (Array.isArray(data) ? data.map(normalizeUnit) : []))
+        .catch(() => []),
+      fetchAdminRooms()
+        .then((data) => (Array.isArray(data) ? data.map(normalizeRoom) : []))
+        .catch(() => []),
+      fetchAdminTenanciesAll().catch(() => []),
+    ]).then(([u, r, t]) => {
+      setUnits(u);
+      setRooms(r);
+      setTenancies(t);
+    });
   }, []);
 
   const businessUnits = useMemo(() => {
@@ -354,7 +370,8 @@ function AdminBusinessApartmentsDashboardPage() {
           profit: null,
         };
 
-      const occupied = unit.status === "Belegt" || unit.status === "Occupied";
+      const occ = getUnitOccupancyStatus(unit, rooms, tenancies);
+      const occupied = occ === "belegt";
 
       totalApartments += 1;
       if (occupied) occupiedApartments += 1;
@@ -392,7 +409,7 @@ function AdminBusinessApartmentsDashboardPage() {
       worstUnit: ranked[ranked.length - 1] || null,
       performance: ranked,
     };
-  }, [filteredUnits, latestUnitProfit]);
+  }, [filteredUnits, latestUnitProfit, rooms, tenancies]);
 
   const revenueTrend = useMemo(() => {
     if (financeChartData.length < 2) return null;

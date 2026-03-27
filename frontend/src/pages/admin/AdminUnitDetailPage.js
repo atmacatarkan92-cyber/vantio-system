@@ -19,6 +19,12 @@ import {
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
+import {
+  getUnitOccupancyStatus,
+  formatOccupancyStatusDe,
+  occupancyStatusBadgeTone,
+  isLandlordContractLeaseStarted,
+} from "../../utils/unitOccupancyStatus";
 
 const UNIT_AUDIT_FIELD_LABELS = {
   landlord_id: "Verwaltung",
@@ -99,10 +105,6 @@ function getTodayDateString() {
   return new Date().toISOString().split("T")[0];
 }
 
-function hasLeaseStarted(unit) {
-  if (!unit.landlordLeaseStartDate) return true;
-  return unit.landlordLeaseStartDate <= getTodayDateString();
-}
 
 /** Monthly share of landlord insurance deposit premium (annual / 12). */
 function landlordDepositInsuranceMonthly(unit) {
@@ -301,7 +303,7 @@ function getAuditEntryDisplayLines(entry, resolvers) {
 }
 
 function getRunningMonthlyCosts(unit) {
-  if (!hasLeaseStarted(unit)) return 0;
+  if (!isLandlordContractLeaseStarted(unit)) return 0;
   return (
     Number(unit.landlordRentMonthly || 0) +
     Number(unit.utilitiesMonthly || 0) +
@@ -396,7 +398,7 @@ function getRoomsForUnit(unitId, allRooms) {
 }
 
 function getCoLivingMetrics(unit, allRooms) {
-  const leaseStarted = hasLeaseStarted(unit);
+  const leaseStarted = isLandlordContractLeaseStarted(unit);
   const rooms = getRoomsForUnit(unit.unitId, allRooms);
 
   if (rooms.length === 0) {
@@ -605,7 +607,7 @@ function buildUnitWarnings(unit, rooms, metrics) {
   if (!metrics.leaseStarted && metrics.currentRevenue <= 0) {
     warnings.push({
       tone: "rose",
-      text: "Mietstart Vermieter liegt in der Zukunft und aktuell ist noch kein Umsatz gesichert.",
+      text: "Mietbeginn (Vertrag Vermieter) liegt in der Zukunft und aktuell ist noch kein Umsatz gesichert.",
     });
   }
 
@@ -896,7 +898,6 @@ function AdminUnitDetailPage() {
         rooms: 0,
         status: "",
         availableFrom: "",
-        landlordLeaseStartDate: "",
         occupiedRooms: 0,
       },
     [unit]
@@ -979,6 +980,11 @@ function AdminUnitDetailPage() {
   const unitWarnings = useMemo(() => {
     return buildUnitWarnings(safeUnit, unitRooms, metrics);
   }, [safeUnit, unitRooms, metrics]);
+
+  const derivedUnitOccupancy = useMemo(
+    () => getUnitOccupancyStatus(unit, rooms, unitTenancies),
+    [unit, rooms, unitTenancies]
+  );
 
   const nextUnitForecast = {
     revenue: metrics.currentRevenue,
@@ -1245,12 +1251,14 @@ function AdminUnitDetailPage() {
     unit.landlordDepositType ||
     "—";
   const landlordLeaseContractStatusStr = landlordLeaseContractStatus(unit);
+  const leaseContractEnded =
+    String(unit.leaseStatus ?? unit.lease_status ?? "").trim() === "ended";
 
   return (
     <div className="min-h-screen bg-slate-50 -m-6 p-6 md:p-8">
       <div className="max-w-[1800px] mx-auto space-y-8">
         <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
-          <div>
+          <div className={leaseContractEnded ? "opacity-75" : undefined}>
             <p className="text-sm font-semibold text-orange-600">
               Unit Intelligence
             </p>
@@ -1263,7 +1271,13 @@ function AdminUnitDetailPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Badge tone={getStatusTone(unit.status)}>{unit.status}</Badge>
+            {derivedUnitOccupancy == null ? (
+              <span className="text-slate-400 text-sm">—</span>
+            ) : (
+              <Badge tone={occupancyStatusBadgeTone(derivedUnitOccupancy)}>
+                {formatOccupancyStatusDe(derivedUnitOccupancy)}
+              </Badge>
+            )}
             <Link
               to="/admin/apartments"
               className="inline-block border border-slate-300 hover:bg-slate-50 text-slate-700 px-5 py-3 rounded-xl font-medium transition"
@@ -1357,13 +1371,6 @@ function AdminUnitDetailPage() {
               <div>
                 <p className="text-sm text-slate-500">Verfügbar ab</p>
                 <p className="font-medium">{unit.availableFrom || "-"}</p>
-              </div>
-
-              <div>
-                <p className="text-sm text-slate-500">Mietstart Vermieter</p>
-                <p className="font-medium">
-                  {unit.landlordLeaseStartDate || "-"}
-                </p>
               </div>
 
               <div className="md:col-span-2 border-t border-slate-200 pt-4 mt-2">

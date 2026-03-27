@@ -83,12 +83,15 @@ function formatMonthLabel(date) {
 }
 
 function hasLeaseStarted(unit) {
-  const leaseStartDate =
-    unit.landlordLeaseStartDate || unit.availableFrom || null;
-
-  if (!leaseStartDate) return false;
-
-  return leaseStartDate <= getTodayDateString();
+  const c = String(unit?.leaseStartDate ?? unit?.lease_start_date ?? "").trim();
+  if (c && /^\d{4}-\d{2}-\d{2}/.test(c)) {
+    return c.slice(0, 10) <= getTodayDateString();
+  }
+  const af = String(unit?.availableFrom ?? "").trim();
+  if (af && /^\d{4}-\d{2}-\d{2}/.test(af)) {
+    return af.slice(0, 10) <= getTodayDateString();
+  }
+  return false;
 }
 
 function getMonthStart(date) {

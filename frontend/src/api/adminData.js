@@ -333,6 +333,23 @@ export function fetchAdminTenancies(params = {}) {
     .then((data) => expectPaginatedItems(data, "GET /api/admin/tenancies"));
 }
 
+/**
+ * Fetch all tenancies for the org (pages through limit=200 until exhausted).
+ */
+export async function fetchAdminTenanciesAll(params = {}) {
+  const limit = 200;
+  let skip = 0;
+  const all = [];
+  for (;;) {
+    const batch = await fetchAdminTenancies({ ...params, limit, skip });
+    if (!Array.isArray(batch) || batch.length === 0) break;
+    all.push(...batch);
+    if (batch.length < limit) break;
+    skip += limit;
+  }
+  return all;
+}
+
 export async function patchAdminTenancy(tenancyId, body) {
   const res = await fetch(
     `${API_BASE_URL}/api/admin/tenancies/${encodeURIComponent(tenancyId)}`,
