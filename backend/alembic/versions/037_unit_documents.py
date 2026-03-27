@@ -20,7 +20,7 @@ def upgrade() -> None:
     op.create_table(
         "unit_documents",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("organization_id", sa.String(), nullable=False),
+        sa.Column("organization_id", sa.UUID(), nullable=False),
         sa.Column("unit_id", sa.String(), nullable=False),
         sa.Column("file_name", sa.String(), nullable=True),
         sa.Column("file_url", sa.String(), nullable=False, server_default=""),
