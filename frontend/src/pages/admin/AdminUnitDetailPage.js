@@ -35,6 +35,10 @@ import {
   sumActiveTenancyMonthlyRentForUnit,
 } from "../../utils/unitOccupancyStatus";
 import { getCoLivingMetrics } from "../../utils/adminUnitCoLivingMetrics";
+import {
+  getUnitRevenueForecast,
+  getPhase4OperationalWarnings,
+} from "../../utils/unitOperationalIntelligence";
 
 const UNIT_AUDIT_FIELD_LABELS = {
   landlord_id: "Verwaltung",
@@ -105,6 +109,15 @@ function formatChfOrDash(value) {
     return "-";
   }
   return formatCurrency(value);
+}
+
+function formatChfNetChange(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return "-";
+  }
+  const n = roundCurrency(value);
+  const sign = n >= 0 ? "+" : "−";
+  return `${sign} CHF ${Math.abs(n).toLocaleString("de-CH")}`;
 }
 
 function formatPercent(value) {
@@ -573,6 +586,40 @@ function roomDisplayTenantName(room, unitTenancies, tenantNameMap) {
   return r && r !== "-" ? String(r) : "—";
 }
 
+function formatDeShort(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.slice(0, 10).split("-");
+  return `${d}.${m}.${y}`;
+}
+
+/** Compact Co-Living room future line (tenancy dates only). */
+function roomCompactFutureSignal(room, unitTenancies) {
+  if (!unitTenancies) return null;
+  const today = getTodayIsoForOccupancy();
+  const active = getActiveTenancyForRoom(room, unitTenancies, today);
+  const future = getFutureTenancyForRoom(room, unitTenancies, today);
+  const mo = active ? parseIsoDate(active.move_out_date) : null;
+  const fi = future ? parseIsoDate(future.move_in_date) : null;
+  const parts = [];
+  if (mo) parts.push(`frei ab ${formatDeShort(mo)}`);
+  if (fi) parts.push(`reserviert ab ${formatDeShort(fi)}`);
+  if (parts.length === 0) return null;
+  return parts.join(" · ");
+}
+
+function mergeUnitWarningsByText(...lists) {
+  const seen = new Set();
+  const out = [];
+  for (const list of lists) {
+    for (const w of list) {
+      if (seen.has(w.text)) continue;
+      seen.add(w.text);
+      out.push(w);
+    }
+  }
+  return out;
+}
+
 function buildUnitWarnings(unit, rooms, metrics, unitTenancies) {
   const warnings = [];
   const isApartment = unit.type === "Apartment";
@@ -699,7 +746,10 @@ function buildUnitWarnings(unit, rooms, metrics, unitTenancies) {
   }
 
   if (isApartment) {
-    return warnings.slice(0, 8);
+    return mergeUnitWarningsByText(
+      warnings,
+      getPhase4OperationalWarnings(unit, rooms, unitTenancies, 30)
+    ).slice(0, 12);
   }
 
   rooms.forEach((room) => {
@@ -744,7 +794,10 @@ function buildUnitWarnings(unit, rooms, metrics, unitTenancies) {
     }
   });
 
-  return warnings.slice(0, 8);
+  return mergeUnitWarningsByText(
+    warnings,
+    getPhase4OperationalWarnings(unit, rooms, unitTenancies, 30)
+  ).slice(0, 12);
 }
 
 function AdminUnitDetailPage() {
@@ -1062,15 +1115,36 @@ function AdminUnitDetailPage() {
     [unit, rooms, unitTenancies]
   );
 
-  const nextUnitForecast = {
-    revenue: metrics.currentRevenue,
-    fullPotential: metrics.fullRevenue,
-    openPotential:
-      metrics.fullRevenue != null && metrics.currentRevenue != null
-        ? Math.max(metrics.fullRevenue - metrics.currentRevenue, 0)
-        : null,
-    profit: metrics.currentProfit,
-  };
+  const unitRevenueForecast = useMemo(() => {
+    if (unitTenancies == null) return null;
+    return getUnitRevenueForecast(safeUnit, rooms, unitTenancies, 30);
+  }, [safeUnit, rooms, unitTenancies]);
+
+  const nextUnitForecast = useMemo(() => {
+    const f = unitRevenueForecast;
+    const fullPot =
+      f?.fullPotential != null
+        ? f.fullPotential
+        : metrics.fullRevenue != null
+          ? metrics.fullRevenue
+          : null;
+    const openPot =
+      f?.openPotential != null
+        ? f.openPotential
+        : fullPot != null && metrics.currentRevenue != null
+          ? Math.max(fullPot - metrics.currentRevenue, 0)
+          : null;
+    return {
+      revenue: f?.currentRevenue ?? metrics.currentRevenue,
+      forecast30: f?.forecastRevenue ?? null,
+      expiringRevenue: f?.expiringRevenue ?? null,
+      futureBookedRevenue: f?.futureBookedRevenue ?? null,
+      netChange: f?.netChange ?? null,
+      openPotential: openPot,
+      fullPotential: fullPot,
+      profit: metrics.currentProfit,
+    };
+  }, [unitRevenueForecast, metrics]);
 
   const unitNumber =
     safeUnit.unitId && safeUnit.unitId.split("-")[2]
@@ -1814,7 +1888,9 @@ function AdminUnitDetailPage() {
                     ? "border-rose-200 bg-rose-50"
                     : warning.tone === "slate"
                       ? "border-slate-200 bg-slate-50"
-                      : "border-amber-200 bg-amber-50"
+                      : warning.tone === "emerald"
+                        ? "border-emerald-200 bg-emerald-50"
+                        : "border-amber-200 bg-amber-50"
                 }`}
               >
                 <p
@@ -1823,7 +1899,9 @@ function AdminUnitDetailPage() {
                       ? "text-rose-700"
                       : warning.tone === "slate"
                         ? "text-slate-700"
-                        : "text-amber-700"
+                        : warning.tone === "emerald"
+                          ? "text-emerald-700"
+                          : "text-amber-700"
                   }`}
                 >
                   {warning.text}
@@ -1850,20 +1928,38 @@ function AdminUnitDetailPage() {
               <SmallStatCard
                 label="Aktueller Umsatz"
                 value={formatChfOrDash(nextUnitForecast.revenue)}
-                hint="Live berechnet"
+                hint="Aus aktiven Mietverhältnissen (heute)"
                 accent="green"
               />
               <SmallStatCard
-                label="Offenes Potenzial"
-                value={formatChfOrDash(nextUnitForecast.openPotential)}
-                hint="Noch nicht vermietete Kapazität"
+                label="Erwarteter Umsatz in 30 Tagen"
+                value={formatChfOrDash(nextUnitForecast.forecast30)}
+                hint="Aktuell − wegfallend + bereits geplant (30 Tage)"
+                accent="blue"
+              />
+              <SmallStatCard
+                label="Wegfallender Umsatz"
+                value={formatChfOrDash(nextUnitForecast.expiringRevenue)}
+                hint="Aktive Verträge enden im Horizont"
                 accent="amber"
               />
               <SmallStatCard
-                label="Vollbelegung Potenzial"
-                value={formatChfOrDash(nextUnitForecast.fullPotential)}
-                hint="Bei 100% Belegung"
+                label="Bereits geplanter Umsatz"
+                value={formatChfOrDash(nextUnitForecast.futureBookedRevenue)}
+                hint="Neue Verträge starten im Horizont"
                 accent="orange"
+              />
+              <SmallStatCard
+                label="Netto-Veränderung vs heute"
+                value={formatChfNetChange(nextUnitForecast.netChange)}
+                hint="Erwarteter Umsatz minus aktueller Umsatz"
+                accent={
+                  nextUnitForecast.netChange == null
+                    ? "slate"
+                    : nextUnitForecast.netChange < 0
+                      ? "rose"
+                      : "green"
+                }
               />
               <SmallStatCard
                 label="Gewinn aktuell"
@@ -1890,6 +1986,7 @@ function AdminUnitDetailPage() {
                   tenantNameMap
                 );
                 const rmi = roomDisplayMoveIn(room, unitTenancies);
+                const futureSig = roomCompactFutureSignal(room, unitTenancies);
                 return (
                 <div
                   key={room.id}
@@ -1906,6 +2003,9 @@ function AdminUnitDetailPage() {
                         ? ` · Einzug ${rmi}`
                         : ` · Kein Einzug erfasst`}
                     </p>
+                    {futureSig ? (
+                      <p className="text-xs text-slate-600 mt-1">{futureSig}</p>
+                    ) : null}
                   </div>
 
                   <Badge tone={getRoomOccBadgeTone(roomOcc)}>
@@ -2012,6 +2112,10 @@ function AdminUnitDetailPage() {
                     );
                     const rIn = roomDisplayMoveIn(room, unitTenancies);
                     const rOut = roomDisplayMoveOut(room, unitTenancies);
+                    const futureSig = roomCompactFutureSignal(
+                      room,
+                      unitTenancies
+                    );
                     return (
                     <tr
                       key={room.id}
@@ -2020,7 +2124,14 @@ function AdminUnitDetailPage() {
                       <td className="py-4 pr-4 font-medium text-orange-600">
                         {room.roomId}
                       </td>
-                      <td className="py-4 pr-4">{room.roomName}</td>
+                      <td className="py-4 pr-4">
+                        <div>{room.roomName}</div>
+                        {futureSig ? (
+                          <div className="text-xs text-slate-500 mt-0.5">
+                            {futureSig}
+                          </div>
+                        ) : null}
+                      </td>
                       <td className="py-4 pr-4">
                         <Badge tone={getRoomOccBadgeTone(roomOcc)}>
                           {roomOcc != null

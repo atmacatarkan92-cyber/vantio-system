@@ -65,7 +65,7 @@ export function sumActiveTenancyMonthlyRentForUnit(
  * @param {object[]|null|undefined} tenancies
  * @returns {null | 'frei' | 'reserviert' | 'belegt'}
  */
-function tenanciesForRoom(room, tenancies) {
+export function tenanciesForRoom(room, tenancies) {
   if (!room || !Array.isArray(tenancies)) return [];
   const rid = String(room.room_id || room.roomId || room.id || "");
   return tenancies.filter(
