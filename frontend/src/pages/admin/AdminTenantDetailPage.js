@@ -102,6 +102,20 @@ function formatTenantDocumentType(doc) {
   return "Datei";
 }
 
+const TENANT_DOCUMENT_CATEGORY_LABELS = {
+  rent_contract: "Mietvertrag",
+  id_document: "Ausweis",
+  debt_register: "Betreibungsregister",
+  insurance: "Versicherung",
+  other: "Sonstiges",
+};
+
+function formatTenantDocumentCategoryLabel(category) {
+  if (category == null || String(category).trim() === "") return "—";
+  const k = String(category).trim();
+  return TENANT_DOCUMENT_CATEGORY_LABELS[k] || k;
+}
+
 function auditLogToTenantHistoryEvent(log) {
   const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
   const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
@@ -502,6 +516,7 @@ export default function AdminTenantDetailPage() {
   const [tenantDocuments, setTenantDocuments] = useState([]);
   const [tenantDocUploading, setTenantDocUploading] = useState(false);
   const [tenantDocUploadError, setTenantDocUploadError] = useState("");
+  const [tenantDocCategory, setTenantDocCategory] = useState("");
   const tenantDocFileInputRef = useRef(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
@@ -659,7 +674,10 @@ export default function AdminTenantDetailPage() {
     setTenantDocUploading(true);
     setTenantDocUploadError("");
     try {
-      await uploadAdminTenantDocument(tenantId, f);
+      await uploadAdminTenantDocument(tenantId, f, {
+        category: tenantDocCategory.trim() || undefined,
+      });
+      setTenantDocCategory("");
       const [items, auditData] = await Promise.all([
         fetchAdminTenantDocuments(tenantId),
         fetchAdminAuditLogs({ entity_type: "tenant", entity_id: tenantId }),
@@ -1973,7 +1991,38 @@ export default function AdminTenantDetailPage() {
                   }}
                 >
                   <div style={sectionTitle}>Dokumente</div>
-                  <div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                      gap: "10px",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#64748B" }}>
+                      <span>Kategorie</span>
+                      <select
+                        value={tenantDocCategory}
+                        onChange={(e) => setTenantDocCategory(e.target.value)}
+                        disabled={tenantDocUploading || !tenantId}
+                        style={{
+                          fontSize: "13px",
+                          border: "1px solid #CBD5E1",
+                          borderRadius: "8px",
+                          padding: "6px 8px",
+                          color: "#0F172A",
+                          background: tenantDocUploading || !tenantId ? "#F1F5F9" : "#FFFFFF",
+                        }}
+                      >
+                        <option value="">—</option>
+                        <option value="rent_contract">Mietvertrag</option>
+                        <option value="id_document">Ausweis</option>
+                        <option value="debt_register">Betreibungsregister</option>
+                        <option value="insurance">Versicherung</option>
+                        <option value="other">Sonstiges</option>
+                      </select>
+                    </label>
                     <input
                       ref={tenantDocFileInputRef}
                       type="file"
@@ -2015,6 +2064,7 @@ export default function AdminTenantDetailPage() {
                         <tr>
                           <th style={thCell}>Datei</th>
                           <th style={thCell}>Typ</th>
+                          <th style={thCell}>Kategorie</th>
                           <th style={thCell}>Datum</th>
                           <th style={thCell}>Von</th>
                           <th style={thCell}>Aktionen</th>
@@ -2025,6 +2075,9 @@ export default function AdminTenantDetailPage() {
                           <tr key={String(doc.id)}>
                             <td style={{ ...tdCell, fontWeight: 600 }}>{doc.file_name || "—"}</td>
                             <td style={{ ...tdCell, color: "#64748B" }}>{formatTenantDocumentType(doc)}</td>
+                            <td style={{ ...tdCell, color: "#64748B" }}>
+                              {formatTenantDocumentCategoryLabel(doc.category)}
+                            </td>
                             <td style={{ ...tdCell, color: "#64748B" }}>{formatTenantDocumentDate(doc.created_at)}</td>
                             <td style={{ ...tdCell, color: "#64748B" }}>
                               {doc.uploaded_by_name != null && doc.uploaded_by_name !== ""

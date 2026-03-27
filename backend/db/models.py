@@ -138,6 +138,7 @@ class UnitDocument(SQLModel, table=True):
     object_key: Optional[str] = Field(default=None)
     file_size: Optional[int] = Field(default=None)
     mime_type: Optional[str] = Field(default=None)
+    category: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     uploaded_by: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
 
@@ -155,6 +156,7 @@ class TenantDocument(SQLModel, table=True):
     object_key: Optional[str] = Field(default=None)
     file_size: Optional[int] = Field(default=None)
     mime_type: Optional[str] = Field(default=None)
+    category: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     uploaded_by: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
 

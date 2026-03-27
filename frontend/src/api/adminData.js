@@ -699,10 +699,12 @@ export function fetchAdminUnitDocuments(unitId) {
     });
 }
 
-export async function uploadAdminUnitDocument(unitId, file) {
+export async function uploadAdminUnitDocument(unitId, file, options = {}) {
   const fd = new FormData();
   fd.append("unit_id", unitId);
   fd.append("file", file);
+  const cat = options.category != null ? String(options.category).trim() : "";
+  if (cat) fd.append("category", cat);
   const res = await fetch(`${API_BASE_URL}/api/admin/unit-documents`, {
     method: "POST",
     headers: getApiHeadersMultipart(),
@@ -752,10 +754,12 @@ export function fetchAdminTenantDocuments(tenantId) {
     });
 }
 
-export async function uploadAdminTenantDocument(tenantId, file) {
+export async function uploadAdminTenantDocument(tenantId, file, options = {}) {
   const fd = new FormData();
   fd.append("tenant_id", tenantId);
   fd.append("file", file);
+  const cat = options.category != null ? String(options.category).trim() : "";
+  if (cat) fd.append("category", cat);
   const res = await fetch(`${API_BASE_URL}/api/admin/tenant-documents`, {
     method: "POST",
     headers: getApiHeadersMultipart(),

@@ -427,6 +427,20 @@ function formatUnitDocumentType(doc) {
   return "Datei";
 }
 
+const UNIT_DOCUMENT_CATEGORY_LABELS = {
+  rent_contract: "Mietvertrag",
+  insurance: "Versicherung",
+  internet: "Internet",
+  handover: "Übergabe",
+  other: "Sonstiges",
+};
+
+function formatUnitDocumentCategoryLabel(category) {
+  if (category == null || String(category).trim() === "") return "—";
+  const k = String(category).trim();
+  return UNIT_DOCUMENT_CATEGORY_LABELS[k] || k;
+}
+
 function SectionCard({ title, subtitle, children, rightSlot = null }) {
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
@@ -599,6 +613,7 @@ function AdminUnitDetailPage() {
   const [unitDocumentsError, setUnitDocumentsError] = useState("");
   const [unitDocUploading, setUnitDocUploading] = useState(false);
   const [unitDocUploadError, setUnitDocUploadError] = useState("");
+  const [unitDocCategory, setUnitDocCategory] = useState("");
   const unitDocFileInputRef = useRef(null);
   const [verwaltungLabel, setVerwaltungLabel] = useState("");
   const [bewirtschafterLabel, setBewirtschafterLabel] = useState("");
@@ -1099,8 +1114,11 @@ function AdminUnitDetailPage() {
     setUnitDocUploading(true);
     setUnitDocUploadError("");
     try {
-      const rec = await uploadAdminUnitDocument(unitId, f);
+      const rec = await uploadAdminUnitDocument(unitId, f, {
+        category: unitDocCategory.trim() || undefined,
+      });
       setUnitDocuments((prev) => [rec, ...prev]);
+      setUnitDocCategory("");
     } catch (err) {
       setUnitDocUploadError(err.message || "Upload fehlgeschlagen.");
     } finally {
@@ -1334,7 +1352,23 @@ function AdminUnitDetailPage() {
           title="Dokumente"
           subtitle="Dateien zu dieser Unit"
           rightSlot={
-            <div className="flex flex-col items-end gap-1">
+            <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:flex-wrap sm:justify-end">
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <span className="whitespace-nowrap">Kategorie</span>
+                <select
+                  value={unitDocCategory}
+                  onChange={(e) => setUnitDocCategory(e.target.value)}
+                  disabled={unitDocUploading || !unitId}
+                  className="text-sm border border-slate-300 rounded-lg px-2 py-1.5 bg-white text-slate-800 disabled:opacity-50"
+                >
+                  <option value="">—</option>
+                  <option value="rent_contract">Mietvertrag</option>
+                  <option value="insurance">Versicherung</option>
+                  <option value="internet">Internet</option>
+                  <option value="handover">Übergabe</option>
+                  <option value="other">Sonstiges</option>
+                </select>
+              </label>
               <input
                 ref={unitDocFileInputRef}
                 type="file"
@@ -1368,6 +1402,7 @@ function AdminUnitDetailPage() {
                   <tr className="border-b border-slate-200 text-slate-500">
                     <th className="py-2 pr-4 font-medium">Datei</th>
                     <th className="py-2 pr-4 font-medium">Typ</th>
+                    <th className="py-2 pr-4 font-medium">Kategorie</th>
                     <th className="py-2 pr-4 font-medium">Datum</th>
                     <th className="py-2 pr-4 font-medium">Von</th>
                     <th className="py-2 pr-4 font-medium">Aktionen</th>
@@ -1378,6 +1413,9 @@ function AdminUnitDetailPage() {
                     <tr key={String(doc.id)} className="border-b border-slate-100">
                       <td className="py-2 pr-4 font-medium">{doc.file_name || "—"}</td>
                       <td className="py-2 pr-4 text-slate-600">{formatUnitDocumentType(doc)}</td>
+                      <td className="py-2 pr-4 text-slate-600">
+                        {formatUnitDocumentCategoryLabel(doc.category)}
+                      </td>
                       <td className="py-2 pr-4 text-slate-600">
                         {formatUnitDocumentDate(doc.created_at)}
                       </td>

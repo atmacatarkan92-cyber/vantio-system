@@ -40,6 +40,13 @@ def _user_display_name(u: Optional[User]) -> str:
     return "—"
 
 
+def _normalize_category_optional(category: Optional[str]) -> Optional[str]:
+    if category is None:
+        return None
+    s = str(category).strip()
+    return s if s else None
+
+
 def _doc_to_dict(d: UnitDocument, uploaded_by_name: Optional[str] = None) -> dict[str, Any]:
     return {
         "id": str(d.id),
@@ -49,6 +56,7 @@ def _doc_to_dict(d: UnitDocument, uploaded_by_name: Optional[str] = None) -> dic
         "file_url": d.file_url,
         "file_size": d.file_size,
         "mime_type": d.mime_type,
+        "category": getattr(d, "category", None),
         "created_at": d.created_at.isoformat() if d.created_at else None,
         "uploaded_by": str(d.uploaded_by) if d.uploaded_by else None,
         "uploaded_by_name": uploaded_by_name if uploaded_by_name is not None else "—",
@@ -173,6 +181,7 @@ def admin_create_unit_document(
     request: Request,
     unit_id: str = Form(...),
     file: UploadFile = File(...),
+    category: Optional[str] = Form(default=None),
     org_id: str = Depends(get_current_organization),
     current_user: User = Depends(require_roles("admin", "manager")),
     session: Session = Depends(get_db_session),
@@ -203,6 +212,7 @@ def admin_create_unit_document(
         object_key=key,
         file_size=len(body),
         mime_type=mime,
+        category=_normalize_category_optional(category),
         uploaded_by=str(current_user.id),
     )
     session.add(doc)
