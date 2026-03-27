@@ -19,9 +19,14 @@ import {
   fetchAdminOccupancy,
   fetchAdminDashboardKpis,
   fetchAdminInvoices,
+  fetchAdminTenanciesAll,
   normalizeFetchError,
   sanitizeClientErrorMessage,
 } from "../../api/adminData";
+import {
+  getPortfolioMetrics,
+  getPortfolioUnitLabel,
+} from "../../utils/adminPortfolioMetrics";
 
 function roundCurrency(value) {
   return Math.round(Number(value || 0));
@@ -293,6 +298,7 @@ export default function AdminUebersichtPage() {
   const [invoiceError, setInvoiceError] = useState("");
   const [units, setUnits] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [tenancies, setTenancies] = useState(null);
   const [profitApi, setProfitApi] = useState({ summary: null, units: [], year: null, month: null });
   const [occupancyApi, setOccupancyApi] = useState(null);
   const [kpis, setKpis] = useState(null);
@@ -316,8 +322,9 @@ export default function AdminUebersichtPage() {
       fetchAdminRooms(),
       fetchAdminOccupancy(),
       fetchAdminProfit({ year: now.getFullYear(), month: now.getMonth() + 1 }),
+      fetchAdminTenanciesAll().catch(() => []),
     ])
-      .then(([unitsData, roomsData, occupancyData, profitData]) => {
+      .then(([unitsData, roomsData, occupancyData, profitData, tenanciesData]) => {
         setUnits(unitsData.map(normalizeUnit));
         setRooms(Array.isArray(roomsData) ? roomsData.map(normalizeRoom) : []);
         setOccupancyApi(occupancyData);
@@ -327,8 +334,10 @@ export default function AdminUebersichtPage() {
           year: profitData.year,
           month: profitData.month,
         });
+        setTenancies(Array.isArray(tenanciesData) ? tenanciesData : []);
       })
       .catch((e) => {
+        setTenancies([]);
         setOperationsLoadError(
           sanitizeClientErrorMessage(
             normalizeFetchError(e, "Betriebsdaten konnten nicht geladen werden.").message,
@@ -504,6 +513,11 @@ export default function AdminUebersichtPage() {
 
   const latestInvoices = useMemo(() => [...invoices].slice(0, 5), [invoices]);
 
+  const portfolio = useMemo(
+    () => getPortfolioMetrics(units, rooms, tenancies),
+    [units, rooms, tenancies]
+  );
+
   const systemWarnings = useMemo(() => {
     const warnings = [];
     if (operationsStats.freeRooms > 0) {
@@ -668,6 +682,96 @@ export default function AdminUebersichtPage() {
           </div>
         </div>
       </div>
+
+      {portfolio && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "16px",
+          }}
+        >
+          <KpiKarte
+            titel="Gesamt Umsatz"
+            wert={formatCurrency(portfolio.totalRevenue)}
+            hinweis="Summe aktiver Mietverhältnisse (alle Units)"
+            farbe="#0F172A"
+            akzent="#94A3B8"
+            badge="Tenancy"
+          />
+          <KpiKarte
+            titel="Vollbelegung Potenzial"
+            wert={formatCurrency(portfolio.totalFullPotential)}
+            hinweis="Co-Living: Zimmerpreise · Apartment: Mieterpreis"
+            farbe="#EA580C"
+            akzent="#FDBA74"
+            badge="Tenancy"
+          />
+          <KpiKarte
+            titel="Leerstand"
+            wert={formatCurrency(portfolio.totalVacancy)}
+            hinweis="Potenzial minus aktueller Umsatz"
+            farbe="#E11D48"
+            akzent="#FDA4AF"
+            badge="Tenancy"
+          />
+          <KpiKarte
+            titel="Auslastung %"
+            wert={
+              portfolio.occupancyRate != null
+                ? formatPercent(portfolio.occupancyRate * 100)
+                : "—"
+            }
+            hinweis="Belegte Slots / Kapazität (Co-Living: Zimmer, Apartment: 1)"
+            farbe="#2563EB"
+            akzent="#93C5FD"
+            badge="Tenancy"
+          />
+          <KpiKarte
+            titel="Beste Unit"
+            wert={
+              portfolio.bestUnit
+                ? getPortfolioUnitLabel(
+                    portfolio.bestUnit.unit,
+                    portfolio.bestUnit.listIndex
+                  )
+                : "—"
+            }
+            hinweis={
+              portfolio.bestUnit
+                ? `${formatCurrency(portfolio.bestUnit.profit)} Gewinn`
+                : ""
+            }
+            farbe="#16A34A"
+            akzent="#86EFAC"
+            badge="Tenancy"
+          />
+          <KpiKarte
+            titel="Schwächste Unit"
+            wert={
+              portfolio.worstUnit
+                ? getPortfolioUnitLabel(
+                    portfolio.worstUnit.unit,
+                    portfolio.worstUnit.listIndex
+                  )
+                : "—"
+            }
+            hinweis={
+              portfolio.worstUnit
+                ? `${formatCurrency(portfolio.worstUnit.profit)} Gewinn`
+                : ""
+            }
+            farbe="#7C3AED"
+            akzent="#C4B5FD"
+            badge="Tenancy"
+          />
+        </div>
+      )}
+      {tenancies === null && !operationsLoadError && (
+        <p style={{ color: "#64748B", padding: "8px 0" }}>
+          Portfolio-KPIs (Tenancies) werden geladen…
+        </p>
+      )}
 
       {kpisLoading && (
         <p style={{ color: "#64748B", padding: "16px 0" }}>Lade KPI-Daten…</p>
