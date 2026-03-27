@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import os
 import re
+import unicodedata
 import uuid
+from urllib.parse import quote
 
 from botocore.config import Config
 
@@ -40,9 +42,21 @@ def _s3_client():
 
 
 def safe_filename(name: str) -> str:
+    """ASCII-safe name for object keys: spaces → _, extension preserved, URL-hostile chars removed."""
     base = os.path.basename(name or "").strip() or "file"
-    cleaned = re.sub(r"[^a-zA-Z0-9._-]", "_", base)
-    return (cleaned[:200] or "file")[:200]
+    stem, ext = os.path.splitext(base)
+    ext = ext.lower()
+    stem = unicodedata.normalize("NFKD", stem)
+    stem = "".join(c for c in stem if unicodedata.category(c) != "Mn")
+    stem = stem.replace(" ", "_")
+    stem = re.sub(r"[^a-zA-Z0-9._-]", "_", stem)
+    stem = re.sub(r"_+", "_", stem).strip("_") or "file"
+    ext_ok = bool(ext and re.match(r"^\.[a-zA-Z0-9]{1,16}$", ext))
+    ext_clean = ext if ext_ok else ""
+    max_stem = max(1, 200 - len(ext_clean)) if ext_clean else 200
+    stem = stem[:max_stem]
+    out = stem + ext_clean if ext_clean else stem
+    return (out[:200] or "file")[:200]
 
 
 def build_object_key(unit_id: str, original_name: str) -> str:
@@ -58,7 +72,8 @@ def public_object_url(object_key: str) -> str:
         raise RuntimeError(
             "R2_PUBLIC_URL is not set (required for public download links)"
         )
-    return f"{base}/{object_key}"
+    path = "/".join(quote(seg, safe="") for seg in object_key.split("/"))
+    return f"{base}/{path}"
 
 
 def upload_bytes(object_key: str, body: bytes, content_type: str | None) -> str:
