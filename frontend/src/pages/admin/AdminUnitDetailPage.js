@@ -39,6 +39,15 @@ const UNIT_AUDIT_FIELD_LABELS = {
   landlord_deposit_annual_premium: "Kautionsprämie",
 };
 
+/** Order for audit update lines (remaining keys sorted alphabetically after these). */
+const AUDIT_UPDATE_FIELD_ORDER = [
+  "landlord_id",
+  "property_manager_id",
+  "tenant_price_monthly_chf",
+  "landlord_rent_monthly_chf",
+  "occupancy_status",
+];
+
 function auditValuesEqual(a, b) {
   if (a === b) return true;
   if (a == null && b == null) return true;
@@ -118,8 +127,41 @@ const AUDIT_CHF_KEYS = new Set([
 
 const AUDIT_DATE_KEYS = new Set(["landlord_lease_start_date", "available_from"]);
 
-function formatAuditFieldValue(key, value) {
+function auditFallbackIdDisplay(value) {
   if (value === null || value === undefined || value === "") return "—";
+  const s = String(value);
+  if (s.length > 24) return `${s.slice(0, 8)}…${s.slice(-4)}`;
+  return s;
+}
+
+function sortAuditChangedFieldKeys(keys) {
+  const priority = new Map(AUDIT_UPDATE_FIELD_ORDER.map((k, i) => [k, i]));
+  return [...keys].sort((a, b) => {
+    const pa = priority.has(a) ? priority.get(a) : 1000;
+    const pb = priority.has(b) ? priority.get(b) : 1000;
+    if (pa !== pb) return pa - pb;
+    return a.localeCompare(b);
+  });
+}
+
+function formatAuditFieldValue(key, value, resolvers) {
+  const r = resolvers || {};
+  if (value === null || value === undefined || value === "") return "—";
+  if (key === "landlord_id") {
+    const s = String(value);
+    if (r.landlordById && r.landlordById[s]) return r.landlordById[s];
+    return auditFallbackIdDisplay(s);
+  }
+  if (key === "property_manager_id") {
+    const s = String(value);
+    if (r.pmById && r.pmById[s]) return r.pmById[s];
+    return auditFallbackIdDisplay(s);
+  }
+  if (key === "property_id") {
+    const s = String(value);
+    if (r.propertyById && r.propertyById[s]) return r.propertyById[s];
+    return auditFallbackIdDisplay(s);
+  }
   if (AUDIT_CHF_KEYS.has(key)) {
     const n = Number(value);
     if (Number.isNaN(n)) return String(value);
@@ -136,15 +178,8 @@ function formatAuditFieldValue(key, value) {
     const k = String(value).toLowerCase();
     return LANDLORD_DEPOSIT_TYPE_LABELS[k] || String(value);
   }
-  if (
-    key === "landlord_id" ||
-    key === "property_manager_id" ||
-    key === "property_id" ||
-    key === "city_id"
-  ) {
-    const s = String(value);
-    if (s.length > 24) return `${s.slice(0, 8)}…${s.slice(-4)}`;
-    return s;
+  if (key === "city_id") {
+    return auditFallbackIdDisplay(String(value));
   }
   if (key === "rooms" || key === "occupied_rooms") {
     const n = Number(value);
@@ -154,30 +189,37 @@ function formatAuditFieldValue(key, value) {
   return String(value);
 }
 
-function buildAuditUpdateLines(entry) {
+function buildAuditUpdateLines(entry, resolvers) {
   const oldV = entry.old_values;
   const newV = entry.new_values;
   if (!oldV || !newV) return ["Unit bearbeitet"];
   const keys = new Set([...Object.keys(oldV), ...Object.keys(newV)]);
-  const lines = [];
+  const changedKeys = [];
   for (const k of keys) {
     if (auditValuesEqual(oldV[k], newV[k])) continue;
-    const lbl = UNIT_AUDIT_FIELD_LABELS[k];
-    if (!lbl) continue;
-    const oldStr = formatAuditFieldValue(k, oldV[k]);
-    const newStr = formatAuditFieldValue(k, newV[k]);
-    lines.push(`${lbl} geändert: ${oldStr} → ${newStr}`);
+    if (!UNIT_AUDIT_FIELD_LABELS[k]) continue;
+    changedKeys.push(k);
   }
-  if (lines.length === 0) return ["Unit bearbeitet"];
-  if (lines.length <= 3) return lines;
-  return [...lines.slice(0, 3), "Weitere Änderungen"];
+  if (changedKeys.length === 0) return ["Unit bearbeitet"];
+  const sorted = sortAuditChangedFieldKeys(changedKeys);
+  const detailLines = sorted.map((k) => {
+    const lbl = UNIT_AUDIT_FIELD_LABELS[k];
+    const oldStr = formatAuditFieldValue(k, oldV[k], resolvers);
+    const newStr = formatAuditFieldValue(k, newV[k], resolvers);
+    return `${lbl} geändert: ${oldStr} → ${newStr}`;
+  });
+  const limited =
+    detailLines.length <= 3
+      ? detailLines
+      : [...detailLines.slice(0, 3), "Weitere Änderungen"];
+  return ["Unit bearbeitet", ...limited];
 }
 
-function getAuditEntryDisplayLines(entry) {
+function getAuditEntryDisplayLines(entry, resolvers) {
   const action = String(entry.action || "").toLowerCase();
   if (action === "create") return ["Unit erstellt"];
   if (action === "delete") return ["Unit gelöscht"];
-  if (action === "update") return buildAuditUpdateLines(entry);
+  if (action === "update") return buildAuditUpdateLines(entry, resolvers);
   return ["Unit bearbeitet"];
 }
 
@@ -578,6 +620,23 @@ function AdminUnitDetailPage() {
       })
       .finally(() => setAuditLogLoading(false));
   }, [unitId]);
+
+  const auditResolvers = useMemo(() => {
+    const landlordById = {};
+    if (unit?.landlord_id && verwaltungLabel && verwaltungLabel !== "—") {
+      landlordById[String(unit.landlord_id)] = verwaltungLabel;
+    }
+    const pmById = {};
+    if (unit?.property_manager_id && bewirtschafterLabel && bewirtschafterLabel !== "—") {
+      pmById[String(unit.property_manager_id)] = bewirtschafterLabel;
+    }
+    const propertyById = {};
+    if (unit?.property_id) {
+      const title = String(unit.property_title || "").trim();
+      if (title) propertyById[String(unit.property_id)] = title;
+    }
+    return { landlordById, pmById, propertyById };
+  }, [unit, verwaltungLabel, bewirtschafterLabel]);
 
   const [occupancyRoomsData, setOccupancyRoomsData] = useState(null);
   useEffect(() => {
@@ -1544,7 +1603,7 @@ function AdminUnitDetailPage() {
                     {formatAuditTimestamp(entry.created_at)}
                   </p>
                   <div className="font-medium text-slate-800 mt-0.5 space-y-1">
-                    {getAuditEntryDisplayLines(entry).map((line, idx) => (
+                    {getAuditEntryDisplayLines(entry, auditResolvers).map((line, idx) => (
                       <p key={idx}>{line}</p>
                     ))}
                   </div>
