@@ -20,7 +20,7 @@ def upgrade() -> None:
     op.create_table(
         "property_managers",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("organization_id", sa.String(), nullable=False),
+        sa.Column("organization_id", sa.UUID(), nullable=False),
         sa.Column("landlord_id", sa.String(), nullable=True),
         sa.Column("name", sa.String(), nullable=False, server_default=""),
         sa.Column("email", sa.String(), nullable=True),
