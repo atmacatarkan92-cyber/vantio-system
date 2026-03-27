@@ -537,7 +537,21 @@ def admin_delete_unit(
     ).scalar()
     room_count = int(_room_count_row) if _room_count_row is not None else 0
     tenancy_count = int(_tenancy_count_row) if _tenancy_count_row is not None else 0
-    if room_count > 0 or tenancy_count > 0:
+
+    technical_default_room_removed = False
+    if tenancy_count == 0 and room_count == 1:
+        _only_room = session.exec(
+            select(Room).where(Room.unit_id == unit_id)
+        ).first()
+        if (
+            _only_room is not None
+            and (_only_room.name or "").strip() == "Gesamte Wohnung"
+        ):
+            session.delete(_only_room)
+            session.flush()
+            technical_default_room_removed = True
+
+    if (room_count > 0 or tenancy_count > 0) and not technical_default_room_removed:
         logger.warning(
             "admin_delete_unit blocked: unit_id=%s rooms=%s tenancies=%s",
             unit_id,
