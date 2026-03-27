@@ -401,6 +401,16 @@ export function normalizeUnit(u) {
       u.landlordDepositAnnualPremium ?? u.landlord_deposit_annual_premium ?? "",
     landlord_id: u.landlord_id ?? null,
     property_manager_id: u.property_manager_id ?? null,
+    leaseType: u.leaseType ?? u.lease_type ?? "",
+    leaseStartDate: u.leaseStartDate ?? u.lease_start_date ?? "",
+    leaseEndDate: u.leaseEndDate ?? u.lease_end_date ?? "",
+    noticeGivenDate: u.noticeGivenDate ?? u.notice_given_date ?? "",
+    terminationEffectiveDate:
+      u.terminationEffectiveDate ?? u.termination_effective_date ?? "",
+    returnedToLandlordDate:
+      u.returnedToLandlordDate ?? u.returned_to_landlord_date ?? "",
+    leaseStatus: u.leaseStatus ?? u.lease_status ?? "",
+    leaseNotes: u.leaseNotes ?? u.lease_notes ?? "",
   };
 }
 

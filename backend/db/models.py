@@ -122,6 +122,14 @@ class Unit(SQLModel, table=True):
     landlord_deposit_type: Optional[str] = Field(default=None, max_length=32)
     landlord_deposit_amount: Optional[float] = Field(default=None)
     landlord_deposit_annual_premium: Optional[float] = Field(default=None)
+    lease_type: Optional[str] = Field(default=None, max_length=64)
+    lease_start_date: Optional[date] = None
+    lease_end_date: Optional[date] = None
+    notice_given_date: Optional[date] = None
+    termination_effective_date: Optional[date] = None
+    returned_to_landlord_date: Optional[date] = None
+    lease_status: Optional[str] = Field(default=None, max_length=64)
+    lease_notes: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

@@ -49,6 +49,14 @@ const emptyForm = {
   landlordDepositType: "",
   landlordDepositAmount: "",
   landlordDepositAnnualPremium: "",
+  leaseType: "",
+  leaseStartDate: "",
+  leaseEndDate: "",
+  noticeGivenDate: "",
+  terminationEffectiveDate: "",
+  returnedToLandlordDate: "",
+  leaseStatus: "",
+  leaseNotes: "",
 };
 
 function parseMoneyChf(raw) {
@@ -67,6 +75,11 @@ function dateOnlyOrNull(raw) {
   const s = String(raw || "").trim();
   if (!/^\d{4}-\d{2}-\d{2}/.test(s)) return null;
   return s.slice(0, 10);
+}
+
+function strOrNull(raw) {
+  const t = String(raw ?? "").trim();
+  return t === "" ? null : t;
 }
 
 function numFieldStr(v) {
@@ -710,6 +723,17 @@ function AdminApartmentsPage() {
       landlordDepositType: String(unit.landlordDepositType || "").trim(),
       landlordDepositAmount: numFieldStr(unit.landlordDepositAmount),
       landlordDepositAnnualPremium: numFieldStr(unit.landlordDepositAnnualPremium),
+      leaseType: String(unit.leaseType ?? "").trim(),
+      leaseStartDate: numFieldStr(unit.leaseStartDate).slice(0, 10),
+      leaseEndDate: numFieldStr(unit.leaseEndDate).slice(0, 10),
+      noticeGivenDate: numFieldStr(unit.noticeGivenDate).slice(0, 10),
+      terminationEffectiveDate: numFieldStr(unit.terminationEffectiveDate).slice(
+        0,
+        10
+      ),
+      returnedToLandlordDate: numFieldStr(unit.returnedToLandlordDate).slice(0, 10),
+      leaseStatus: String(unit.leaseStatus ?? "").trim(),
+      leaseNotes: unit.leaseNotes != null ? String(unit.leaseNotes) : "",
     });
     setSaveError("");
     setIsModalOpen(true);
@@ -787,6 +811,15 @@ function AdminApartmentsPage() {
         ...prev,
         landlordDepositType: value,
         landlordDepositAnnualPremium: "",
+      }));
+      return;
+    }
+
+    if (name === "leaseType" && value !== "fixed_term") {
+      setFormData((prev) => ({
+        ...prev,
+        leaseType: value,
+        leaseEndDate: "",
       }));
       return;
     }
@@ -871,6 +904,19 @@ function AdminApartmentsPage() {
       landlord_deposit_annual_premium: parseOptionalMoneyChf(
         formData.landlordDepositAnnualPremium
       ),
+      lease_type: strOrNull(formData.leaseType),
+      lease_start_date: dateOnlyOrNull(formData.leaseStartDate),
+      lease_end_date:
+        formData.leaseType === "fixed_term"
+          ? dateOnlyOrNull(formData.leaseEndDate)
+          : null,
+      notice_given_date: dateOnlyOrNull(formData.noticeGivenDate),
+      termination_effective_date: dateOnlyOrNull(
+        formData.terminationEffectiveDate
+      ),
+      returned_to_landlord_date: dateOnlyOrNull(formData.returnedToLandlordDate),
+      lease_status: strOrNull(formData.leaseStatus),
+      lease_notes: strOrNull(formData.leaseNotes),
     };
 
     const baseUnitPayload = {
@@ -1599,6 +1645,126 @@ function AdminApartmentsPage() {
                     />
                   </div>
                 ) : null}
+
+                <div className="md:col-span-2 border-t border-slate-200 pt-5 mt-1">
+                  <p className="text-sm font-semibold text-slate-800 mb-3">
+                    Vertrag Vermieter
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-slate-600 mb-2">
+                        Vertragsart
+                      </label>
+                      <select
+                        name="leaseType"
+                        value={formData.leaseType}
+                        onChange={handleChange}
+                        className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                      >
+                        <option value="">—</option>
+                        <option value="open_ended">Unbefristet</option>
+                        <option value="fixed_term">Befristet</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-slate-600 mb-2">
+                        Mietbeginn
+                      </label>
+                      <input
+                        type="date"
+                        name="leaseStartDate"
+                        value={formData.leaseStartDate}
+                        onChange={handleChange}
+                        className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+
+                    {formData.leaseType === "fixed_term" ? (
+                      <div>
+                        <label className="block text-sm text-slate-600 mb-2">
+                          Vertragsende
+                        </label>
+                        <input
+                          type="date"
+                          name="leaseEndDate"
+                          value={formData.leaseEndDate}
+                          onChange={handleChange}
+                          className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                      </div>
+                    ) : null}
+
+                    <div>
+                      <label className="block text-sm text-slate-600 mb-2">
+                        Kündigung eingereicht am
+                      </label>
+                      <input
+                        type="date"
+                        name="noticeGivenDate"
+                        value={formData.noticeGivenDate}
+                        onChange={handleChange}
+                        className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-slate-600 mb-2">
+                        Kündigung wirksam per
+                      </label>
+                      <input
+                        type="date"
+                        name="terminationEffectiveDate"
+                        value={formData.terminationEffectiveDate}
+                        onChange={handleChange}
+                        className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-slate-600 mb-2">
+                        Rückgabe erfolgt am
+                      </label>
+                      <input
+                        type="date"
+                        name="returnedToLandlordDate"
+                        value={formData.returnedToLandlordDate}
+                        onChange={handleChange}
+                        className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-slate-600 mb-2">
+                        Vertragsstatus
+                      </label>
+                      <select
+                        name="leaseStatus"
+                        value={formData.leaseStatus}
+                        onChange={handleChange}
+                        className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                      >
+                        <option value="">—</option>
+                        <option value="active">Aktiv</option>
+                        <option value="notice_given">Gekündigt</option>
+                        <option value="ended">Beendet</option>
+                      </select>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm text-slate-600 mb-2">
+                        Notizen
+                      </label>
+                      <textarea
+                        name="leaseNotes"
+                        value={formData.leaseNotes}
+                        onChange={handleChange}
+                        rows={3}
+                        className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 resize-y min-h-[5rem]"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -81,6 +81,14 @@ def _iso_date(d: Optional[date]) -> str:
     return ""
 
 
+def _iso_date_or_none(d: Optional[date]) -> Optional[str]:
+    if d is None:
+        return None
+    if hasattr(d, "isoformat"):
+        return d.isoformat()[:10]
+    return None
+
+
 def _unit_to_dict(u: Unit, property_title: Optional[str] = None) -> dict:
     tp = float(getattr(u, "tenant_price_monthly_chf", 0) or 0)
     lr = float(getattr(u, "landlord_rent_monthly_chf", 0) or 0)
@@ -124,6 +132,18 @@ def _unit_to_dict(u: Unit, property_title: Optional[str] = None) -> dict:
             if getattr(u, "landlord_deposit_annual_premium", None) is not None
             else None
         ),
+        "leaseType": getattr(u, "lease_type", None),
+        "leaseStartDate": _iso_date_or_none(getattr(u, "lease_start_date", None)),
+        "leaseEndDate": _iso_date_or_none(getattr(u, "lease_end_date", None)),
+        "noticeGivenDate": _iso_date_or_none(getattr(u, "notice_given_date", None)),
+        "terminationEffectiveDate": _iso_date_or_none(
+            getattr(u, "termination_effective_date", None)
+        ),
+        "returnedToLandlordDate": _iso_date_or_none(
+            getattr(u, "returned_to_landlord_date", None)
+        ),
+        "leaseStatus": getattr(u, "lease_status", None),
+        "leaseNotes": getattr(u, "lease_notes", None),
     }
 
 
@@ -192,6 +212,14 @@ class UnitCreate(BaseModel):
     landlord_deposit_type: Optional[str] = None
     landlord_deposit_amount: Optional[float] = Field(default=None, ge=0)
     landlord_deposit_annual_premium: Optional[float] = Field(default=None, ge=0)
+    lease_type: Optional[str] = None
+    lease_start_date: Optional[date] = None
+    lease_end_date: Optional[date] = None
+    notice_given_date: Optional[date] = None
+    termination_effective_date: Optional[date] = None
+    returned_to_landlord_date: Optional[date] = None
+    lease_status: Optional[str] = None
+    lease_notes: Optional[str] = None
 
     @field_validator("landlord_deposit_type", mode="before")
     @classmethod
@@ -242,6 +270,14 @@ class UnitPatch(BaseModel):
     landlord_deposit_type: Optional[str] = None
     landlord_deposit_amount: Optional[float] = Field(default=None, ge=0)
     landlord_deposit_annual_premium: Optional[float] = Field(default=None, ge=0)
+    lease_type: Optional[str] = None
+    lease_start_date: Optional[date] = None
+    lease_end_date: Optional[date] = None
+    notice_given_date: Optional[date] = None
+    termination_effective_date: Optional[date] = None
+    returned_to_landlord_date: Optional[date] = None
+    lease_status: Optional[str] = None
+    lease_notes: Optional[str] = None
 
     @field_validator("landlord_deposit_type", mode="before")
     @classmethod
@@ -400,6 +436,14 @@ def admin_create_unit(
         landlord_deposit_type=body.landlord_deposit_type,
         landlord_deposit_amount=body.landlord_deposit_amount,
         landlord_deposit_annual_premium=body.landlord_deposit_annual_premium,
+        lease_type=body.lease_type,
+        lease_start_date=body.lease_start_date,
+        lease_end_date=body.lease_end_date,
+        notice_given_date=body.notice_given_date,
+        termination_effective_date=body.termination_effective_date,
+        returned_to_landlord_date=body.returned_to_landlord_date,
+        lease_status=body.lease_status,
+        lease_notes=body.lease_notes,
     )
     session.add(unit)
     session.flush()

@@ -120,6 +120,58 @@ const LANDLORD_DEPOSIT_TYPE_LABELS = {
   none: "Keine",
 };
 
+const LEASE_TYPE_LABELS = {
+  open_ended: "Unbefristet",
+  fixed_term: "Befristet",
+};
+
+const LEASE_STATUS_LABELS = {
+  active: "Aktiv",
+  notice_given: "Gekündigt",
+  ended: "Beendet",
+};
+
+function dashEmpties(value) {
+  if (value == null || value === "") return "—";
+  const s = String(value);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  return s;
+}
+
+function landlordLeaseTypeLabel(unit) {
+  const k = String(unit.leaseType ?? unit.lease_type ?? "").trim();
+  if (!k) return "—";
+  return LEASE_TYPE_LABELS[k] || k;
+}
+
+function landlordLeaseContractStatus(unit) {
+  return String(unit.leaseStatus ?? unit.lease_status ?? "").trim();
+}
+
+function landlordLeaseStatusBadgeTone(status) {
+  if (status === "active") return "green";
+  if (status === "notice_given") return "orange";
+  if (status === "ended") return "rose";
+  return "slate";
+}
+
+function landlordLeaseNotesDisplay(unit) {
+  const n = unit.leaseNotes ?? unit.lease_notes;
+  if (n == null || String(n).trim() === "") return "—";
+  return String(n);
+}
+
+function calendarDaysUntil(dateStr) {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}/.test(String(dateStr))) return null;
+  const y = Number(String(dateStr).slice(0, 4));
+  const m = Number(String(dateStr).slice(5, 7)) - 1;
+  const day = Number(String(dateStr).slice(8, 10));
+  const end = Date.UTC(y, m, day);
+  const now = new Date();
+  const t0 = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.round((end - t0) / 86400000);
+}
+
 const AUDIT_CHF_KEYS = new Set([
   "tenant_price_monthly_chf",
   "landlord_rent_monthly_chf",
@@ -515,6 +567,40 @@ function getStatusTone(status) {
 function buildUnitWarnings(unit, rooms, metrics) {
   const warnings = [];
   const isApartment = unit.type === "Apartment";
+
+  const lt = String(unit.leaseType ?? unit.lease_type ?? "").trim();
+  const ls = String(unit.leaseStatus ?? unit.lease_status ?? "").trim();
+  const led = unit.leaseEndDate ?? unit.lease_end_date;
+  const ted = unit.terminationEffectiveDate ?? unit.termination_effective_date;
+  const rtd = unit.returnedToLandlordDate ?? unit.returned_to_landlord_date;
+
+  if (lt === "fixed_term" && led) {
+    const d = calendarDaysUntil(led);
+    if (d != null && d >= 0 && d <= 90) {
+      warnings.push({
+        tone: "amber",
+        text: `Befristeter Vertrag läuft in ${d} Tagen ab`,
+      });
+    }
+  }
+  if (ls === "notice_given") {
+    warnings.push({ tone: "amber", text: "Unit ist gekündigt" });
+  }
+  if (ted) {
+    const d = calendarDaysUntil(ted);
+    if (d != null && d >= 0 && d <= 30) {
+      warnings.push({
+        tone: "amber",
+        text: `Rückgabe an Vermieter in ${d} Tagen`,
+      });
+    }
+  }
+  if (ls === "ended" && (rtd == null || rtd === "")) {
+    warnings.push({
+      tone: "amber",
+      text: "Vertrag beendet, aber keine Rückgabe erfasst",
+    });
+  }
 
   if (!metrics.leaseStarted && metrics.currentRevenue <= 0) {
     warnings.push({
@@ -1158,6 +1244,7 @@ function AdminUnitDetailPage() {
     LANDLORD_DEPOSIT_TYPE_LABELS[landlordDepositTypeKey] ||
     unit.landlordDepositType ||
     "—";
+  const landlordLeaseContractStatusStr = landlordLeaseContractStatus(unit);
 
   return (
     <div className="min-h-screen bg-slate-50 -m-6 p-6 md:p-8">
@@ -1277,6 +1364,75 @@ function AdminUnitDetailPage() {
                 <p className="font-medium">
                   {unit.landlordLeaseStartDate || "-"}
                 </p>
+              </div>
+
+              <div className="md:col-span-2 border-t border-slate-200 pt-4 mt-2">
+                <p className="text-sm font-semibold text-slate-800 mb-3">
+                  Vertrag Vermieter
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-slate-500">Vertragsart</p>
+                    <p className="font-medium">{landlordLeaseTypeLabel(unit)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">Mietbeginn</p>
+                    <p className="font-medium">
+                      {dashEmpties(unit.leaseStartDate ?? unit.lease_start_date)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">Vertragsende</p>
+                    <p className="font-medium">
+                      {dashEmpties(unit.leaseEndDate ?? unit.lease_end_date)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">Kündigung eingereicht</p>
+                    <p className="font-medium">
+                      {dashEmpties(unit.noticeGivenDate ?? unit.notice_given_date)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">Kündigung wirksam</p>
+                    <p className="font-medium">
+                      {dashEmpties(
+                        unit.terminationEffectiveDate ?? unit.termination_effective_date
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">Rückgabe erfolgt</p>
+                    <p className="font-medium">
+                      {dashEmpties(
+                        unit.returnedToLandlordDate ?? unit.returned_to_landlord_date
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">Status</p>
+                    <p className="font-medium">
+                      {landlordLeaseContractStatusStr ? (
+                        <Badge
+                          tone={landlordLeaseStatusBadgeTone(
+                            landlordLeaseContractStatusStr
+                          )}
+                        >
+                          {LEASE_STATUS_LABELS[landlordLeaseContractStatusStr] ||
+                            landlordLeaseContractStatusStr}
+                        </Badge>
+                      ) : (
+                        "—"
+                      )}
+                    </p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-slate-500">Notizen</p>
+                    <p className="font-medium whitespace-pre-wrap">
+                      {landlordLeaseNotesDisplay(unit)}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </SectionCard>
