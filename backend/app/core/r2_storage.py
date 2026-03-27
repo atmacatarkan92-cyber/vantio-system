@@ -77,10 +77,28 @@ def public_object_url(object_key: str) -> str:
 
 
 def upload_bytes(object_key: str, body: bytes, content_type: str | None) -> str:
+    """Upload to R2; returns object_key (same as input) for storage."""
     _, _, bucket, _ = _require_r2_config()
     client = _s3_client()
     extra: dict = {}
     if content_type:
         extra["ContentType"] = content_type
     client.put_object(Bucket=bucket, Key=object_key, Body=body, **extra)
-    return public_object_url(object_key)
+    return object_key
+
+
+def generate_presigned_url(object_key: str, expires_in: int = 3600) -> str:
+    """Temporary signed GET URL for private R2 objects."""
+    _, _, bucket, _ = _require_r2_config()
+    client = _s3_client()
+    return client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": bucket, "Key": object_key},
+        ExpiresIn=expires_in,
+    )
+
+
+def delete_object(object_key: str) -> None:
+    _, _, bucket, _ = _require_r2_config()
+    client = _s3_client()
+    client.delete_object(Bucket=bucket, Key=object_key)

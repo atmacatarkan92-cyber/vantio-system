@@ -135,6 +135,7 @@ class UnitDocument(SQLModel, table=True):
     unit_id: str = Field(foreign_key="unit.id", index=True)
     file_name: Optional[str] = Field(default=None)
     file_url: str = Field(default="")
+    object_key: Optional[str] = Field(default=None)
     file_size: Optional[int] = Field(default=None)
     mime_type: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)

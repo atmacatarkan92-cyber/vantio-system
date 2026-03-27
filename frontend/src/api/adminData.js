@@ -713,3 +713,24 @@ export async function uploadAdminUnitDocument(unitId, file) {
   }
   return res.json();
 }
+
+export function fetchAdminUnitDocumentDownloadUrl(documentId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/unit-documents/${encodeURIComponent(documentId)}/download`,
+    { headers: getApiHeaders() }
+  ).then(async (res) => {
+    if (!res.ok) throw new Error(await parseAdminErrorResponse(res));
+    return res.json();
+  });
+}
+
+export async function deleteAdminUnitDocument(documentId) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/unit-documents/${encodeURIComponent(documentId)}`, {
+    method: "DELETE",
+    headers: getApiHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}

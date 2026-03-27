@@ -14,6 +14,8 @@ import {
   fetchAdminAuditLogs,
   fetchAdminUnitDocuments,
   uploadAdminUnitDocument,
+  fetchAdminUnitDocumentDownloadUrl,
+  deleteAdminUnitDocument,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
@@ -1063,6 +1065,29 @@ function AdminUnitDetailPage() {
     }
   }
 
+  async function handleOpenUnitDocument(docId) {
+    try {
+      const data = await fetchAdminUnitDocumentDownloadUrl(docId);
+      if (data && data.url) {
+        window.open(data.url, "_blank", "noopener,noreferrer");
+      }
+    } catch (err) {
+      window.alert(err.message || "Download konnte nicht gestartet werden.");
+    }
+  }
+
+  async function handleDeleteUnitDocument(docId) {
+    const ok = window.confirm("Dieses Dokument wirklich löschen?");
+    if (!ok) return;
+    try {
+      await deleteAdminUnitDocument(docId);
+      const items = await fetchAdminUnitDocuments(unitId);
+      setUnitDocuments(items);
+    } catch (err) {
+      window.alert(err.message || "Löschen fehlgeschlagen.");
+    }
+  }
+
   const landlordDepositTypeKey = String(unit.landlordDepositType || "")
     .trim()
     .toLowerCase();
@@ -1300,7 +1325,7 @@ function AdminUnitDetailPage() {
                   <tr className="border-b border-slate-200 text-slate-500">
                     <th className="py-2 pr-4 font-medium">Datei</th>
                     <th className="py-2 pr-4 font-medium">Datum</th>
-                    <th className="py-2 pr-4 font-medium">Download</th>
+                    <th className="py-2 pr-4 font-medium">Aktionen</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1311,18 +1336,22 @@ function AdminUnitDetailPage() {
                         {formatUnitDocumentDate(doc.created_at)}
                       </td>
                       <td className="py-2 pr-4">
-                        {doc.file_url ? (
-                          <a
-                            href={doc.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-orange-600 hover:underline"
+                        <div className="flex flex-wrap items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenUnitDocument(doc.id)}
+                            className="text-orange-600 hover:underline font-medium"
                           >
                             Öffnen
-                          </a>
-                        ) : (
-                          "—"
-                        )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUnitDocument(doc.id)}
+                            className="text-slate-500 hover:text-rose-600 hover:underline text-sm"
+                          >
+                            Löschen
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
