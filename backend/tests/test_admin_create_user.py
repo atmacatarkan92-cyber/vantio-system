@@ -104,8 +104,12 @@ def two_orgs_and_admins(admin_users_session: Session, admin_users_cleanup):
     admin_users_session.commit()
     admin_users_session.refresh(org_a)
     admin_users_session.refresh(org_b)
+    # RLS on users: SELECT for refresh must run with matching org GUC per row.
+    apply_pg_organization_context(admin_users_session, str(org_a.id))
     admin_users_session.refresh(admin_a)
+    apply_pg_organization_context(admin_users_session, str(org_b.id))
     admin_users_session.refresh(admin_b)
+    apply_pg_organization_context(admin_users_session, str(org_a.id))
     admin_users_session.refresh(mgr)
 
     return {
