@@ -81,11 +81,21 @@ def two_orgs_and_admins(admin_users_session: Session, admin_users_cleanup):
     )
     admin_users_session.add(admin_b)
     admin_users_session.flush()
+    apply_pg_organization_context(admin_users_session, str(org_a.id))
     admin_users_session.add(
-        UserCredentials(user_id=str(admin_a.id), password_hash=hash_password(pwd_a))
+        UserCredentials(
+            user_id=str(admin_a.id),
+            organization_id=str(org_a.id),
+            password_hash=hash_password(pwd_a),
+        )
     )
+    apply_pg_organization_context(admin_users_session, str(org_b.id))
     admin_users_session.add(
-        UserCredentials(user_id=str(admin_b.id), password_hash=hash_password(pwd_b))
+        UserCredentials(
+            user_id=str(admin_b.id),
+            organization_id=str(org_b.id),
+            password_hash=hash_password(pwd_b),
+        )
     )
 
     apply_pg_organization_context(admin_users_session, str(org_a.id))
@@ -99,7 +109,11 @@ def two_orgs_and_admins(admin_users_session: Session, admin_users_cleanup):
     admin_users_session.add(mgr)
     admin_users_session.flush()
     admin_users_session.add(
-        UserCredentials(user_id=str(mgr.id), password_hash=hash_password("ManagerPass!1"))
+        UserCredentials(
+            user_id=str(mgr.id),
+            organization_id=str(org_a.id),
+            password_hash=hash_password("ManagerPass!1"),
+        )
     )
     admin_users_session.commit()
     admin_users_session.refresh(org_a)

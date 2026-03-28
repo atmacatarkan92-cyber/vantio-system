@@ -83,6 +83,7 @@ def admin_user(auth_db_session: Session) -> User:
 
     creds = UserCredentials(
         user_id=str(user.id),
+        organization_id=str(org.id),
         password_hash=hash_password(password),
     )
     auth_db_session.add(creds)

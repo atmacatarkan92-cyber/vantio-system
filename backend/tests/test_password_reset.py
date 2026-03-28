@@ -108,6 +108,7 @@ def org_and_user(reset_db_session: Session, cleanup_reset_tables):
     old_password = "OldPassword!1"
     creds = UserCredentials(
         user_id=str(user.id),
+        organization_id=str(org.id),
         password_hash=hash_password(old_password),
     )
     reset_db_session.add(creds)
