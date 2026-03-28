@@ -15,7 +15,6 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import delete
 from sqlmodel import Session, create_engine, select
 
 import auth.routes as auth_routes
@@ -31,6 +30,7 @@ from db.models import (
 )
 from db.rls import apply_pg_organization_context
 from tests.db_schema_utils import ensure_test_db_schema_from_models
+from tests.org_scoped_cleanup import delete_org_scoped_auth_and_users
 
 
 GENERIC_FORGOT_DETAIL = "If the account exists, a password reset link has been sent."
@@ -73,17 +73,9 @@ def override_reset_db(reset_db_session: Session, app) -> Generator[None, None, N
 
 @pytest.fixture
 def cleanup_reset_tables(reset_db_session: Session):
-    # Delete in FK-safe order
+    # Password reset tokens reference users — remove before users.
     reset_db_session.exec(PasswordResetToken.__table__.delete())
-    reset_db_session.exec(RefreshToken.__table__.delete())
-    reset_db_session.exec(UserCredentials.__table__.delete())
-    # users: RLS requires app.current_organization_id; delete per org (same pattern as test_rls.py)
-    # Use scalars() so each id is a full string — exec().all() can yield plain str rows, and
-    # row[0] on a str is only the first character, so deletes would silently match nothing.
-    for oid in reset_db_session.scalars(select(Organization.id)).all():
-        oid_s = str(oid)
-        apply_pg_organization_context(reset_db_session, oid_s)
-        reset_db_session.execute(delete(User).where(User.organization_id == oid_s))
+    delete_org_scoped_auth_and_users(reset_db_session)
     reset_db_session.exec(Organization.__table__.delete())
     reset_db_session.commit()
 

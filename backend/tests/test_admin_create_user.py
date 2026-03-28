@@ -11,14 +11,14 @@ from typing import Generator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import delete
-from sqlmodel import Session, create_engine, select
+from sqlmodel import Session, create_engine
 
 from auth.dependencies import get_db_session
 from auth.security import hash_password
-from db.models import Organization, RefreshToken, User, UserCredentials, UserRole
+from db.models import Organization, User, UserCredentials, UserRole
 from db.rls import apply_pg_organization_context
 from tests.db_schema_utils import ensure_test_db_schema_from_models
+from tests.org_scoped_cleanup import delete_org_scoped_auth_and_users
 
 
 @pytest.fixture(scope="session")
@@ -39,12 +39,7 @@ def admin_users_session(admin_users_engine) -> Generator[Session, None, None]:
 
 @pytest.fixture
 def admin_users_cleanup(admin_users_session: Session):
-    admin_users_session.exec(RefreshToken.__table__.delete())
-    admin_users_session.exec(UserCredentials.__table__.delete())
-    for oid in admin_users_session.scalars(select(Organization.id)).all():
-        oid_s = str(oid)
-        apply_pg_organization_context(admin_users_session, oid_s)
-        admin_users_session.execute(delete(User).where(User.organization_id == oid_s))
+    delete_org_scoped_auth_and_users(admin_users_session)
     admin_users_session.exec(Organization.__table__.delete())
     admin_users_session.commit()
 
@@ -89,6 +84,8 @@ def two_orgs_and_admins(admin_users_session: Session, admin_users_cleanup):
             password_hash=hash_password(pwd_a),
         )
     )
+    admin_users_session.flush()
+
     apply_pg_organization_context(admin_users_session, str(org_b.id))
     admin_users_session.add(
         UserCredentials(
@@ -97,6 +94,7 @@ def two_orgs_and_admins(admin_users_session: Session, admin_users_cleanup):
             password_hash=hash_password(pwd_b),
         )
     )
+    admin_users_session.flush()
 
     apply_pg_organization_context(admin_users_session, str(org_a.id))
     mgr = User(
@@ -115,6 +113,7 @@ def two_orgs_and_admins(admin_users_session: Session, admin_users_cleanup):
             password_hash=hash_password("ManagerPass!1"),
         )
     )
+    admin_users_session.flush()
     admin_users_session.commit()
     admin_users_session.refresh(org_a)
     admin_users_session.refresh(org_b)
