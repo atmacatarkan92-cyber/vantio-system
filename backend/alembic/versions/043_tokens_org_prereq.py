@@ -3,8 +3,8 @@
 Revision ID: 043_tokens_org_prereq
 Revises: 042_rls_users_audit_logs
 
-Adds nullable organization_id matching public.organization.id (dynamic physical type per environment),
-backfills from users via user_id = users.id, FK + indexes. NOT NULL deferred until app paths populate the column.
+Adds organization_id matching public.organization.id (dynamic physical type per environment),
+backfills from users via user_id = users.id, NOT NULL + FK + indexes.
 
 Does NOT enable RLS — that is a later step.
 
@@ -100,9 +100,10 @@ def _backfill_and_enforce(conn, table: str, fk_name: str, ix_name: str) -> None:
     if n is not None and int(n) > 0:
         raise RuntimeError(
             f"043: {table}.organization_id backfill left {n} NULL row(s); "
-            "cannot add FK (orphan user_id or missing users.organization_id)."
+            "cannot add NOT NULL / FK (orphan user_id or missing users.organization_id)."
         )
 
+    conn.execute(text(f"ALTER TABLE {table} ALTER COLUMN organization_id SET NOT NULL"))
     op.create_foreign_key(
         fk_name,
         table,
