@@ -81,9 +81,7 @@ def _clear_refresh_cookie(response: JSONResponse) -> None:
 def login(request: Request, data: LoginRequest, session=Depends(get_db_session)):
     """Verify credentials, issue access token (body) and refresh token (HttpOnly cookie)."""
     apply_pg_auth_unscoped_user_lookup(session)
-    statement = select(User, UserCredentials).join(
-        UserCredentials, User.id == UserCredentials.user_id
-    ).where(
+    statement = select(User).where(
         User.email == data.email,
         User.is_active == True,  # noqa: E712
     )
@@ -98,7 +96,18 @@ def login(request: Request, data: LoginRequest, session=Depends(get_db_session))
             detail="Invalid credentials",
         )
 
-    user, credentials = matches[0]
+    user = matches[0]
+    apply_pg_organization_context(session, str(user.organization_id))
+
+    credentials = session.exec(
+        select(UserCredentials).where(UserCredentials.user_id == str(user.id))
+    ).first()
+    if not credentials:
+        session.info.pop("rls_auth_unscoped", None)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+        )
 
     if not verify_password(data.password, credentials.password_hash):
         session.info.pop("rls_auth_unscoped", None)
