@@ -36,6 +36,7 @@ from auth.dependencies import get_current_user, get_db_session
 from db.rls import (
     apply_pg_auth_unscoped_user_lookup,
     apply_pg_organization_context,
+    apply_pg_refresh_token_hash_lookup,
     apply_pg_user_context,
 )
 from app.core.rate_limit import limiter
@@ -180,12 +181,14 @@ def refresh(request: Request, session=Depends(get_db_session)):
     token_hash = hash_refresh_token(plain)
     now = datetime.now(timezone.utc)
 
+    apply_pg_refresh_token_hash_lookup(session, token_hash)
     row = session.exec(
         select(RefreshToken)
         .where(RefreshToken.token_hash == token_hash)
         .where(RefreshToken.revoked_at.is_(None))
         .where(RefreshToken.expires_at > now)
     ).first()
+    apply_pg_refresh_token_hash_lookup(session, None)
 
     if not row:
         response = JSONResponse(
@@ -197,6 +200,12 @@ def refresh(request: Request, session=Depends(get_db_session)):
 
     apply_pg_user_context(session, str(row.user_id))
     user = session.get(User, row.user_id)
+    oid = getattr(row, "organization_id", None)
+    if user and getattr(user, "organization_id", None):
+        oid = user.organization_id
+    if oid:
+        apply_pg_organization_context(session, str(oid))
+
     if not user or not user.is_active:
         row.revoked_at = now
         session.add(row)
@@ -407,6 +416,15 @@ def reset_password(
             detail="Password does not meet requirements",
         )
 
+    apply_pg_user_context(session, str(token_row.user_id))
+    user = session.get(User, token_row.user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token",
+        )
+    apply_pg_organization_context(session, str(user.organization_id))
+
     creds = session.exec(
         select(UserCredentials).where(UserCredentials.user_id == token_row.user_id)
     ).first()
@@ -448,8 +466,12 @@ def logout(request: Request, session=Depends(get_db_session)):
     if plain and plain.strip():
         token_hash = hash_refresh_token(plain)
         now = datetime.now(timezone.utc)
+        apply_pg_refresh_token_hash_lookup(session, token_hash)
         row = session.exec(select(RefreshToken).where(RefreshToken.token_hash == token_hash)).first()
+        apply_pg_refresh_token_hash_lookup(session, None)
         if row and row.revoked_at is None:
+            if getattr(row, "organization_id", None):
+                apply_pg_organization_context(session, str(row.organization_id))
             row.revoked_at = now
             session.add(row)
             session.commit()

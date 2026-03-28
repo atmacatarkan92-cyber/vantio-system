@@ -10,8 +10,9 @@ from __future__ import annotations
 import uuid
 
 import pytest
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
+from auth.security import hash_password
 from sqlalchemy import text, update
 from sqlmodel import Session, select
 
@@ -21,6 +22,7 @@ from db.models import (
     Landlord,
     Organization,
     Property,
+    RefreshToken,
     Room,
     Tenancy,
     TenancyStatus,
@@ -28,6 +30,7 @@ from db.models import (
     Unit,
     UnitCost,
     User,
+    UserCredentials,
     UserRole,
 )
 from db.rls import apply_pg_organization_context, apply_pg_user_context
@@ -64,6 +67,8 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         ("tenant_notes", "org_isolation_tenant_notes"),
         ("tenant_events", "org_isolation_tenant_events"),
         ("users", "org_isolation_users"),
+        ("user_credentials", "org_isolation_user_credentials"),
+        ("refresh_tokens", "org_isolation_refresh_tokens"),
     }
     with Session(engine) as session:
         cu, su = session.execute(text("SELECT current_user, session_user")).one()
@@ -99,9 +104,9 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                 JOIN pg_namespace n ON n.oid = c.relnamespace
                 WHERE n.nspname = 'public' AND c.relkind = 'r'
                   AND c.relname IN (
-                    'audit_logs', 'invoices', 'landlords', 'properties', 'room',
-                    'tenancies', 'tenant', 'tenant_events', 'tenant_notes',
-                    'unit', 'unit_costs', 'users'
+                    'audit_logs', 'invoices', 'landlords', 'properties', 'refresh_tokens',
+                    'room', 'tenancies', 'tenant', 'tenant_events', 'tenant_notes',
+                    'unit', 'unit_costs', 'user_credentials', 'users'
                   )
                 ORDER BY c.relname
                 """
@@ -113,6 +118,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
             "invoices",
             "landlords",
             "properties",
+            "refresh_tokens",
             "room",
             "tenancies",
             "tenant",
@@ -120,13 +126,14 @@ def test_rls_environment_validates_database_role_and_policies(engine):
             "tenant_notes",
             "unit",
             "unit_costs",
+            "user_credentials",
             "users",
         ], (
-            f"expected RLS tables from migrations 023/025/030/042; got {names}"
+            f"expected RLS tables from migrations 023/025/030/042/044; got {names}"
         )
         for relname, relrowsecurity, relforcerowsecurity in rls_rows:
             assert relrowsecurity is True, f"RLS not enabled on {relname}"
-            if relname in ("audit_logs", "users"):
+            if relname in ("audit_logs", "users", "user_credentials", "refresh_tokens"):
                 assert relforcerowsecurity is True, (
                     f"FORCE ROW LEVEL SECURITY expected on {relname}"
                 )
@@ -139,7 +146,8 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                 WHERE tablename IN (
                     'audit_logs', 'unit', 'tenant', 'room', 'tenancies', 'invoices',
                     'properties', 'landlords', 'unit_costs',
-                    'tenant_notes', 'tenant_events', 'users'
+                    'tenant_notes', 'tenant_events', 'users',
+                    'user_credentials', 'refresh_tokens'
                 )
                 """
             )
@@ -148,7 +156,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         assert got == expected_policies, (
             f"expected policies {expected_policies}; got {got}. "
             "Apply migrations 023_rls_unit_tenant_room, 025_rls_core_tables, 030_rls_tenant_crm, "
-            "042_rls_users_audit_logs."
+            "042_rls_users_audit_logs, 044_rls_tokens_credentials."
         )
 
 
@@ -578,6 +586,8 @@ def seeded_users_audit_rows(engine, seeded_tenant_rows):
     tag = uuid.uuid4().hex[:8]
     ids["user_a"] = f"rls-u-a-{tag}"
     ids["user_b"] = f"rls-u-b-{tag}"
+    ids["rt_a"] = f"rls-rt-a-{tag}"
+    ids["rt_b"] = f"rls-rt-b-{tag}"
 
     with Session(engine) as session:
         apply_pg_organization_context(session, org_a)
@@ -604,6 +614,46 @@ def seeded_users_audit_rows(engine, seeded_tenant_rows):
         )
         session.commit()
 
+    rt_exp = datetime.now(timezone.utc) + timedelta(days=7)
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.add(
+            UserCredentials(
+                user_id=ids["user_a"],
+                organization_id=org_a,
+                password_hash=hash_password("RlsTestCred!1"),
+            )
+        )
+        session.add(
+            RefreshToken(
+                id=ids["rt_a"],
+                user_id=ids["user_a"],
+                organization_id=org_a,
+                token_hash=f"rls-rt-hash-{tag}-a",
+                expires_at=rt_exp,
+            )
+        )
+        session.commit()
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_b)
+        session.add(
+            UserCredentials(
+                user_id=ids["user_b"],
+                organization_id=org_b,
+                password_hash=hash_password("RlsTestCred!2"),
+            )
+        )
+        session.add(
+            RefreshToken(
+                id=ids["rt_b"],
+                user_id=ids["user_b"],
+                organization_id=org_b,
+                token_hash=f"rls-rt-hash-{tag}-b",
+                expires_at=rt_exp,
+            )
+        )
+        session.commit()
+
     aid = uuid.uuid4().hex
     ids["audit_a"] = aid
     with Session(engine) as session:
@@ -622,6 +672,24 @@ def seeded_users_audit_rows(engine, seeded_tenant_rows):
 
     yield ids
 
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        session.execute(
+            text("DELETE FROM refresh_tokens WHERE user_id = :id"), {"id": ids["user_a"]}
+        )
+        session.execute(
+            text("DELETE FROM user_credentials WHERE user_id = :id"), {"id": ids["user_a"]}
+        )
+        session.commit()
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_b)
+        session.execute(
+            text("DELETE FROM refresh_tokens WHERE user_id = :id"), {"id": ids["user_b"]}
+        )
+        session.execute(
+            text("DELETE FROM user_credentials WHERE user_id = :id"), {"id": ids["user_b"]}
+        )
+        session.commit()
     with Session(engine) as session:
         apply_pg_organization_context(session, org_a)
         session.execute(text("DELETE FROM audit_logs WHERE id = :id"), {"id": aid})
@@ -681,6 +749,67 @@ def test_rls_audit_logs_missing_org_context_sees_nothing(engine, seeded_users_au
     with Session(engine) as session:
         assert (
             len(session.exec(select(AuditLog).where(AuditLog.id == ids["audit_a"])).all())
+            == 0
+        )
+
+
+def test_rls_org_a_sees_own_user_credentials_and_refresh_tokens(engine, seeded_users_audit_rows):
+    ids = seeded_users_audit_rows
+    org_a = ids["org_a"]
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_a)
+        assert (
+            len(
+                session.exec(
+                    select(UserCredentials).where(UserCredentials.user_id == ids["user_a"])
+                ).all()
+            )
+            == 1
+        )
+        assert (
+            len(
+                session.exec(select(RefreshToken).where(RefreshToken.id == ids["rt_a"])).all()
+            )
+            == 1
+        )
+
+
+def test_rls_org_b_cannot_see_org_a_credentials_or_refresh_tokens(engine, seeded_users_audit_rows):
+    ids = seeded_users_audit_rows
+    org_b = ids["org_b"]
+    with Session(engine) as session:
+        apply_pg_organization_context(session, org_b)
+        assert (
+            len(
+                session.exec(
+                    select(UserCredentials).where(UserCredentials.user_id == ids["user_a"])
+                ).all()
+            )
+            == 0
+        )
+        assert (
+            len(
+                session.exec(select(RefreshToken).where(RefreshToken.id == ids["rt_a"])).all()
+            )
+            == 0
+        )
+
+
+def test_rls_credentials_and_tokens_missing_org_context_sees_nothing(engine, seeded_users_audit_rows):
+    ids = seeded_users_audit_rows
+    with Session(engine) as session:
+        assert (
+            len(
+                session.exec(
+                    select(UserCredentials).where(UserCredentials.user_id == ids["user_a"])
+                ).all()
+            )
+            == 0
+        )
+        assert (
+            len(
+                session.exec(select(RefreshToken).where(RefreshToken.id == ids["rt_a"])).all()
+            )
             == 0
         )
 

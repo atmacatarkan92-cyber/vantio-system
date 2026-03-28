@@ -6,11 +6,13 @@ Tenant isolation policies compare rows to transaction-local GUCs:
   app.current_user_id — bootstrap: SELECT own users row before org GUC is known (JWT sub)
   app.auth_unscoped_user_lookup — trusted auth-only: login / forgot-password email lookup
     (SET LOCAL only in auth routes; must not persist across commits; see auth/routes.py)
+  app.current_refresh_token_hash — trusted auth-only: SELECT refresh_tokens by token_hash
+    before app.current_organization_id is known (refresh / logout; see apply_pg_refresh_token_hash_lookup)
 
 SET LOCAL is transaction-scoped: when a pooled connection returns to the pool and the
 next transaction begins, the previous SET LOCAL is gone — no cross-request leakage.
 
-We store context on session.info (rls_org_id, rls_user_id, rls_auth_unscoped) and:
+We store context on session.info (rls_org_id, rls_user_id, rls_auth_unscoped, rls_refresh_token_hash) and:
 - On a new transaction (after_begin): apply SET LOCAL on the connection before other
   statements in that transaction.
 - When apply_pg_organization_context() / apply_pg_user_context() is called while a
@@ -78,6 +80,12 @@ def _rls_after_begin(session: Session, transaction, connection) -> None:
         )
     if session.info.get("rls_auth_unscoped"):
         connection.execute(text("SET LOCAL app.auth_unscoped_user_lookup = 'true'"))
+    rth = session.info.get("rls_refresh_token_hash")
+    if rth is not None:
+        connection.execute(
+            text("SET LOCAL app.current_refresh_token_hash = :v"),
+            {"v": str(rth)},
+        )
 
 
 def apply_pg_organization_context(session: Session, organization_id: str | None) -> None:
@@ -118,6 +126,26 @@ def apply_pg_user_context(session: Session, user_id: str | None) -> None:
     session.info["rls_user_id"] = s
     if session.in_transaction():
         session.execute(text("SET LOCAL app.current_user_id = :v"), {"v": s})
+    else:
+        session.execute(text("SELECT 1"))
+
+
+def apply_pg_refresh_token_hash_lookup(session: Session, token_hash: str | None) -> None:
+    """
+    Trusted server-only: allow SELECT/UPDATE refresh_tokens by token_hash before org GUC is set.
+    Pass None to clear (SET LOCAL to empty string so policy does not match real hashes).
+    """
+    if not token_hash or not str(token_hash).strip():
+        session.info.pop("rls_refresh_token_hash", None)
+        if session.in_transaction():
+            session.execute(text("SET LOCAL app.current_refresh_token_hash = ''"))
+        else:
+            session.execute(text("SELECT 1"))
+        return
+    s = str(token_hash).strip()
+    session.info["rls_refresh_token_hash"] = s
+    if session.in_transaction():
+        session.execute(text("SET LOCAL app.current_refresh_token_hash = :v"), {"v": s})
     else:
         session.execute(text("SELECT 1"))
 
