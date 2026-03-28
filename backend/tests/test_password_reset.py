@@ -15,6 +15,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import delete
 from sqlmodel import Session, create_engine, select
 
 import auth.routes as auth_routes
@@ -28,6 +29,7 @@ from db.models import (
     UserRole,
     PasswordResetToken,
 )
+from db.rls import apply_pg_organization_context
 from tests.db_schema_utils import ensure_test_db_schema_from_models
 
 
@@ -75,7 +77,11 @@ def cleanup_reset_tables(reset_db_session: Session):
     reset_db_session.exec(PasswordResetToken.__table__.delete())
     reset_db_session.exec(RefreshToken.__table__.delete())
     reset_db_session.exec(UserCredentials.__table__.delete())
-    reset_db_session.exec(User.__table__.delete())
+    # users: RLS requires app.current_organization_id; delete per org (same pattern as test_rls.py)
+    for row in reset_db_session.exec(select(Organization.id)).all():
+        oid = row[0] if hasattr(row, "__getitem__") else row
+        apply_pg_organization_context(reset_db_session, str(oid))
+        reset_db_session.execute(delete(User).where(User.organization_id == str(oid)))
     reset_db_session.exec(Organization.__table__.delete())
     reset_db_session.commit()
 
@@ -85,6 +91,7 @@ def org_and_user(reset_db_session: Session, cleanup_reset_tables):
     org = Organization(name="Reset Org")
     reset_db_session.add(org)
     reset_db_session.flush()
+    apply_pg_organization_context(reset_db_session, str(org.id))
 
     user = User(
         organization_id=str(org.id),
