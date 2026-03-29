@@ -8,10 +8,16 @@ import {
   Wallet,
   Users,
   Share2,
+  Check,
+  Sparkles,
+  LayoutGrid,
+  PieChart,
+  ListTodo,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { Card, CardContent } from '../components/ui/card';
 import { PUBLIC_APP_LOGIN_URL } from '../components/Header';
+
+const ACCENT = '#F97316';
 
 /** Public landing copy (EN). Ready for i18n swap later. */
 const LANDING = {
@@ -24,6 +30,7 @@ const LANDING = {
     secondaryCta: 'Login',
   },
   socialProof: {
+    label: 'Trusted by teams who operate at scale',
     line: 'Built for modern rental operators',
     logos: [
       'Operator One',
@@ -76,20 +83,48 @@ const LANDING = {
   visual: {
     headline: 'Operate your portfolio with clarity',
     body: 'Stop juggling spreadsheets and disconnected tools. Vantio brings everything into one system.',
-    previewLabel: 'Dashboard Preview',
+    benefits: [
+      'Single source of truth for units, tenants and contracts',
+      'Fewer errors and less manual reconciliation',
+      'Faster decisions with live portfolio metrics',
+    ],
+    cta: 'Explore the platform',
+    previewLabel: 'Portfolio overview',
   },
   problemSolution: {
+    problemLabel: 'Without a unified system',
     problem: 'Spreadsheets, manual work, no real overview',
+    solutionLabel: 'With Vantio',
     solution: 'One platform. Real control. Scalable operations.',
   },
   audience: {
     title: 'Who is Vantio for?',
-    items: [
-      { label: 'Property managers', Icon: Building2 },
-      { label: 'Co-living operators', Icon: Users },
-      { label: 'Serviced apartment providers', Icon: Layers },
-      { label: 'Real estate investors', Icon: BarChart3 },
+    cards: [
+      {
+        title: 'Property managers',
+        description: 'Centralize operations across buildings and stakeholders.',
+        Icon: Building2,
+      },
+      {
+        title: 'Co-living operators',
+        description: 'Run flexible models with clear occupancy and billing.',
+        Icon: Users,
+      },
+      {
+        title: 'Serviced apartment providers',
+        description: 'Deliver consistent guest and unit operations at scale.',
+        Icon: Layers,
+      },
+      {
+        title: 'Real estate investors',
+        description: 'See performance and risk across assets in one place.',
+        Icon: BarChart3,
+      },
     ],
+  },
+  trust: {
+    headline: 'Built from real operations',
+    body: 'Vantio is shaped by the day-to-day work of running rental portfolios — not slide decks. We focus on clarity, control and workflows your team will actually use.',
   },
   finalCta: {
     headline: 'Ready to scale your rental operations?',
@@ -99,57 +134,213 @@ const LANDING = {
   },
 };
 
+const sectionWrap = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8';
+const sectionY = 'py-24 lg:py-32';
+
+/** Premium app-frame preview — distinct layout from prior iterations. */
+function HeroProductPreview() {
+  const barHeights = [32, 48, 38, 62, 44, 71, 55, 68, 52, 78, 61, 84];
+  return (
+    <div className="relative w-full mt-20 sm:mt-24 lg:mt-32">
+      <div
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[min(520px,90vw)] w-[min(900px,120%)] -translate-x-1/2 -translate-y-1/2 rounded-[100%] bg-gradient-to-tr from-orange-100/[0.35] via-white/0 to-slate-200/[0.25] blur-[100px]"
+        aria-hidden
+      />
+      <div className="relative mx-auto max-w-6xl">
+        <div
+          className="rounded-[1.75rem] bg-white shadow-[0_40px_100px_-32px_rgba(15,23,42,0.28)] ring-1 ring-slate-200/90 overflow-hidden"
+          style={{ boxShadow: `0 40px 100px -32px rgba(15,23,42,0.22), 0 0 0 1px rgba(15,23,42,0.04)` }}
+        >
+          <div className="flex items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/95 px-5 py-3.5">
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+              <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
+              <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
+            </div>
+            <div className="hidden sm:flex flex-1 justify-center">
+              <span className="rounded-lg bg-white px-4 py-1.5 text-[11px] font-medium text-slate-400 ring-1 ring-slate-200/80">
+                app.vantio.io / portfolio
+              </span>
+            </div>
+            <div className="w-16 sm:w-24" aria-hidden />
+          </div>
+
+          <div className="flex min-h-[280px] sm:min-h-[320px] lg:min-h-[360px]">
+            <aside className="hidden sm:flex w-16 lg:w-[4.5rem] flex-col items-center gap-5 border-r border-slate-100 bg-slate-50/50 py-8">
+              <LayoutGrid className="h-5 w-5 text-slate-400" strokeWidth={1.5} />
+              <PieChart className="h-5 w-5 text-slate-300" strokeWidth={1.5} />
+              <ListTodo className="h-5 w-5 text-slate-300" strokeWidth={1.5} />
+              <div
+                className="mt-auto mb-2 h-9 w-9 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: `${ACCENT}18` }}
+              >
+                <BarChart3 className="h-4 w-4" style={{ color: ACCENT }} strokeWidth={2} />
+              </div>
+            </aside>
+
+            <div className="flex-1 p-6 sm:p-8 lg:p-10 bg-gradient-to-b from-white via-white to-slate-50/40">
+              <div className="grid gap-6 lg:grid-cols-12 lg:gap-8 lg:items-start">
+                <div className="lg:col-span-5 space-y-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Live snapshot
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { k: 'Occupancy', v: '94%' },
+                      { k: 'MRR', v: 'CHF 428k' },
+                      { k: 'Tasks', v: '12' },
+                    ].map((row) => (
+                      <div
+                        key={row.k}
+                        className="rounded-xl border border-slate-100 bg-white p-3.5 shadow-[0_1px_0_0_rgba(15,23,42,0.04)]"
+                      >
+                        <p className="text-[10px] text-slate-400">{row.k}</p>
+                        <p className="mt-1 text-sm font-semibold tabular-nums text-slate-900">{row.v}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-xl border border-dashed border-slate-200/90 bg-slate-50/50 px-4 py-3 text-[11px] text-slate-500 leading-relaxed">
+                    Unified ledger · tenants · units — one operational view.
+                  </div>
+                </div>
+
+                <div className="lg:col-span-7 rounded-2xl border border-slate-100 bg-white p-5 shadow-inner">
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="text-xs font-medium text-slate-700">Performance</span>
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                      Last 12 periods
+                    </span>
+                  </div>
+                  <div className="flex h-40 items-end justify-between gap-1.5 px-1">
+                    {barHeights.map((h, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 min-h-[12%] rounded-t-md"
+                        style={{
+                          height: `${h}%`,
+                          background: `linear-gradient(to top, ${ACCENT}f0, ${ACCENT}66)`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <p className="mt-4 text-center text-[11px] text-slate-400">
+                    Illustrative trend — revenue & occupancy
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SplitProductPreview() {
+  return (
+    <div className="relative h-full min-h-[340px] lg:min-h-[420px]">
+      <div
+        className="pointer-events-none absolute -inset-8 rounded-[2rem] bg-gradient-to-br from-orange-50/80 via-white to-slate-100/60 blur-2xl opacity-90"
+        aria-hidden
+      />
+      <div className="relative flex h-full flex-col overflow-hidden rounded-[1.5rem] bg-white ring-1 ring-slate-200/90 shadow-[0_24px_70px_-20px_rgba(15,23,42,0.18)]">
+        <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/90 px-4 py-3">
+          <span className="h-2 w-2 rounded-full bg-slate-300" />
+          <span className="h-2 w-2 rounded-full bg-slate-200" />
+          <span className="h-2 w-2 rounded-full bg-slate-200" />
+          <span className="ml-3 text-[10px] font-medium text-slate-400">{LANDING.visual.previewLabel}</span>
+        </div>
+        <div className="flex flex-1 flex-col justify-between p-8 lg:p-10">
+          <div className="space-y-3">
+            {[72, 100, 88, 96].map((w, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="h-8 w-8 shrink-0 rounded-lg bg-slate-100" />
+                <div className="h-2.5 rounded-full bg-slate-100" style={{ width: `${w}%` }} />
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 grid grid-cols-3 gap-3 border-t border-slate-100 pt-8">
+            {['Units', 'Contracts', 'Alerts'].map((lab, i) => (
+              <div key={lab} className="text-center">
+                <p className="text-[10px] uppercase tracking-wider text-slate-400">{lab}</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900 tabular-nums">
+                  {i === 0 ? '248' : i === 1 ? '192' : '3'}
+                </p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-6 text-center text-xs text-slate-400 leading-relaxed">
+            Illustrative UI — portfolio, units and tenants in one place.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const btnPrimary =
+  'rounded-full font-semibold text-white shadow-[0_8px_24px_-6px_rgba(249,115,22,0.45)] hover:opacity-[0.96] transition-opacity px-8 py-6 text-[15px]';
+const btnSecondary =
+  'rounded-full font-semibold border-slate-200 bg-white text-slate-800 shadow-sm hover:bg-slate-50 px-8 py-6 text-[15px]';
+
 const HomePage = () => {
   return (
     <div className="min-h-screen bg-white antialiased">
-      {/* 1. Hero */}
-      <section className="relative pt-32 pb-24 lg:pt-40 lg:pb-32 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(255,122,61,0.12),transparent)] pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-50/80 via-white to-white pointer-events-none" />
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl md:text-[3.25rem] font-semibold text-slate-900 mb-8 leading-[1.1] tracking-tight">
-            {LANDING.hero.headline}
-          </h1>
-          <p className="text-lg sm:text-xl text-slate-600 mb-14 max-w-2xl mx-auto leading-relaxed font-normal">
-            {LANDING.hero.subheadline}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <Link to="/contact">
-              <Button
-                size="lg"
-                className="bg-[#FF7A3D] hover:bg-[#FF6A2D] text-white px-10 py-7 text-base font-semibold rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/25 transition-all duration-300 hover:-translate-y-0.5"
-              >
-                {LANDING.hero.primaryCta}
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <a href={PUBLIC_APP_LOGIN_URL} rel="noopener noreferrer">
-              <Button
-                size="lg"
-                variant="outline"
-                className="border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 px-10 py-7 text-base font-semibold rounded-xl shadow-sm transition-all duration-300 hover:-translate-y-0.5"
-              >
-                {LANDING.hero.secondaryCta}
-              </Button>
-            </a>
+      {/* 1. Hero — full-height, dominant type, new preview */}
+      <section className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-white pb-24 pt-28 sm:pb-28 sm:pt-32 lg:pb-32 lg:pt-36">
+        <div
+          className="pointer-events-none absolute -left-40 top-20 h-[500px] w-[500px] rounded-full bg-orange-50/[0.45] blur-[120px]"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -right-32 bottom-0 h-[420px] w-[420px] rounded-full bg-slate-100/80 blur-[100px]"
+          aria-hidden
+        />
+
+        <div className={`relative z-10 ${sectionWrap} flex flex-col`}>
+          <div className="mx-auto max-w-4xl text-center">
+            <h1 className="text-[2.75rem] font-bold leading-[1.05] tracking-tight text-slate-900 sm:text-6xl lg:text-7xl">
+              {LANDING.hero.headline}
+            </h1>
+            <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-slate-500 sm:text-xl lg:text-2xl lg:leading-relaxed">
+              {LANDING.hero.subheadline}
+            </p>
+            <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-5">
+              <Link to="/contact">
+                <Button size="lg" className={btnPrimary} style={{ backgroundColor: ACCENT }}>
+                  {LANDING.hero.primaryCta}
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+              <a href={PUBLIC_APP_LOGIN_URL} rel="noopener noreferrer">
+                <Button size="lg" variant="outline" className={btnSecondary}>
+                  {LANDING.hero.secondaryCta}
+                </Button>
+              </a>
+            </div>
+            <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">
+              {LANDING.hero.tagline}
+            </p>
           </div>
-          <p className="text-sm font-medium text-slate-500 tracking-[0.2em] uppercase">
-            {LANDING.hero.tagline}
-          </p>
+
+          <HeroProductPreview />
         </div>
       </section>
 
       {/* 2. Social proof */}
-      <section className="py-16 lg:py-20 border-y border-slate-100 bg-slate-50/50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-sm font-medium text-slate-500 uppercase tracking-widest mb-12">
-            {LANDING.socialProof.line}
-          </p>
-          <div className="flex flex-wrap justify-center items-center gap-6 md:gap-10">
+      <section className={`border-t border-slate-100 bg-slate-50 ${sectionY}`}>
+        <div className={sectionWrap}>
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">
+              {LANDING.socialProof.label}
+            </p>
+            <p className="mt-3 text-base text-slate-500">{LANDING.socialProof.line}</p>
+          </div>
+          <div className="mx-auto mt-14 flex max-w-5xl flex-wrap justify-center gap-4 md:gap-5">
             {LANDING.socialProof.logos.map((name) => (
               <div
                 key={name}
-                className="h-12 md:h-14 min-w-[140px] px-5 rounded-lg bg-slate-200/80 border border-slate-200/90 flex items-center justify-center text-slate-500 text-xs font-medium tracking-tight hover:bg-slate-200 transition-colors duration-300"
+                className="flex min-h-[3.25rem] min-w-[148px] items-center justify-center rounded-2xl border border-slate-200/80 bg-white px-7 py-3 text-xs font-medium text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
               >
                 {name}
               </div>
@@ -158,90 +349,112 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* 3. Features */}
-      <section id="features" className="py-24 lg:py-32 bg-white scroll-mt-24">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16 lg:mb-20">
-            <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-4 tracking-tight">
+      {/* 3. Features — product-style blocks */}
+      <section id="features" className={`scroll-mt-28 border-t border-slate-100 bg-white ${sectionY}`}>
+        <div className={sectionWrap}>
+          <div className="mx-auto mb-16 max-w-3xl text-center lg:mb-24">
+            <h2 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">
               {LANDING.featuresIntro.title}
             </h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
+            <p className="mt-5 text-lg leading-relaxed text-slate-500 md:text-xl">
               {LANDING.featuresIntro.subtitle}
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 lg:gap-10">
             {LANDING.features.map(({ title, description, Icon }) => (
-              <Card
+              <div
                 key={title}
-                className="group border-slate-100/80 bg-white shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-slate-200/80 transition-all duration-300 rounded-2xl"
+                className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_12px_40px_-28px_rgba(15,23,42,0.2)] transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_24px_56px_-24px_rgba(15,23,42,0.22)]"
               >
-                <CardContent className="p-8">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#FF7A3D]/15 to-orange-50 flex items-center justify-center mb-5 group-hover:from-[#FF7A3D]/25 transition-colors duration-300">
-                    <Icon className="h-6 w-6 text-[#FF7A3D]" strokeWidth={1.75} />
+                <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/90 px-5 py-3">
+                  <span className="font-mono text-[10px] text-slate-400">module.{title.split(' ')[0].toLowerCase()}</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/90" aria-hidden />
+                </div>
+                <div className="flex flex-1 flex-col p-9 lg:p-10">
+                  <div
+                    className="mb-7 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-orange-100"
+                    style={{ backgroundColor: `${ACCENT}14` }}
+                  >
+                    <Icon className="h-7 w-7" style={{ color: ACCENT }} strokeWidth={1.6} />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3 tracking-tight">{title}</h3>
-                  <p className="text-slate-600 text-[15px] leading-relaxed">{description}</p>
-                </CardContent>
-              </Card>
+                  <h3 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h3>
+                  <p className="mt-4 flex-1 text-base leading-relaxed text-slate-500">{description}</p>
+                  <div className="mt-8 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+                  <p className="mt-4 text-xs font-medium text-slate-400">Included in platform</p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* 4. Visual split */}
-      <section className="py-24 lg:py-32 bg-slate-50 border-y border-slate-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-14 lg:gap-20 items-center">
-            <div className="space-y-6">
-              <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight leading-tight">
+      <section className={`border-t border-slate-100 bg-slate-50 ${sectionY}`}>
+        <div className={sectionWrap}>
+          <div className="grid items-center gap-16 lg:grid-cols-2 lg:gap-20 xl:gap-24">
+            <div className="order-2 lg:order-1">
+              <h2 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl md:leading-[1.1]">
                 {LANDING.visual.headline}
               </h2>
-              <p className="text-lg text-slate-600 leading-relaxed max-w-lg">
-                {LANDING.visual.body}
-              </p>
-            </div>
-            <div className="relative">
-              <div className="absolute -inset-4 bg-gradient-to-tr from-[#FF7A3D]/20 via-slate-200/40 to-slate-100 rounded-3xl blur-2xl opacity-70" aria-hidden />
-              <div className="relative rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50 shadow-2xl shadow-slate-900/10 overflow-hidden aspect-[4/3] flex flex-col">
-                <div className="h-10 border-b border-slate-100 bg-slate-50/80 flex items-center gap-2 px-4">
-                  <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
-                </div>
-                <div className="flex-1 flex items-center justify-center p-8">
-                  <div className="text-center space-y-3">
-                    <div className="inline-flex h-14 w-14 rounded-2xl bg-slate-100 border border-slate-200 items-center justify-center mx-auto">
-                      <BarChart3 className="h-7 w-7 text-slate-400" />
-                    </div>
-                    <p className="text-sm font-medium text-slate-500">{LANDING.visual.previewLabel}</p>
-                    <p className="text-xs text-slate-400 max-w-[200px] mx-auto">
-                      Placeholder for product UI — metrics, units, and pipeline in one view.
-                    </p>
-                  </div>
-                </div>
+              <p className="mt-8 text-lg leading-relaxed text-slate-500 md:text-xl">{LANDING.visual.body}</p>
+              <ul className="mt-10 space-y-5">
+                {LANDING.visual.benefits.map((line) => (
+                  <li key={line} className="flex gap-4 text-base text-slate-600">
+                    <span
+                      className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+                      style={{ backgroundColor: `${ACCENT}18`, color: ACCENT }}
+                    >
+                      <Check className="h-4 w-4" strokeWidth={2.5} />
+                    </span>
+                    <span className="leading-relaxed">{line}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-12">
+                <Link to="/contact">
+                  <Button size="lg" className={btnPrimary} style={{ backgroundColor: ACCENT }}>
+                    {LANDING.visual.cta}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
               </div>
+            </div>
+            <div className="order-1 lg:order-2">
+              <SplitProductPreview />
             </div>
           </div>
         </div>
       </section>
 
-      {/* 5. Problem → Solution */}
-      <section className="py-24 lg:py-32 bg-[#0f172a] text-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-stretch">
-            <div className="rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur-sm p-10 lg:p-12">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 mb-4">
-                The problem
+      {/* 5. Problem / solution */}
+      <section className={`border-t border-slate-100 bg-white ${sectionY}`}>
+        <div className={sectionWrap}>
+          <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
+            <div className="flex flex-col justify-center rounded-3xl border border-slate-200 bg-slate-50 p-10 lg:p-12">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                {LANDING.problemSolution.problemLabel}
               </p>
-              <p className="text-2xl md:text-[1.65rem] font-medium leading-snug text-white/95">
+              <p className="mt-6 text-2xl font-medium leading-snug text-slate-600 md:text-3xl">
                 {LANDING.problemSolution.problem}
               </p>
             </div>
-            <div className="rounded-3xl border border-[#FF7A3D]/30 bg-gradient-to-br from-[#FF7A3D]/15 to-orange-950/20 p-10 lg:p-12">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-200/90 mb-4">
-                The solution
+            <div
+              className="relative flex flex-col justify-center overflow-hidden rounded-3xl border p-10 shadow-[0_20px_50px_-28px_rgba(249,115,22,0.35)] lg:p-12"
+              style={{
+                borderColor: `${ACCENT}55`,
+                background: `linear-gradient(135deg, ${ACCENT}12 0%, #fff 48%, #fff 100%)`,
+              }}
+            >
+              <div
+                className="absolute left-0 top-0 h-full w-1.5 rounded-l-3xl"
+                style={{ backgroundColor: ACCENT }}
+                aria-hidden
+              />
+              <p className="pl-2 text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: ACCENT }}>
+                {LANDING.problemSolution.solutionLabel}
               </p>
-              <p className="text-2xl md:text-[1.65rem] font-medium leading-snug text-white">
+              <p className="mt-6 pl-2 text-2xl font-semibold leading-snug text-slate-900 md:text-3xl">
                 {LANDING.problemSolution.solution}
               </p>
             </div>
@@ -250,53 +463,77 @@ const HomePage = () => {
       </section>
 
       {/* 6. Target group */}
-      <section className="py-24 lg:py-32 bg-white">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 text-center mb-14 tracking-tight">
+      <section className={`border-t border-slate-100 bg-slate-50 ${sectionY}`}>
+        <div className={sectionWrap}>
+          <h2 className="mx-auto max-w-3xl text-center text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">
             {LANDING.audience.title}
           </h2>
-          <ul className="space-y-0 divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/30">
-            {LANDING.audience.items.map(({ label, Icon }) => (
-              <li
-                key={label}
-                className="flex items-center gap-4 px-6 py-5 text-slate-800 text-[17px] hover:bg-white transition-colors duration-200"
+          <div className="mx-auto mt-16 grid max-w-6xl grid-cols-1 gap-8 sm:grid-cols-2 lg:mt-20 lg:gap-10">
+            {LANDING.audience.cards.map(({ title, description, Icon }) => (
+              <div
+                key={title}
+                className="flex flex-col rounded-3xl border border-slate-200/90 bg-white p-10 shadow-[0_16px_48px_-32px_rgba(15,23,42,0.15)] transition-shadow duration-300 hover:shadow-[0_24px_56px_-28px_rgba(15,23,42,0.18)] lg:p-12"
               >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-100 shadow-sm">
-                  <Icon className="h-5 w-5 text-[#FF7A3D]" strokeWidth={1.75} />
-                </span>
-                <span className="font-medium">{label}</span>
-              </li>
+                <div
+                  className="mb-8 inline-flex h-16 w-16 items-center justify-center rounded-2xl border border-orange-100"
+                  style={{ backgroundColor: `${ACCENT}14` }}
+                >
+                  <Icon className="h-8 w-8" style={{ color: ACCENT }} strokeWidth={1.5} />
+                </div>
+                <h3 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h3>
+                <p className="mt-4 text-lg leading-relaxed text-slate-500">{description}</p>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       </section>
 
-      {/* 7. Final CTA */}
-      <section className="py-24 lg:py-32 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-semibold text-white mb-5 tracking-tight leading-tight">
-            {LANDING.finalCta.headline}
-          </h2>
-          <p className="text-lg text-slate-400 mb-12 leading-relaxed">{LANDING.finalCta.subtext}</p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link to="/contact">
-              <Button
-                size="lg"
-                className="w-full sm:w-auto bg-[#FF7A3D] hover:bg-[#FF6A2D] text-white px-10 py-7 text-base font-semibold rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
-              >
-                {LANDING.finalCta.primary}
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <a href={PUBLIC_APP_LOGIN_URL} rel="noopener noreferrer">
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full sm:w-auto border-white/20 bg-white/5 text-white hover:bg-white/10 px-10 py-7 text-base font-semibold rounded-xl transition-all duration-300 hover:-translate-y-0.5"
-              >
-                {LANDING.finalCta.secondary}
-              </Button>
-            </a>
+      {/* 7. Trust */}
+      <section className={`border-t border-slate-100 bg-white ${sectionY}`}>
+        <div className={sectionWrap}>
+          <div className="mx-auto max-w-3xl text-center lg:max-w-4xl">
+            <div
+              className="mx-auto mb-10 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-orange-100"
+              style={{ backgroundColor: `${ACCENT}14` }}
+            >
+              <Sparkles className="h-7 w-7" style={{ color: ACCENT }} strokeWidth={1.4} />
+            </div>
+            <h2 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">
+              {LANDING.trust.headline}
+            </h2>
+            <p className="mx-auto mt-10 text-lg leading-[1.75] text-slate-500 md:text-xl">
+              {LANDING.trust.body}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 8. CTA */}
+      <section className={`border-t border-slate-100 bg-slate-50 ${sectionY}`}>
+        <div className={sectionWrap}>
+          <div
+            className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-slate-200/90 p-12 text-center shadow-[0_32px_80px_-40px_rgba(15,23,42,0.25)] sm:p-16 lg:rounded-[2.5rem] lg:p-20"
+            style={{
+              background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 45%, #fff7ed 100%)',
+            }}
+          >
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
+              {LANDING.finalCta.headline}
+            </h2>
+            <p className="mx-auto mt-6 max-w-xl text-lg text-slate-500">{LANDING.finalCta.subtext}</p>
+            <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-5">
+              <Link to="/contact">
+                <Button size="lg" className={btnPrimary} style={{ backgroundColor: ACCENT }}>
+                  {LANDING.finalCta.primary}
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+              <a href={PUBLIC_APP_LOGIN_URL} rel="noopener noreferrer">
+                <Button size="lg" variant="outline" className={btnSecondary}>
+                  {LANDING.finalCta.secondary}
+                </Button>
+              </a>
+            </div>
           </div>
         </div>
       </section>

@@ -8,6 +8,8 @@ import vantioLogo from '../assets/vantio-logo.svg';
 /** Public marketing site → production app login (fixed URL, not SPA-relative). */
 export const PUBLIC_APP_LOGIN_URL = 'https://vantio-system.vercel.app/admin/login';
 
+const ACCENT = '#F97316';
+
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { language, toggleLanguage } = useLanguage();
@@ -30,76 +32,88 @@ const Header = () => {
     return location.pathname === path;
   };
 
-  const navLinkClass = (active) =>
-    `text-sm font-medium transition-colors duration-200 relative group ${
-      active ? 'text-[#FF7A3D]' : 'text-gray-700 hover:text-[#FF7A3D]'
+  const linkClass = (active, external) =>
+    `text-[14px] font-medium transition-colors ${
+      !external && active ? '' : 'text-slate-500 hover:text-slate-900'
     }`;
 
-  const navUnderline = (active) =>
-    `absolute -bottom-1 left-0 w-0 h-0.5 bg-[#FF7A3D] transition-all duration-200 group-hover:w-full ${
-      active ? 'w-full' : ''
-    }`;
+  const linkStyle = (active, external) =>
+    !external && active ? { color: ACCENT } : undefined;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-          <Link to="/" className="flex items-center gap-2 shrink-0 pr-4">
-            <img src={vantioLogo} alt="Vantio" className="h-9 sm:h-10 w-auto" />
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-slate-100/80 bg-white/90 backdrop-blur-xl supports-[backdrop-filter]:bg-white/75">
+      <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between lg:h-[4.25rem]">
+          <Link to="/" className="flex shrink-0 items-center -ml-0.5">
+            <img src={vantioLogo} alt="Vantio" className="h-8 w-auto sm:h-9" />
           </Link>
 
-          <div className="hidden lg:flex items-center space-x-8">
+          <div className="hidden items-center gap-12 lg:flex">
             {navigation.map((item) => {
               const active = item.external ? false : isActive(item.href);
               return item.external ? (
                 <a
                   key={item.name}
                   href={item.href}
-                  className={navLinkClass(active)}
+                  className={linkClass(active, true)}
+                  style={linkStyle(active, true)}
                   rel="noopener noreferrer"
                 >
                   {item.name}
-                  <span className={navUnderline(active)} />
                 </a>
               ) : (
-                <Link key={item.name} to={item.href} className={navLinkClass(active)}>
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={linkClass(active, false)}
+                  style={linkStyle(active, false)}
+                >
                   {item.name}
-                  <span className={navUnderline(active)} />
                 </Link>
               );
             })}
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link to="/contact" className="hidden sm:block">
+              <Button
+                size="sm"
+                className="rounded-full px-5 text-[13px] font-semibold text-white shadow-[0_6px_20px_-6px_rgba(249,115,22,0.45)]"
+                style={{ backgroundColor: ACCENT }}
+              >
+                Request demo
+              </Button>
+            </Link>
             <Button
               variant="ghost"
               size="sm"
               onClick={toggleLanguage}
-              className="hidden sm:flex items-center space-x-2 text-gray-700 hover:text-[#FF7A3D] hover:bg-[#FF7A3D]/5"
+              className="hidden items-center gap-2 rounded-full text-slate-500 hover:bg-slate-50 hover:text-slate-900 sm:flex"
             >
               <Globe className="h-4 w-4" />
-              <span className="text-sm font-medium">{language.toUpperCase()}</span>
+              <span className="text-[13px] font-medium">{language.toUpperCase()}</span>
             </Button>
 
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="lg:hidden p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+              className="rounded-full p-2.5 text-slate-700 transition-colors hover:bg-slate-50 lg:hidden"
               type="button"
               aria-label="Toggle menu"
             >
-              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
 
         {isMenuOpen && (
-          <div className="lg:hidden py-4 border-t border-gray-100">
-            <div className="flex flex-col space-y-3">
+          <div className="border-t border-slate-100 py-6 lg:hidden">
+            <div className="flex flex-col gap-1">
               {navigation.map((item) => {
                 const active = item.external ? false : isActive(item.href);
-                const mobileClass = `px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  active ? 'text-[#FF7A3D] bg-[#FF7A3D]/10' : 'text-gray-700 hover:bg-gray-50'
+                const mobileClass = `rounded-xl px-4 py-3.5 text-[15px] font-medium transition-colors ${
+                  active ? 'bg-slate-50' : 'text-slate-700 hover:bg-slate-50'
                 }`;
+                const mobileStyle = active && !item.external ? { color: ACCENT } : undefined;
                 return item.external ? (
                   <a
                     key={item.name}
@@ -116,15 +130,24 @@ const Header = () => {
                     to={item.href}
                     onClick={() => setIsMenuOpen(false)}
                     className={mobileClass}
+                    style={mobileStyle}
                   >
                     {item.name}
                   </Link>
                 );
               })}
+              <Link
+                to="/contact"
+                onClick={() => setIsMenuOpen(false)}
+                className="mx-2 mt-3 rounded-full py-3.5 text-center text-[15px] font-semibold text-white sm:hidden"
+                style={{ backgroundColor: ACCENT }}
+              >
+                Request demo
+              </Link>
               <button
                 type="button"
                 onClick={toggleLanguage}
-                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors sm:hidden"
+                className="flex items-center gap-2 rounded-xl px-4 py-3.5 text-[15px] font-medium text-slate-500 transition-colors hover:bg-slate-50 sm:hidden"
               >
                 <Globe className="h-4 w-4" />
                 <span>{language === 'de' ? 'English' : 'Deutsch'}</span>
