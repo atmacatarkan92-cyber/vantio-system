@@ -179,9 +179,20 @@ app.include_router(contact_router)
 async def startup_event():
     logger.info("Starting FeelAtHomeNow API...")
     validate_auth_config()  # Refuse to start if SECRET_KEY is not set
-    # Production: schema is managed by Alembic only; skip create_db() to avoid "relation already exists"
-    if engine is not None and os.environ.get("ENVIRONMENT") != "production":
+    env = os.environ.get("ENVIRONMENT", "development").lower()
+    if env == "production":
+        if engine is None:
+            raise RuntimeError(
+                "ENVIRONMENT=production requires DATABASE_URL to be set explicitly. "
+                "PG_* implicit database URL fallback is disabled in production."
+            )
+        from db.startup_checks import run_production_startup_checks
+
+        run_production_startup_checks(engine)
+    # Non-production: optional SQLModel.create_all; production uses Alembic only
+    if engine is not None and env != "production":
         from db.database import create_db
+
         create_db()
 
 

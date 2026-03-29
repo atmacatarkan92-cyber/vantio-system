@@ -31,7 +31,7 @@ async def readiness_check():
                 conn.execute(text("SELECT 1"))
             checks["postgres"] = True
         except Exception as e:
-            logger.warning("PostgreSQL readiness failed: %s", e)
+            logger.error("PostgreSQL readiness failed: %s", e, exc_info=True)
             checks["postgres"] = False
     all_ok = all(checks.values()) if checks else True
     status = 200 if all_ok else 503
