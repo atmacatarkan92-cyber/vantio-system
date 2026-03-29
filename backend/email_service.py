@@ -1,10 +1,7 @@
 import logging
 import os
-import smtplib
-import ssl
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.utils import formataddr
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -13,59 +10,35 @@ class EmailServiceError(Exception):
     pass
 
 
-def _smtp_config() -> tuple[str, int, str, str, str] | None:
-    """Load SMTP settings from environment. Never log passwords."""
-    host = (os.environ.get("SMTP_HOST") or "").strip()
-    port_raw = (os.environ.get("SMTP_PORT") or "").strip()
-    user = (os.environ.get("SMTP_USER") or "").strip()
-    password = os.environ.get("SMTP_PASS")  # may contain spaces; do not strip secrets blindly
-    from_addr = (os.environ.get("SMTP_FROM") or "").strip()
-
-    if not host or not port_raw or not user or password is None or password == "" or not from_addr:
-        return None
-
-    try:
-        port = int(port_raw)
-    except ValueError:
-        return None
-
-    return (host, port, user, password, from_addr)
-
-
 def send_email(to_email: str, subject: str, html_content: str) -> bool:
-    """
-    Send a single HTML email via Microsoft 365–compatible SMTP (STARTTLS + auth).
-
-    Uses SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM from the environment.
-    """
-    cfg = _smtp_config()
-    if cfg is None:
-        logger.error(
-            "SMTP not configured: require SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM"
-        )
+    api_key = (os.environ.get("RESEND_API_KEY") or "").strip()
+    if not api_key:
+        logger.error("RESEND_API_KEY not configured")
         raise EmailServiceError("Email service not configured")
 
-    host, port, user, password, from_addr = cfg
+    from_addr = (os.environ.get("RESEND_FROM", "noreply@mail.vantio.ch")).strip()
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = formataddr(("FeelAtHomeNow", from_addr))
-    msg["To"] = to_email
-    msg.attach(MIMEText(html_content, "html", "utf-8"))
-
-    context = ssl.create_default_context()
     try:
-        with smtplib.SMTP(host, port, timeout=30) as server:
-            server.ehlo()
-            server.starttls(context=context)
-            server.ehlo()
-            server.login(user, password)
-            server.send_message(msg)
-    except smtplib.SMTPException as e:
-        logger.error("SMTP send failed: %s", e)
+        response = httpx.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": f"Vantio <{from_addr}>",
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content,
+            },
+            timeout=15,
+        )
+        response.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        logger.error("Resend API error: %s %s", e.response.status_code, e.response.text)
         raise EmailServiceError("Failed to send email") from e
-    except OSError as e:
-        logger.error("SMTP connection error: %s", e)
+    except httpx.RequestError as e:
+        logger.error("Resend connection error: %s", e)
         raise EmailServiceError("Failed to send email") from e
 
     return True
