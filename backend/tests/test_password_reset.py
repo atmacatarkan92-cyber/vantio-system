@@ -73,8 +73,7 @@ def override_reset_db(reset_db_session: Session, app) -> Generator[None, None, N
 
 @pytest.fixture
 def cleanup_reset_tables(reset_db_session: Session):
-    # Password reset tokens reference users — remove before users.
-    reset_db_session.exec(PasswordResetToken.__table__.delete())
+    # Tokens and auth rows are removed per-org under RLS (see org_scoped_cleanup).
     delete_org_scoped_auth_and_users(reset_db_session)
     reset_db_session.exec(Organization.__table__.delete())
     reset_db_session.commit()
