@@ -34,8 +34,11 @@ const Footer = () => {
             </Link>
           </nav>
         </div>
-        <div className="mt-10 pt-8 border-t border-gray-100">
-          <p className="text-sm text-slate-500 text-center">
+        <div className="mt-10 pt-8 border-t border-gray-100 space-y-3">
+          <p className="text-sm text-slate-500 text-center font-medium">
+            Vantio — Operating system for modern rental businesses
+          </p>
+          <p className="text-sm text-slate-400 text-center">
             © {year} Vantio. All rights reserved.
           </p>
         </div>
