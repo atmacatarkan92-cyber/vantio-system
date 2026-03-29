@@ -7,7 +7,7 @@ import { Input } from '../components/ui/input';
 import { Card, CardContent } from '../components/ui/card';
 
 const ACCENT = '#F97316';
-const PAGE = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-20';
+const PAGE = 'max-w-7xl mx-auto px-6 lg:px-20';
 
 function isValidPasswordLength(pw) {
   return String(pw || '').length >= 8;
@@ -108,8 +108,10 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <section className="border-b border-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-50/80 pt-28 pb-12 lg:pt-32 lg:pb-16">
+    <div className="relative min-h-screen overflow-hidden bg-slate-50">
+      <div className="pointer-events-none absolute right-0 top-20 h-72 w-72 rounded-full bg-orange-500/[0.1] blur-3xl" aria-hidden />
+      <div className="pointer-events-none absolute bottom-32 left-0 h-64 w-64 rounded-full bg-slate-400/[0.1] blur-3xl" aria-hidden />
+      <section className="relative z-10 border-b border-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-100/30 pt-28 pb-12 lg:pt-32 lg:pb-16">
         <div className={PAGE}>
           <div className="mx-auto max-w-lg text-center">
             <h1 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">Reset Password</h1>
@@ -120,9 +122,9 @@ export default function ResetPasswordPage() {
         </div>
       </section>
 
-      <section className="border-t border-slate-100 py-24 lg:py-32">
+      <section className="relative z-10 border-t border-slate-100 bg-gradient-to-b from-white via-slate-50/40 to-white py-24 lg:py-32">
         <div className={PAGE}>
-          <Card className="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <Card className="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <CardContent className="p-8">
               {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
               {success && <p className="mb-4 text-sm font-medium text-emerald-700">{success}</p>}

@@ -80,7 +80,7 @@ const Header = () => {
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 ${headerSurface}`}>
-      <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-20">
+      <nav className="mx-auto max-w-7xl px-6 lg:px-20">
         <div className="flex h-16 items-center justify-between lg:h-[4.25rem]">
           <Link to="/" className="flex shrink-0 items-center -ml-0.5">
             <img src={vantioLogo} alt="Vantio" className={logoClass} />

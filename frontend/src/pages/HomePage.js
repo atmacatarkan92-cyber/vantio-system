@@ -134,8 +134,13 @@ const LANDING = {
   },
 };
 
-const sectionWrap = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-20';
+const sectionWrap = 'max-w-7xl mx-auto px-6 lg:px-20';
 const sectionY = 'py-24 lg:py-32';
+const sectionDecor =
+  'pointer-events-none absolute inset-0 overflow-hidden';
+const sectionBlob = (pos) => `pointer-events-none absolute ${pos} rounded-full blur-3xl`;
+const cardInteractive =
+  'rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl';
 
 /** Premium app-frame preview — distinct layout from prior iterations. */
 function HeroProductPreview() {
@@ -287,7 +292,7 @@ const btnHeroSecondary =
 
 const HomePage = () => {
   return (
-    <div className="min-h-screen bg-white antialiased">
+    <div className="min-h-screen bg-slate-50 antialiased">
       {/* 1. Hero — dark premium; only this section is dark */}
       <section className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-[#05080f] pb-0 pt-28 sm:pt-32 lg:pt-36">
         {/* Subtle grid */}
@@ -345,16 +350,19 @@ const HomePage = () => {
           <HeroProductPreview />
         </div>
 
-        {/* Transition into light sections */}
-        <div
-          className="pointer-events-none relative z-10 h-28 w-full bg-gradient-to-b from-[#05080f] via-slate-100/80 to-slate-50 sm:h-36"
-          aria-hidden
-        />
+        {/* Transition into light sections — soft fade, no hard cut */}
+        <div className="relative z-10 w-full overflow-hidden" aria-hidden>
+          <div className="h-36 w-full bg-gradient-to-b from-[#05080f] via-slate-700/45 to-slate-50 sm:h-44" />
+        </div>
       </section>
 
       {/* 2. Social proof */}
-      <section className={`bg-slate-50 ${sectionY}`}>
-        <div className={sectionWrap}>
+      <section className={`relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-slate-50 to-slate-100/40 ${sectionY}`}>
+        <div className={sectionDecor} aria-hidden>
+          <div className={`${sectionBlob('right-0 top-0 h-72 w-72 bg-orange-500/[0.12]')}`} />
+          <div className={`${sectionBlob('-left-16 bottom-0 h-64 w-64 bg-slate-400/[0.12]')}`} />
+        </div>
+        <div className={`relative z-10 ${sectionWrap}`}>
           <div className="mx-auto max-w-3xl text-center">
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">
               {LANDING.socialProof.label}
@@ -365,7 +373,7 @@ const HomePage = () => {
             {LANDING.socialProof.logos.map((name) => (
               <div
                 key={name}
-                className="flex min-h-[3.25rem] min-w-[148px] items-center justify-center rounded-2xl border border-slate-200/80 bg-white px-7 py-3 text-xs font-medium text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                className="flex min-h-[3.25rem] min-w-[148px] items-center justify-center rounded-2xl border border-slate-200 bg-white/90 px-7 py-3 text-xs font-medium text-slate-500 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
               >
                 {name}
               </div>
@@ -375,8 +383,14 @@ const HomePage = () => {
       </section>
 
       {/* 3. Features — product-style blocks */}
-      <section id="features" className={`scroll-mt-28 border-t border-slate-100 bg-white ${sectionY}`}>
-        <div className={sectionWrap}>
+      <section
+        id="features"
+        className={`relative scroll-mt-28 overflow-hidden border-t border-slate-100 bg-gradient-to-b from-white via-slate-50/40 to-white ${sectionY}`}
+      >
+        <div className={sectionDecor} aria-hidden>
+          <div className={`${sectionBlob('left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 bg-orange-500')}`} />
+        </div>
+        <div className={`relative z-10 ${sectionWrap}`}>
           <div className="mx-auto mb-16 max-w-3xl text-center lg:mb-24">
             <h2 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">
               {LANDING.featuresIntro.title}
@@ -390,7 +404,7 @@ const HomePage = () => {
             {LANDING.features.map(({ title, description, Icon }) => (
               <div
                 key={title}
-                className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_12px_40px_-28px_rgba(15,23,42,0.2)] transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_24px_56px_-24px_rgba(15,23,42,0.22)]"
+                className={`group flex flex-col overflow-hidden ${cardInteractive}`}
               >
                 <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/90 px-5 py-3">
                   <span className="font-mono text-[10px] text-slate-400">module.{title.split(' ')[0].toLowerCase()}</span>
@@ -415,8 +429,11 @@ const HomePage = () => {
       </section>
 
       {/* 4. Visual split */}
-      <section className={`border-t border-slate-100 bg-slate-50 ${sectionY}`}>
-        <div className={sectionWrap}>
+      <section className={`relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-50/80 ${sectionY}`}>
+        <div className={sectionDecor} aria-hidden>
+          <div className={`${sectionBlob('right-0 bottom-0 h-80 w-80 bg-slate-400/[0.1]')}`} />
+        </div>
+        <div className={`relative z-10 ${sectionWrap}`}>
           <div className="grid items-center gap-16 lg:grid-cols-2 lg:gap-20 xl:gap-24">
             <div className="order-2 lg:order-1">
               <h2 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl md:leading-[1.1]">
@@ -453,10 +470,13 @@ const HomePage = () => {
       </section>
 
       {/* 5. Problem / solution */}
-      <section className={`border-t border-slate-100 bg-white ${sectionY}`}>
-        <div className={sectionWrap}>
+      <section className={`relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-white via-slate-50/40 to-white ${sectionY}`}>
+        <div className={sectionDecor} aria-hidden>
+          <div className={`${sectionBlob('left-0 top-1/2 h-72 w-72 -translate-y-1/2 bg-orange-500/[0.1]')}`} />
+        </div>
+        <div className={`relative z-10 ${sectionWrap}`}>
           <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
-            <div className="flex flex-col justify-center rounded-3xl border border-slate-200 bg-slate-50 p-10 lg:p-12">
+            <div className="flex flex-col justify-center rounded-3xl border border-slate-200 bg-slate-50/90 p-10 shadow-sm lg:p-12">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                 {LANDING.problemSolution.problemLabel}
               </p>
@@ -465,7 +485,7 @@ const HomePage = () => {
               </p>
             </div>
             <div
-              className="relative flex flex-col justify-center overflow-hidden rounded-3xl border p-10 shadow-[0_20px_50px_-28px_rgba(249,115,22,0.35)] lg:p-12"
+              className="relative flex flex-col justify-center overflow-hidden rounded-3xl border border-slate-200 bg-white p-10 shadow-sm transition-all duration-300 hover:shadow-lg lg:p-12"
               style={{
                 borderColor: `${ACCENT}55`,
                 background: `linear-gradient(135deg, ${ACCENT}12 0%, #fff 48%, #fff 100%)`,
@@ -487,9 +507,12 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* 6. Target group */}
-      <section className={`border-t border-slate-100 bg-slate-50 ${sectionY}`}>
-        <div className={sectionWrap}>
+        {/* 6. Target group */}
+      <section className={`relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-slate-50 to-slate-100/40 ${sectionY}`}>
+        <div className={sectionDecor} aria-hidden>
+          <div className={`${sectionBlob('right-1/4 top-0 h-64 w-64 bg-slate-400')}`} />
+        </div>
+        <div className={`relative z-10 ${sectionWrap}`}>
           <h2 className="mx-auto max-w-3xl text-center text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">
             {LANDING.audience.title}
           </h2>
@@ -497,7 +520,7 @@ const HomePage = () => {
             {LANDING.audience.cards.map(({ title, description, Icon }) => (
               <div
                 key={title}
-                className="flex flex-col rounded-3xl border border-slate-200/90 bg-white p-10 shadow-[0_16px_48px_-32px_rgba(15,23,42,0.15)] transition-shadow duration-300 hover:shadow-[0_24px_56px_-28px_rgba(15,23,42,0.18)] lg:p-12"
+                className={`flex flex-col ${cardInteractive} p-10 lg:p-12`}
               >
                 <div
                   className="mb-8 inline-flex h-16 w-16 items-center justify-center rounded-2xl border border-orange-100"
@@ -514,8 +537,11 @@ const HomePage = () => {
       </section>
 
       {/* 7. Trust */}
-      <section className={`border-t border-slate-100 bg-white ${sectionY}`}>
-        <div className={sectionWrap}>
+      <section className={`relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-white via-slate-50/50 to-white ${sectionY}`}>
+        <div className={sectionDecor} aria-hidden>
+          <div className={`${sectionBlob('left-0 bottom-0 h-72 w-72 bg-orange-500/[0.1]')}`} />
+        </div>
+        <div className={`relative z-10 ${sectionWrap}`}>
           <div className="mx-auto max-w-3xl text-center lg:max-w-4xl">
             <div
               className="mx-auto mb-10 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-orange-100"
@@ -534,10 +560,13 @@ const HomePage = () => {
       </section>
 
       {/* 8. CTA */}
-      <section className={`border-t border-slate-100 bg-slate-50 ${sectionY}`}>
-        <div className={sectionWrap}>
+      <section className={`relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-slate-50 to-slate-100/40 ${sectionY}`}>
+        <div className={sectionDecor} aria-hidden>
+          <div className={`${sectionBlob('right-0 top-1/2 h-80 w-80 -translate-y-1/2 bg-orange-500/[0.1]')}`} />
+        </div>
+        <div className={`relative z-10 ${sectionWrap}`}>
           <div
-            className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-slate-200/90 p-12 text-center shadow-[0_32px_80px_-40px_rgba(15,23,42,0.25)] sm:p-16 lg:rounded-[2.5rem] lg:p-20"
+            className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-slate-200/90 p-12 text-center shadow-sm transition-all duration-300 hover:shadow-xl sm:p-16 lg:rounded-[2.5rem] lg:p-20"
             style={{
               background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 45%, #fff7ed 100%)',
             }}

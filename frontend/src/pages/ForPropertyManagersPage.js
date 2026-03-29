@@ -5,9 +5,9 @@ import { Card, CardContent } from '../components/ui/card';
 import { Shield, TrendingUp, Home, CheckCircle2, ArrowRight } from 'lucide-react';
 
 const ACCENT = '#F97316';
-const PAGE = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-20';
+const PAGE = 'max-w-7xl mx-auto px-6 lg:px-20';
 const cardClass =
-  'rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md';
+  'rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl';
 
 const ForPropertyManagersPage = () => {
   const { t, language } = useLanguage();
@@ -46,8 +46,9 @@ const ForPropertyManagersPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <section className="border-b border-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-50/80 pt-28 pb-16 lg:pt-32 lg:pb-24">
-        <div className={PAGE}>
+      <section className="relative overflow-hidden border-b border-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-100/30 pt-28 pb-16 lg:pt-32 lg:pb-24">
+        <div className="pointer-events-none absolute left-0 top-1/4 h-72 w-72 rounded-full bg-orange-500/[0.1] blur-3xl" aria-hidden />
+        <div className={`relative z-10 ${PAGE}`}>
           <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
             <div className="relative order-2 lg:order-1">
               <img
@@ -99,8 +100,9 @@ const ForPropertyManagersPage = () => {
         </div>
       </section>
 
-      <section className="border-t border-slate-100 bg-slate-50 py-24 lg:py-32">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-20">
+      <section className="relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-slate-50 to-slate-100/40 py-24 lg:py-32">
+        <div className="pointer-events-none absolute left-1/3 top-0 h-64 w-64 rounded-full bg-orange-500/[0.08] blur-3xl" aria-hidden />
+        <div className="relative z-10 mx-auto max-w-5xl px-6 lg:px-20">
           <div className="mb-12 text-center">
             <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
               {language === 'de' ? 'Was wir bieten' : 'What We Offer'}
@@ -118,8 +120,9 @@ const ForPropertyManagersPage = () => {
         </div>
       </section>
 
-      <section className="border-t border-slate-100 bg-white py-24 lg:py-32">
-        <div className={PAGE}>
+      <section className="relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-white via-slate-50/30 to-white py-24 lg:py-32">
+        <div className="pointer-events-none absolute right-1/4 top-1/2 h-72 w-72 -translate-y-1/2 rounded-full bg-slate-400/[0.08] blur-3xl" aria-hidden />
+        <div className={`relative z-10 ${PAGE}`}>
           <div className="mb-16 text-center">
             <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
               {language === 'de' ? 'So funktioniert die Partnerschaft' : 'How the Partnership Works'}
@@ -165,10 +168,11 @@ const ForPropertyManagersPage = () => {
         </div>
       </section>
 
-      <section className="border-t border-slate-100 bg-slate-50 py-24 lg:py-32">
-        <div className={PAGE}>
+      <section className="relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-slate-50 to-slate-100/40 py-24 lg:py-32">
+        <div className="pointer-events-none absolute left-0 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full bg-orange-500/[0.1] blur-3xl" aria-hidden />
+        <div className={`relative z-10 ${PAGE}`}>
           <div
-            className="mx-auto max-w-4xl rounded-[2rem] border border-slate-200/90 p-10 text-center shadow-[0_24px_80px_-40px_rgba(15,23,42,0.2)] sm:p-14 lg:p-16"
+            className="mx-auto max-w-4xl rounded-[2rem] border border-slate-200/90 p-10 text-center shadow-sm transition-all duration-300 hover:shadow-xl sm:p-14 lg:p-16"
             style={{
               background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 50%, #fff7ed 100%)',
             }}

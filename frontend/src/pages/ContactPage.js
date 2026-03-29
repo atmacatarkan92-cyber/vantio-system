@@ -11,9 +11,9 @@ import { toast } from 'sonner';
 import { API_BASE_URL } from '../config';
 
 const ACCENT = '#F97316';
-const PAGE = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-20';
+const PAGE = 'max-w-7xl mx-auto px-6 lg:px-20';
 const cardClass =
-  'rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md';
+  'rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl';
 
 const ContactPage = () => {
   const { t, language } = useLanguage();
@@ -120,8 +120,10 @@ const ContactPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <section className="border-b border-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-50/80 pt-28 pb-16 lg:pt-32 lg:pb-24">
-        <div className={PAGE}>
+      <section className="relative overflow-hidden border-b border-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-100/30 pt-28 pb-16 lg:pt-32 lg:pb-24">
+        <div className="pointer-events-none absolute -right-24 top-0 h-72 w-72 rounded-full bg-orange-500/[0.1] blur-3xl" aria-hidden />
+        <div className="pointer-events-none absolute -left-20 bottom-0 h-64 w-64 rounded-full bg-slate-400/[0.1] blur-3xl" aria-hidden />
+        <div className={`relative z-10 ${PAGE}`}>
           <div className="mb-4 text-center">
             <h1 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">{t.contact.title}</h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-slate-500 md:text-xl">{t.contact.subtitle}</p>
@@ -129,8 +131,9 @@ const ContactPage = () => {
         </div>
       </section>
 
-      <section className="border-t border-slate-100 py-24 lg:py-32">
-        <div className={PAGE}>
+      <section className="relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-white via-slate-50/40 to-white py-24 lg:py-32">
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-orange-500/[0.08] blur-3xl" aria-hidden />
+        <div className={`relative z-10 ${PAGE}`}>
           <div className="grid items-start gap-12 lg:grid-cols-2">
             <Card className="border-0 shadow-none">
               <CardContent className="p-0">
@@ -291,8 +294,9 @@ const ContactPage = () => {
         </div>
       </section>
 
-      <section className="border-t border-slate-100 bg-white py-24 lg:py-32">
-        <div className={PAGE}>
+      <section className="relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-slate-50 to-slate-100/40 py-24 lg:py-32">
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-slate-400/[0.1] blur-3xl" aria-hidden />
+        <div className={`relative z-10 ${PAGE}`}>
           <div className="mb-12 text-center">
             <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
               {language === 'de' ? 'Wir sind in diesen Städten aktiv' : 'We Operate in These Cities'}

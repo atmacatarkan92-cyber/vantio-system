@@ -8,9 +8,9 @@ import { Bed, Bath, Square, MapPin, ArrowRight, Loader2 } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
 const ACCENT = '#F97316';
-const PAGE = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-20';
+const PAGE = 'max-w-7xl mx-auto px-6 lg:px-20';
 const cardClass =
-  'group h-full cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg';
+  'group h-full cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl';
 
 const cityMap = {
   zuerich: 'Zurich',
@@ -91,8 +91,9 @@ const ApartmentsPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <section className="border-b border-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-50/80 pt-28 pb-12 lg:pt-32 lg:pb-16">
-        <div className={PAGE}>
+      <section className="relative overflow-hidden border-b border-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-100/30 pt-28 pb-12 lg:pt-32 lg:pb-16">
+        <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 rounded-full bg-orange-500/[0.1] blur-3xl" aria-hidden />
+        <div className={`relative z-10 ${PAGE}`}>
           <div className="mb-12 text-center">
             <h1 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">{t.apartmentsPage.title}</h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-slate-500 md:text-xl">{t.apartmentsPage.subtitle}</p>
@@ -245,10 +246,11 @@ const ApartmentsPage = () => {
         </div>
       </section>
 
-      <section className="border-t border-slate-100 bg-white py-24 lg:py-32">
-        <div className={PAGE}>
+      <section className="relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-slate-50 to-slate-100/40 py-24 lg:py-32">
+        <div className="pointer-events-none absolute left-1/2 top-0 h-80 w-80 -translate-x-1/2 rounded-full bg-slate-400/[0.1] blur-3xl" aria-hidden />
+        <div className={`relative z-10 ${PAGE}`}>
           <div
-            className="mx-auto max-w-4xl rounded-[2rem] border border-slate-200/90 p-10 text-center shadow-[0_24px_80px_-40px_rgba(15,23,42,0.2)] sm:p-14"
+            className="mx-auto max-w-4xl rounded-[2rem] border border-slate-200/90 p-10 text-center shadow-sm transition-all duration-300 hover:shadow-xl sm:p-14"
             style={{
               background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 50%, #fff7ed 100%)',
             }}

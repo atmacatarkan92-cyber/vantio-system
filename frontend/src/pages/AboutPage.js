@@ -4,9 +4,9 @@ import { Card, CardContent } from '../components/ui/card';
 import { Target, Eye, Award, Users, Heart, Shield } from 'lucide-react';
 
 const ACCENT = '#F97316';
-const PAGE = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-20';
+const PAGE = 'max-w-7xl mx-auto px-6 lg:px-20';
 const cardClass =
-  'rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md';
+  'rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl';
 
 const AboutPage = () => {
   const { t, language } = useLanguage();
@@ -43,8 +43,9 @@ const AboutPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <section className="border-b border-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-50/80 pt-28 pb-16 lg:pt-32 lg:pb-24">
-        <div className={PAGE}>
+      <section className="relative overflow-hidden border-b border-slate-100 bg-gradient-to-b from-slate-50 via-white to-slate-100/30 pt-28 pb-16 lg:pt-32 lg:pb-24">
+        <div className="pointer-events-none absolute right-0 top-1/4 h-80 w-80 rounded-full bg-orange-500/[0.1] blur-3xl" aria-hidden />
+        <div className={`relative z-10 ${PAGE}`}>
           <div className="mb-12 text-center">
             <h1 className="text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">{t.aboutPage.title}</h1>
             <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-slate-500 md:text-xl">
@@ -74,8 +75,9 @@ const AboutPage = () => {
         </div>
       </section>
 
-      <section className="border-t border-slate-100 bg-white py-24 lg:py-32">
-        <div className={PAGE}>
+      <section className="relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-white via-slate-50/40 to-white py-24 lg:py-32">
+        <div className="pointer-events-none absolute -left-16 top-0 h-72 w-72 rounded-full bg-slate-400/[0.1] blur-3xl" aria-hidden />
+        <div className={`relative z-10 ${PAGE}`}>
           <div className="grid gap-8 md:grid-cols-2 md:gap-10">
             <Card className={`${cardClass} border-slate-200`}>
               <CardContent className="p-8">
@@ -106,8 +108,9 @@ const AboutPage = () => {
         </div>
       </section>
 
-      <section className="border-t border-slate-100 bg-slate-50 py-24 lg:py-32">
-        <div className={PAGE}>
+      <section className="relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-slate-50 to-slate-100/40 py-24 lg:py-32">
+        <div className="pointer-events-none absolute right-1/4 top-1/2 h-64 w-64 -translate-y-1/2 rounded-full bg-orange-500/[0.08] blur-3xl" aria-hidden />
+        <div className={`relative z-10 ${PAGE}`}>
           <div className="mb-16 text-center">
             <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">{t.aboutPage.valuesTitle}</h2>
           </div>
@@ -131,8 +134,9 @@ const AboutPage = () => {
         </div>
       </section>
 
-      <section className="border-t border-slate-100 bg-white py-24 lg:py-32">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-20">
+      <section className="relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-white via-slate-50/30 to-white py-24 lg:py-32">
+        <div className="pointer-events-none absolute left-0 bottom-0 h-72 w-72 rounded-full bg-slate-400/[0.08] blur-3xl" aria-hidden />
+        <div className="relative z-10 mx-auto max-w-5xl px-6 lg:px-20">
           <div className="mb-12 text-center">
             <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
               {language === 'de' ? 'Unsere Geschichte' : 'Our Story'}
@@ -159,8 +163,9 @@ const AboutPage = () => {
         </div>
       </section>
 
-      <section className="border-t border-slate-100 bg-slate-50 py-24 lg:py-32">
-        <div className={PAGE}>
+      <section className="relative overflow-hidden border-t border-slate-100 bg-gradient-to-b from-slate-50 to-slate-100/40 py-24 lg:py-32">
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-orange-500/[0.08] blur-3xl" aria-hidden />
+        <div className={`relative z-10 ${PAGE}`}>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {[
               'https://images.unsplash.com/photo-1573137785546-9d19e4f33f87',

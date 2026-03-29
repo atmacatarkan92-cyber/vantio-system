@@ -8,7 +8,7 @@ const Footer = () => {
 
   return (
     <footer className="border-t border-slate-800/80 bg-[#0f172a] text-slate-300">
-      <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-20 lg:py-32">
+      <div className="mx-auto max-w-7xl px-6 py-24 lg:px-20 lg:py-32">
         <div className="grid grid-cols-1 gap-14 md:grid-cols-2 lg:grid-cols-4 lg:gap-12">
           <div className="max-w-sm space-y-6">
             <img src={vantioLogo} alt="Vantio" className="h-9 w-auto brightness-0 invert opacity-95" />

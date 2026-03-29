@@ -37,9 +37,9 @@ L.Icon.Default.mergeOptions({
 import { API_BASE_URL } from '../config';
 
 const ACCENT = '#F97316';
-const PAGE = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-20';
+const PAGE = 'max-w-7xl mx-auto px-6 lg:px-20';
 const cardSurface =
-  'rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md';
+  'rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl';
 
 const ApartmentDetailPage = () => {
   const { id } = useParams();
@@ -172,8 +172,10 @@ const ApartmentDetailPage = () => {
   const images = apartment.images && apartment.images.length > 0 ? apartment.images : [apartment.image];
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-24">
-      <div className={`${PAGE} py-6`}>
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-slate-50 via-white to-slate-50 pt-24">
+      <div className="pointer-events-none absolute right-0 top-40 h-72 w-72 rounded-full bg-orange-500/[0.08] blur-3xl" aria-hidden />
+      <div className="pointer-events-none absolute bottom-20 left-0 h-80 w-80 rounded-full bg-slate-400/[0.08] blur-3xl" aria-hidden />
+      <div className={`relative z-10 ${PAGE} py-6`}>
         <Button
           variant="ghost"
           onClick={() => navigate('/apartments')}
@@ -185,7 +187,7 @@ const ApartmentDetailPage = () => {
         </Button>
       </div>
 
-      <div className={`${PAGE} pb-24`}>
+      <div className={`relative z-10 ${PAGE} pb-24`}>
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="space-y-8 lg:col-span-2">
             <div className="space-y-4">
