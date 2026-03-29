@@ -1,6 +1,6 @@
 """Fix public read for published listings under RLS; CASCADE delete for password_reset_tokens.
 
-Revision ID: 046_fix_listing_public_rls_and_prt_fk
+Revision ID: 046_fix_listing_rls
 Revises: 045_rls_listings_ext
 
 1) listings / listing_images / listing_amenities: The published branch previously used
@@ -19,7 +19,7 @@ from typing import Sequence, Union
 from alembic import op
 from sqlalchemy import text
 
-revision: str = "046_fix_listing_public_rls_and_prt_fk"
+revision: str = "046_fix_listing_rls"
 down_revision: Union[str, None] = "045_rls_listings_ext"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
