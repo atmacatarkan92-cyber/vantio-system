@@ -10,6 +10,9 @@ import {
   createAdminUnit,
   updateAdminUnit,
   deleteAdminUnit,
+  fetchAdminUnitCosts,
+  createAdminUnitCost,
+  deleteAdminUnitCost,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
@@ -52,9 +55,6 @@ const emptyForm = {
   landlord_id: "",
   property_manager_id: "",
   tenantPriceMonthly: "",
-  landlordRentMonthly: "",
-  utilitiesMonthly: "",
-  cleaningCostMonthly: "",
   availableFrom: "",
   landlordDepositType: "",
   landlordDepositAmount: "",
@@ -160,6 +160,78 @@ function formatCurrency(value) {
 
 function getTodayDateString() {
   return new Date().toISOString().split("T")[0];
+}
+
+const MODAL_COST_TYPE_OPTIONS = [
+  "Miete",
+  "Nebenkosten",
+  "Reinigung",
+  "Internet",
+  "Sonstiges",
+];
+const MODAL_COST_FIXED_SET = new Set([
+  "Miete",
+  "Nebenkosten",
+  "Reinigung",
+  "Internet",
+]);
+
+function newModalCostRowId() {
+  return `mc-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+function makeDefaultModalCostRows() {
+  return [
+    { id: newModalCostRowId(), cost_type: "Miete", custom_type: "", amount_chf: "" },
+    { id: newModalCostRowId(), cost_type: "Nebenkosten", custom_type: "", amount_chf: "" },
+    { id: newModalCostRowId(), cost_type: "Reinigung", custom_type: "", amount_chf: "" },
+  ];
+}
+
+function modalRowsFromApiCosts(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return makeDefaultModalCostRows();
+  return rows.map((r) => {
+    const ct = String(r.cost_type || "");
+    if (MODAL_COST_FIXED_SET.has(ct)) {
+      return {
+        id: r.id,
+        cost_type: ct,
+        custom_type: "",
+        amount_chf: String(r.amount_chf ?? ""),
+      };
+    }
+    return {
+      id: r.id,
+      cost_type: "Sonstiges",
+      custom_type: ct,
+      amount_chf: String(r.amount_chf ?? ""),
+    };
+  });
+}
+
+function parseModalCostAmount(raw) {
+  const n = Number(String(raw ?? "").replace(",", ".").trim());
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
+function resolveModalCostBackendType(row) {
+  if (row.cost_type === "Sonstiges") return String(row.custom_type || "").trim();
+  return String(row.cost_type || "").trim();
+}
+
+function buildValidModalCostRows(rows) {
+  if (!Array.isArray(rows)) return [];
+  const out = [];
+  for (const row of rows) {
+    if (!row || !row.cost_type) continue;
+    const ct = resolveModalCostBackendType(row);
+    if (!ct) continue;
+    const amt = parseModalCostAmount(row.amount_chf);
+    if (amt == null) continue;
+    out.push({ cost_type: ct, amount_chf: amt });
+  }
+  return out;
 }
 
 function getRunningMonthlyCosts(unit) {
@@ -539,6 +611,7 @@ function AdminApartmentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
+  const [modalCostRows, setModalCostRows] = useState([]);
   const [coLivingRoomRows, setCoLivingRoomRows] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
@@ -683,13 +756,14 @@ function AdminApartmentsPage() {
   function handleOpenCreateModal() {
     setEditingId(null);
     setFormData(emptyForm);
+    setModalCostRows(makeDefaultModalCostRows());
     setCoLivingRoomRows([]);
     setLandlordFilter("");
     setPropertyManagerFilter("");
     setIsModalOpen(true);
   }
 
-  const handleOpenEditModal = useCallback((unit) => {
+  const handleOpenEditModal = useCallback(async (unit) => {
     setEditingId(unit.id);
     setLandlordFilter("");
     setPropertyManagerFilter("");
@@ -710,9 +784,6 @@ function AdminApartmentsPage() {
           ? String(unit.property_manager_id)
           : "",
       tenantPriceMonthly: numFieldStr(unit.tenantPriceMonthly),
-      landlordRentMonthly: numFieldStr(unit.landlordRentMonthly),
-      utilitiesMonthly: numFieldStr(unit.utilitiesMonthly),
-      cleaningCostMonthly: numFieldStr(unit.cleaningCostMonthly),
       availableFrom: numFieldStr(unit.availableFrom).slice(0, 10),
       landlordDepositType: String(unit.landlordDepositType || "").trim(),
       landlordDepositAmount: numFieldStr(unit.landlordDepositAmount),
@@ -730,6 +801,14 @@ function AdminApartmentsPage() {
       leaseNotes: unit.leaseNotes != null ? String(unit.leaseNotes) : "",
     });
     setSaveError("");
+    let costRows = makeDefaultModalCostRows();
+    try {
+      const costs = await fetchAdminUnitCosts(unit.id);
+      costRows = modalRowsFromApiCosts(costs);
+    } catch {
+      costRows = makeDefaultModalCostRows();
+    }
+    setModalCostRows(costRows);
     setIsModalOpen(true);
   }, []);
 
@@ -751,9 +830,32 @@ function AdminApartmentsPage() {
     setIsModalOpen(false);
     setEditingId(null);
     setFormData(emptyForm);
+    setModalCostRows([]);
     setCoLivingRoomRows([]);
     setLandlordFilter("");
     setPropertyManagerFilter("");
+  }
+
+  function addModalCostRow() {
+    setModalCostRows((prev) => [
+      ...prev,
+      {
+        id: newModalCostRowId(),
+        cost_type: "",
+        custom_type: "",
+        amount_chf: "",
+      },
+    ]);
+  }
+
+  function removeModalCostRow(rowId) {
+    setModalCostRows((prev) => prev.filter((r) => r.id !== rowId));
+  }
+
+  function updateModalCostRow(rowId, patch) {
+    setModalCostRows((prev) =>
+      prev.map((r) => (r.id === rowId ? { ...r, ...patch } : r))
+    );
   }
 
   function handleCoLivingRoomChange(index, field, rawValue) {
@@ -823,9 +925,17 @@ function AdminApartmentsPage() {
     }));
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     setSaveError("");
+
+    const validCostRows = buildValidModalCostRows(modalCostRows);
+    if (validCostRows.length === 0) {
+      setSaveError(
+        "Mindestens eine Monatskosten-Zeile mit Kostenart und gültigem Betrag ist erforderlich."
+      );
+      return;
+    }
 
     const coLivingRowsForSubmit =
       !editingId && isCoLivingType && parsedRoomsTotal > 0
@@ -884,9 +994,6 @@ function AdminApartmentsPage() {
 
     const persistedUnitFields = {
       tenant_price_monthly_chf: parseMoneyChf(formData.tenantPriceMonthly),
-      landlord_rent_monthly_chf: parseMoneyChf(formData.landlordRentMonthly),
-      utilities_monthly_chf: parseMoneyChf(formData.utilitiesMonthly),
-      cleaning_cost_monthly_chf: parseMoneyChf(formData.cleaningCostMonthly),
       available_from: dateOnlyOrNull(formData.availableFrom),
       occupied_rooms: Math.max(0, Math.floor(Number(formData.occupiedRooms) || 0)),
       postal_code: String(formData.zip || "").trim() || null,
@@ -952,33 +1059,55 @@ function AdminApartmentsPage() {
       }
     }
 
-    const promise = editingId
-      ? updateAdminUnit(editingId, { ...baseUnitPayload, ...persistedUnitFields })
-      : createAdminUnit(apiPayload);
+    try {
+      if (editingId) {
+        await updateAdminUnit(editingId, {
+          ...baseUnitPayload,
+          ...persistedUnitFields,
+        });
+        const existing = await fetchAdminUnitCosts(editingId);
+        for (const c of existing) {
+          await deleteAdminUnitCost(editingId, c.id);
+        }
+        for (const row of validCostRows) {
+          await createAdminUnitCost(editingId, {
+            cost_type: row.cost_type,
+            amount_chf: row.amount_chf,
+          });
+        }
+      } else {
+        const created = await createAdminUnit(apiPayload);
+        const newId = created?.id || created?.unitId;
+        if (!newId) {
+          throw new Error("Unit konnte nicht gespeichert werden.");
+        }
+        for (const row of validCostRows) {
+          await createAdminUnitCost(newId, {
+            cost_type: row.cost_type,
+            amount_chf: row.amount_chf,
+          });
+        }
+      }
 
-    promise
-      .then(() =>
-        Promise.all([
-          fetchAdminUnits(),
-          fetchAdminRooms(),
-          fetchAdminTenanciesAll(),
-        ])
-      )
-      .then(([unitsData, roomsData, tenanciesData]) => {
-        setUnits(Array.isArray(unitsData) ? unitsData.map(normalizeUnit) : []);
-        setRooms(Array.isArray(roomsData) ? roomsData.map(normalizeRoom) : []);
-        setTenancies(Array.isArray(tenanciesData) ? tenanciesData : []);
-        handleCloseModal();
-      })
-      .catch((e) => {
-        const msg =
-          (typeof e === "string" && e) ||
-          (e && typeof e.message === "string" && e.message) ||
-          (e != null && String(e)) ||
-          "Speichern fehlgeschlagen.";
-        setSaveError(msg);
-      })
-      .finally(() => setSaving(false));
+      const [unitsData, roomsData, tenanciesData] = await Promise.all([
+        fetchAdminUnits(),
+        fetchAdminRooms(),
+        fetchAdminTenanciesAll(),
+      ]);
+      setUnits(Array.isArray(unitsData) ? unitsData.map(normalizeUnit) : []);
+      setRooms(Array.isArray(roomsData) ? roomsData.map(normalizeRoom) : []);
+      setTenancies(Array.isArray(tenanciesData) ? tenanciesData : []);
+      handleCloseModal();
+    } catch (e) {
+      const msg =
+        (typeof e === "string" && e) ||
+        (e && typeof e.message === "string" && e.message) ||
+        (e != null && String(e)) ||
+        "Speichern fehlgeschlagen.";
+      setSaveError(msg);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleDelete(id) {
@@ -1035,11 +1164,13 @@ function AdminApartmentsPage() {
     !formData.leaseStartDate ||
     formData.leaseStartDate <= getTodayDateString();
 
-  const formRunningMonthlyCosts = formLeaseStarted
-    ? Number(formData.landlordRentMonthly || 0) +
-      Number(formData.utilitiesMonthly || 0) +
-      Number(formData.cleaningCostMonthly || 0)
-    : 0;
+  const formRunningMonthlyCosts = useMemo(() => {
+    if (!formLeaseStarted) return 0;
+    return modalCostRows.reduce((sum, row) => {
+      const n = parseModalCostAmount(row.amount_chf);
+      return sum + (n != null ? n : 0);
+    }, 0);
+  }, [formLeaseStarted, modalCostRows]);
 
   const currentApartmentProfit =
     Number(formData.tenantPriceMonthly || 0) - formRunningMonthlyCosts;
@@ -1523,49 +1654,93 @@ function AdminApartmentsPage() {
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm text-slate-600 mb-2">
-                    Mietkosten an Vermieter
-                  </label>
-                  <input
-                    type="number"
-                    name="landlordRentMonthly"
-                    value={formData.landlordRentMonthly}
-                    onChange={handleChange}
-                    required
-                    placeholder="z. B. 1850"
-                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-slate-600 mb-2">
-                    Nebenkosten pro Monat
-                  </label>
-                  <input
-                    type="number"
-                    name="utilitiesMonthly"
-                    value={formData.utilitiesMonthly}
-                    onChange={handleChange}
-                    required
-                    placeholder="z. B. 180"
-                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-slate-600 mb-2">
-                    Reinigungskosten pro Monat
-                  </label>
-                  <input
-                    type="number"
-                    name="cleaningCostMonthly"
-                    value={formData.cleaningCostMonthly}
-                    onChange={handleChange}
-                    required
-                    placeholder="z. B. 120"
-                    className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-                  />
+                <div className="md:col-span-2 border border-slate-200 rounded-xl p-4 bg-slate-50/90">
+                  <p className="text-sm font-semibold text-slate-800 mb-3">
+                    Monatliche Kosten
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm text-slate-700">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-slate-500">
+                          <th className="py-2 pr-4 font-medium">Kostenart</th>
+                          <th className="py-2 pr-4 font-medium">Betrag CHF/Mt</th>
+                          <th className="py-2 pr-4 font-medium w-24"> </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {modalCostRows.map((row) => (
+                          <tr key={row.id} className="border-b border-slate-100 align-top">
+                            <td className="py-2 pr-4">
+                              <select
+                                value={row.cost_type}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  updateModalCostRow(row.id, {
+                                    cost_type: v,
+                                    custom_type: v === "Sonstiges" ? row.custom_type : "",
+                                  });
+                                }}
+                                disabled={saving}
+                                className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 bg-white disabled:opacity-50"
+                              >
+                                <option value="">— wählen —</option>
+                                {MODAL_COST_TYPE_OPTIONS.map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                              {row.cost_type === "Sonstiges" ? (
+                                <input
+                                  type="text"
+                                  value={row.custom_type}
+                                  onChange={(e) =>
+                                    updateModalCostRow(row.id, {
+                                      custom_type: e.target.value,
+                                    })
+                                  }
+                                  disabled={saving}
+                                  placeholder="Bezeichnung"
+                                  className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 mt-2 disabled:opacity-50"
+                                />
+                              ) : null}
+                            </td>
+                            <td className="py-2 pr-4">
+                              <input
+                                type="number"
+                                value={row.amount_chf}
+                                onChange={(e) =>
+                                  updateModalCostRow(row.id, {
+                                    amount_chf: e.target.value,
+                                  })
+                                }
+                                disabled={saving}
+                                className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50"
+                              />
+                            </td>
+                            <td className="py-2 pr-4">
+                              <button
+                                type="button"
+                                disabled={saving}
+                                onClick={() => removeModalCostRow(row.id)}
+                                className="text-red-600 hover:underline text-sm font-medium disabled:opacity-50"
+                              >
+                                Löschen
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={addModalCostRow}
+                    className="mt-3 text-sm border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium disabled:opacity-50"
+                  >
+                    + Kostenart hinzufügen
+                  </button>
                 </div>
 
                 <div>
