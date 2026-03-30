@@ -8,6 +8,7 @@ import {
   verifyAdminAddress,
 } from "../../api/adminData";
 import { SWISS_CANTON_CODES } from "../../constants/swissCantons";
+import { lookupSwissPlz } from "../../data/swissPlzLookup";
 
 const tableStyle = { width: "100%", borderCollapse: "collapse" };
 const thStyle = { textAlign: "left", padding: "12px 8px", borderBottom: "2px solid #E5E7EB" };
@@ -51,6 +52,8 @@ function AdminLandlordsPage() {
   const [listFilter, setListFilter] = useState("active");
   const [addressCheckBusy, setAddressCheckBusy] = useState(false);
   const [cantonHint, setCantonHint] = useState("");
+  const [cantonLockedByPlz, setCantonLockedByPlz] = useState(false);
+  const [plzNotFound, setPlzNotFound] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -81,6 +84,8 @@ function AdminLandlordsPage() {
 
     const applyRow = (row) => {
       deepLinkHandled.current = true;
+      setCantonLockedByPlz(false);
+      setPlzNotFound(false);
       setEditingId(row.id);
       setForm({
         company_name: row.company_name || "",
@@ -123,6 +128,8 @@ function AdminLandlordsPage() {
 
   const openCreate = () => {
     setEditingId(null);
+    setCantonLockedByPlz(false);
+    setPlzNotFound(false);
     setForm({
       company_name: "",
       contact_name: "",
@@ -141,6 +148,8 @@ function AdminLandlordsPage() {
 
   const openEdit = (row) => {
     setEditingId(row.id);
+    setCantonLockedByPlz(false);
+    setPlzNotFound(false);
     setForm({
       company_name: row.company_name || "",
       contact_name: row.contact_name || "",
@@ -155,6 +164,32 @@ function AdminLandlordsPage() {
       status: row.status || "active",
     });
     setFormOpen(true);
+  };
+
+  const handlePostalCodeChange = (e) => {
+    const next = e.target.value;
+    const plz = next.trim();
+    if (!/^\d{4}$/.test(plz)) {
+      setCantonLockedByPlz(false);
+      setPlzNotFound(false);
+      setForm((f) => ({ ...f, postal_code: next }));
+      return;
+    }
+    const hit = lookupSwissPlz(plz);
+    if (hit) {
+      setForm((f) => ({
+        ...f,
+        postal_code: next,
+        city: hit.city,
+        canton: hit.canton,
+      }));
+      setCantonLockedByPlz(true);
+      setPlzNotFound(false);
+    } else {
+      setForm((f) => ({ ...f, postal_code: next }));
+      setCantonLockedByPlz(false);
+      setPlzNotFound(true);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -382,10 +417,15 @@ function AdminLandlordsPage() {
                 <input
                   type="text"
                   value={form.postal_code}
-                  onChange={(e) => setForm((f) => ({ ...f, postal_code: e.target.value }))}
+                  onChange={handlePostalCodeChange}
                   style={inputStyle}
                   required
                 />
+                {plzNotFound ? (
+                  <p style={{ margin: "6px 0 0 0", fontSize: "12px", color: "#94A3B8" }}>
+                    PLZ nicht gefunden
+                  </p>
+                ) : null}
               </div>
               <div>
                 <label style={labelStyle}>Ort *</label>
@@ -467,7 +507,11 @@ function AdminLandlordsPage() {
                 <select
                   value={form.canton || ""}
                   onChange={(e) => setForm((f) => ({ ...f, canton: e.target.value }))}
-                  style={inputStyle}
+                  disabled={cantonLockedByPlz}
+                  style={{
+                    ...inputStyle,
+                    ...(cantonLockedByPlz ? { background: "#F8FAFC", color: "#64748B" } : {}),
+                  }}
                 >
                   <option value="">—</option>
                   {form.canton && !SWISS_CANTON_CODES.includes(form.canton) ? (
