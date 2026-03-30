@@ -12,7 +12,7 @@ from pydantic import BaseModel, EmailStr
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Landlord, User
+from db.models import Landlord, Property, User
 from app.core.rate_limit import limiter
 
 
@@ -119,6 +119,40 @@ def admin_get_landlord(
     if not landlord or str(landlord.organization_id) != org_id:
         raise HTTPException(status_code=404, detail="Landlord not found")
     return _landlord_to_dict(landlord)
+
+
+@router.get("/landlords/{landlord_id}/properties", response_model=List[dict])
+def admin_list_landlord_properties(
+    landlord_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    """Properties linked to this landlord (org-scoped; excludes soft-deleted properties)."""
+    landlord = session.get(Landlord, landlord_id)
+    if not landlord or str(landlord.organization_id) != org_id:
+        raise HTTPException(status_code=404, detail="Landlord not found")
+    rows = list(
+        session.exec(
+            select(Property)
+            .where(Property.organization_id == org_id)
+            .where(Property.landlord_id == landlord_id)
+            .where(Property.deleted_at.is_(None))
+            .order_by(Property.title)
+        ).all()
+    )
+    return [
+        {
+            "id": str(p.id),
+            "title": getattr(p, "title", "") or "",
+            "street": getattr(p, "street", None),
+            "house_number": getattr(p, "house_number", None),
+            "zip_code": getattr(p, "zip_code", None),
+            "city": getattr(p, "city", None),
+            "status": getattr(p, "status", "active"),
+        }
+        for p in rows
+    ]
 
 
 @router.post("/landlords", response_model=dict)

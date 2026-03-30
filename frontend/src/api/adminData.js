@@ -678,6 +678,19 @@ export function fetchAdminLandlord(id) {
   });
 }
 
+export function fetchAdminLandlordProperties(landlordId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/landlords/${encodeURIComponent(landlordId)}/properties`,
+    { headers: getApiHeaders() }
+  ).then((res) => {
+    if (!res.ok) {
+      if (res.status === 404) return [];
+      throw new Error("Liegenschaften konnten nicht geladen werden.");
+    }
+    return res.json();
+  });
+}
+
 export function createAdminLandlord(body) {
   return fetch(`${API_BASE_URL}/api/admin/landlords`, {
     method: "POST",

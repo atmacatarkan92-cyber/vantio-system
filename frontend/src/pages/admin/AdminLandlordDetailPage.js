@@ -1,11 +1,33 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { deleteAdminLandlord, fetchAdminLandlord, restoreAdminLandlord } from "../../api/adminData";
+import {
+  deleteAdminLandlord,
+  fetchAdminLandlord,
+  fetchAdminLandlordProperties,
+  restoreAdminLandlord,
+} from "../../api/adminData";
 
 function dash(s) {
   const t = s != null ? String(s).trim() : "";
   return t || "—";
+}
+
+function propertyStatusLabel(status) {
+  const s = (status || "").toLowerCase();
+  if (s === "inactive") return "Inaktiv";
+  if (s === "active" || !s) return "Aktiv";
+  return status;
+}
+
+function formatPropertyStreet(p) {
+  const parts = [p.street, p.house_number].filter((x) => x != null && String(x).trim() !== "");
+  return parts.length ? parts.join(" ") : "";
+}
+
+function formatPropertyCityLine(p) {
+  const parts = [p.zip_code, p.city].filter((x) => x != null && String(x).trim() !== "");
+  return parts.length ? parts.join(" ") : "";
 }
 
 function formatDateTime(iso) {
@@ -33,6 +55,7 @@ function AdminLandlordDetailPage() {
   const [archiving, setArchiving] = useState(false);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [linkedProperties, setLinkedProperties] = useState([]);
 
   useEffect(() => {
     if (!id) return;
@@ -49,6 +72,13 @@ function AdminLandlordDetailPage() {
       })
       .catch(() => setError("Verwaltung konnte nicht geladen werden."))
       .finally(() => setLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    fetchAdminLandlordProperties(id)
+      .then(setLinkedProperties)
+      .catch(() => setLinkedProperties([]));
   }, [id]);
 
   if (loading) {
@@ -186,15 +216,56 @@ function AdminLandlordDetailPage() {
               <p className="text-xs font-medium text-slate-500">Notizen</p>
               <p className="text-sm font-medium text-slate-900 mt-1 whitespace-pre-wrap">{dash(row.notes)}</p>
             </div>
-            <div>
-              <p className="text-xs font-medium text-slate-500">Erstellt</p>
-              <p className="text-sm font-medium text-slate-900 mt-1">{formatDateTime(row.created_at)}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-slate-500">Zuletzt aktualisiert</p>
-              <p className="text-sm font-medium text-slate-900 mt-1">{formatDateTime(row.updated_at)}</p>
-            </div>
           </div>
+        </section>
+
+        <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6">
+          <h2 className="text-sm font-semibold text-slate-900 mb-4">Zugeordnete Liegenschaften</h2>
+          {linkedProperties.length === 0 ? (
+            <p className="text-sm text-slate-500">Keine Liegenschaften zugeordnet</p>
+          ) : (
+            <ul className="divide-y divide-slate-100 border border-slate-100 rounded-lg overflow-hidden">
+              {linkedProperties.map((p) => {
+                const streetLine = formatPropertyStreet(p);
+                const cityLine = formatPropertyCityLine(p);
+                const sub = [streetLine, cityLine].filter(Boolean).join(" · ");
+                return (
+                  <li key={p.id} className="px-4 py-3 bg-slate-50/50">
+                    <p className="text-sm font-medium text-slate-900">{p.title?.trim() || "—"}</p>
+                    {sub ? <p className="text-xs text-slate-600 mt-0.5">{sub}</p> : null}
+                    <p className="text-xs text-slate-500 mt-1">Status: {propertyStatusLabel(p.status)}</p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6">
+          <h2 className="text-sm font-semibold text-slate-900 mb-4">Historie</h2>
+          <p className="text-xs text-slate-500 mb-3">
+            Basierend auf gespeicherten Stammdaten (kein vollständiges Audit-Protokoll).
+          </p>
+          <ul className="space-y-3 border-l-2 border-slate-200 pl-4 ml-1">
+            <li>
+              <p className="text-xs font-medium text-slate-500">Erstellt am</p>
+              <p className="text-sm font-medium text-slate-900 mt-0.5">{formatDateTime(row.created_at)}</p>
+            </li>
+            <li>
+              <p className="text-xs font-medium text-slate-500">Zuletzt aktualisiert</p>
+              <p className="text-sm font-medium text-slate-900 mt-0.5">{formatDateTime(row.updated_at)}</p>
+            </li>
+            {row.deleted_at ? (
+              <li>
+                <p className="text-xs font-medium text-slate-500">Archiviert am</p>
+                <p className="text-sm font-medium text-slate-900 mt-0.5">{formatDateTime(row.deleted_at)}</p>
+              </li>
+            ) : null}
+            <li>
+              <p className="text-xs font-medium text-slate-500">Status</p>
+              <p className="text-sm font-medium text-slate-900 mt-0.5">{isArchived ? "Archiviert" : "Aktiv"}</p>
+            </li>
+          </ul>
         </section>
       </div>
 
