@@ -9,23 +9,13 @@ import {
 } from "../../api/adminData";
 import { SWISS_CANTON_CODES } from "../../constants/swissCantons";
 import { lookupSwissPlz } from "../../data/swissPlzLookup";
+import { buildGoogleMapsSearchUrl, formatLandlordAddressLine } from "../../utils/googleMapsUrl";
 
 const tableStyle = { width: "100%", borderCollapse: "collapse" };
 const thStyle = { textAlign: "left", padding: "12px 8px", borderBottom: "2px solid #E5E7EB" };
 const tdStyle = { padding: "12px 8px", borderBottom: "1px solid #E5E7EB" };
 const inputStyle = { width: "100%", padding: "8px 10px", borderRadius: "6px", border: "1px solid #E5E7EB" };
 const labelStyle = { display: "block", marginBottom: "4px", fontSize: "13px", fontWeight: 600 };
-
-/** Build Google Maps search URL (new tab) from address parts — no backend call. */
-function buildGoogleMapsSearchUrl(addressLine1, postalCode, city) {
-  const a1 = (addressLine1 || "").trim();
-  const plz = (postalCode || "").trim();
-  const c = (city || "").trim();
-  const line2 = [plz, c].filter(Boolean).join(" ");
-  const parts = [a1, line2].filter(Boolean);
-  const q = parts.join(", ");
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
-}
 
 function AdminLandlordsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -282,10 +272,10 @@ function AdminLandlordsPage() {
         <thead>
           <tr>
             <th style={thStyle}>Firma / Name</th>
-            <th style={thStyle}>Kontakt</th>
+            <th style={thStyle}>Adresse</th>
             <th style={thStyle}>E-Mail</th>
             <th style={thStyle}>Status</th>
-            <th style={thStyle}></th>
+            <th style={thStyle}>Aktionen</th>
           </tr>
         </thead>
         <tbody>
@@ -296,41 +286,91 @@ function AdminLandlordsPage() {
               </td>
             </tr>
           ) : (
-            landlords.map((row) => (
-              <tr key={row.id}>
-                <td style={tdStyle}>
-                  <Link
-                    to={`/admin/landlords/${row.id}`}
-                    style={{ color: "#0F172A", fontWeight: 600, textDecoration: "none" }}
-                  >
-                    {row.company_name?.trim() || row.contact_name?.trim() || "—"}
-                  </Link>
-                </td>
-                <td style={tdStyle}>{row.contact_name || "—"}</td>
-                <td style={tdStyle}>{row.email || "—"}</td>
-                <td style={tdStyle}>
-                  {row.deleted_at ? "Archiviert" : row.status === "inactive" ? "Inaktiv" : "Aktiv"}
-                </td>
-                <td style={tdStyle}>
-                  <button
-                    type="button"
-                    onClick={() => openEdit(row)}
-                    disabled={!!row.deleted_at}
-                    style={{
-                      padding: "6px 12px",
-                      background: row.deleted_at ? "#F8FAFC" : "#F1F5F9",
-                      border: "1px solid #E2E8F0",
-                      borderRadius: "6px",
-                      cursor: row.deleted_at ? "not-allowed" : "pointer",
-                      fontSize: "13px",
-                      color: row.deleted_at ? "#94A3B8" : undefined,
-                    }}
-                  >
-                    Bearbeiten
-                  </button>
-                </td>
-              </tr>
-            ))
+            landlords.map((row) => {
+              const addrDisplay = formatLandlordAddressLine(row);
+              const canOpenMap = addrDisplay !== "—";
+              return (
+                <tr key={row.id}>
+                  <td style={tdStyle}>
+                    <Link
+                      to={`/admin/landlords/${row.id}`}
+                      style={{ color: "#0F172A", fontWeight: 600, textDecoration: "none" }}
+                    >
+                      {row.company_name?.trim() || row.contact_name?.trim() || "—"}
+                    </Link>
+                  </td>
+                  <td style={tdStyle}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ flex: 1, minWidth: 0 }}>{addrDisplay}</span>
+                      {canOpenMap ? (
+                        <button
+                          type="button"
+                          title="In Google Maps öffnen"
+                          aria-label="In Google Maps öffnen"
+                          onClick={() =>
+                            window.open(
+                              buildGoogleMapsSearchUrl(row.address_line1, row.postal_code, row.city),
+                              "_blank",
+                              "noopener,noreferrer"
+                            )
+                          }
+                          style={{
+                            flexShrink: 0,
+                            padding: "4px",
+                            border: "none",
+                            background: "transparent",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            color: "#64748B",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden
+                          >
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                            <circle cx="12" cy="10" r="3" />
+                          </svg>
+                        </button>
+                      ) : null}
+                    </div>
+                  </td>
+                  <td style={tdStyle}>{row.email || "—"}</td>
+                  <td style={tdStyle}>
+                    {row.deleted_at ? "Archiviert" : row.status === "inactive" ? "Inaktiv" : "Aktiv"}
+                  </td>
+                  <td style={tdStyle}>
+                    <button
+                      type="button"
+                      onClick={() => openEdit(row)}
+                      disabled={!!row.deleted_at}
+                      style={{
+                        padding: "6px 12px",
+                        background: row.deleted_at ? "#F8FAFC" : "#F1F5F9",
+                        border: "1px solid #E2E8F0",
+                        borderRadius: "6px",
+                        cursor: row.deleted_at ? "not-allowed" : "pointer",
+                        fontSize: "13px",
+                        color: row.deleted_at ? "#94A3B8" : undefined,
+                      }}
+                    >
+                      Bearbeiten
+                    </button>
+                  </td>
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>

@@ -7,6 +7,7 @@ import {
   fetchAdminLandlordProperties,
   restoreAdminLandlord,
 } from "../../api/adminData";
+import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
 
 function dash(s) {
   const t = s != null ? String(s).trim() : "";
@@ -181,10 +182,43 @@ function AdminLandlordDetailPage() {
 
         <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6">
           <h2 className="text-sm font-semibold text-slate-900 mb-4">Adresse</h2>
-          <div className="text-sm font-medium text-slate-900 space-y-1">
-            <p>{addrLine1 ? addrLine1 : "—"}</p>
-            <p>{addrLine2 ? addrLine2 : "—"}</p>
-            <p>{addrLine3 ? addrLine3 : "—"}</p>
+          <div className="flex items-start gap-2">
+            <div className="text-sm font-medium text-slate-900 space-y-1 flex-1 min-w-0">
+              <p>{addrLine1 ? addrLine1 : "—"}</p>
+              <p>{addrLine2 ? addrLine2 : "—"}</p>
+              <p>{addrLine3 ? addrLine3 : "—"}</p>
+            </div>
+            {addrLine1 || plz || city ? (
+              <button
+                type="button"
+                title="In Google Maps öffnen"
+                aria-label="In Google Maps öffnen"
+                onClick={() =>
+                  window.open(
+                    buildGoogleMapsSearchUrl(row.address_line1, row.postal_code, row.city),
+                    "_blank",
+                    "noopener,noreferrer"
+                  )
+                }
+                className="shrink-0 p-1 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-100 inline-flex items-center justify-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+              </button>
+            ) : null}
           </div>
         </section>
 
