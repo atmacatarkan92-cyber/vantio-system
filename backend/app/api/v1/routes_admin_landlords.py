@@ -68,6 +68,24 @@ class LandlordUpdate(BaseModel):
     status: Optional[str] = None
 
 
+def _validate_address_create(body: LandlordCreate) -> None:
+    if not (body.address_line1 or "").strip():
+        raise HTTPException(status_code=400, detail="address_line1 is required")
+    if not (body.postal_code or "").strip():
+        raise HTTPException(status_code=400, detail="postal_code is required")
+    if not (body.city or "").strip():
+        raise HTTPException(status_code=400, detail="city is required")
+
+
+def _validate_address_update(data: dict) -> None:
+    for k in ("address_line1", "postal_code", "city"):
+        if k not in data:
+            continue
+        v = data.get(k)
+        if not (str(v) if v is not None else "").strip():
+            raise HTTPException(status_code=400, detail=f"{k} is required")
+
+
 @router.get("/landlords", response_model=List[dict])
 def admin_list_landlords(
     org_id: str = Depends(get_current_organization),
@@ -79,6 +97,7 @@ def admin_list_landlords(
         session.exec(
             select(Landlord)
             .where(Landlord.organization_id == org_id)
+            .where(Landlord.deleted_at.is_(None))
             .order_by(Landlord.contact_name, Landlord.company_name)
         ).all()
     )
@@ -94,7 +113,11 @@ def admin_get_landlord(
 ):
     """Get a single landlord by id."""
     landlord = session.get(Landlord, landlord_id)
-    if not landlord or str(landlord.organization_id) != org_id:
+    if (
+        not landlord
+        or str(landlord.organization_id) != org_id
+        or getattr(landlord, "deleted_at", None) is not None
+    ):
         raise HTTPException(status_code=404, detail="Landlord not found")
     return _landlord_to_dict(landlord)
 
@@ -113,6 +136,7 @@ def admin_create_landlord(
         u = session.get(User, body.user_id)
         if not u or str(u.organization_id) != org_id:
             raise HTTPException(status_code=400, detail="Invalid user reference")
+    _validate_address_create(body)
     landlord = Landlord(
         organization_id=org_id,
         user_id=body.user_id,
@@ -120,9 +144,9 @@ def admin_create_landlord(
         contact_name=(body.contact_name or "").strip() or "—",
         email=(body.email or "").strip() or "",
         phone=body.phone,
-        address_line1=body.address_line1,
-        postal_code=body.postal_code,
-        city=body.city,
+        address_line1=(body.address_line1 or "").strip(),
+        postal_code=(body.postal_code or "").strip(),
+        city=(body.city or "").strip(),
         canton=body.canton,
         website=body.website,
         notes=body.notes,
@@ -144,9 +168,14 @@ def admin_put_landlord(
 ):
     """Update a landlord (partial)."""
     landlord = session.get(Landlord, landlord_id)
-    if not landlord or str(landlord.organization_id) != org_id:
+    if (
+        not landlord
+        or str(landlord.organization_id) != org_id
+        or getattr(landlord, "deleted_at", None) is not None
+    ):
         raise HTTPException(status_code=404, detail="Landlord not found")
     data = body.model_dump(exclude_unset=True)
+    _validate_address_update(data)
     if "user_id" in data and data["user_id"]:
         u = session.get(User, data["user_id"])
         if not u or str(u.organization_id) != org_id:

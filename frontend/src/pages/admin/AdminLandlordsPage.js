@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   fetchAdminLandlords,
   fetchAdminLandlord,
   createAdminLandlord,
   updateAdminLandlord,
 } from "../../api/adminData";
+import { SWISS_CANTON_CODES } from "../../constants/swissCantons";
 
 const tableStyle = { width: "100%", borderCollapse: "collapse" };
 const thStyle = { textAlign: "left", padding: "12px 8px", borderBottom: "2px solid #E5E7EB" };
@@ -139,16 +140,23 @@ function AdminLandlordsPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setSaving(true);
     setError("");
+    const addr1 = form.address_line1.trim();
+    const plz = form.postal_code.trim();
+    const ort = form.city.trim();
+    if (!addr1 || !plz || !ort) {
+      setError("Bitte Adresse, PLZ und Ort ausfüllen.");
+      return;
+    }
+    setSaving(true);
     const body = {
       company_name: form.company_name.trim() || null,
       contact_name: form.contact_name.trim() || "—",
       email: form.email.trim() || "",
       phone: form.phone.trim() || null,
-      address_line1: form.address_line1.trim() || null,
-      postal_code: form.postal_code.trim() || null,
-      city: form.city.trim() || null,
+      address_line1: addr1,
+      postal_code: plz,
+      city: ort,
       canton: form.canton.trim() || null,
       website: form.website.trim() || null,
       notes: form.notes.trim() || null,
@@ -216,7 +224,14 @@ function AdminLandlordsPage() {
           ) : (
             landlords.map((row) => (
               <tr key={row.id}>
-                <td style={tdStyle}>{row.company_name || "—"}</td>
+                <td style={tdStyle}>
+                  <Link
+                    to={`/admin/landlords/${row.id}`}
+                    style={{ color: "#0F172A", fontWeight: 600, textDecoration: "none" }}
+                  >
+                    {row.company_name?.trim() || row.contact_name?.trim() || "—"}
+                  </Link>
+                </td>
                 <td style={tdStyle}>{row.contact_name || "—"}</td>
                 <td style={tdStyle}>{row.email || "—"}</td>
                 <td style={tdStyle}>{row.status || "—"}</td>
@@ -309,42 +324,53 @@ function AdminLandlordsPage() {
                 />
               </div>
               <div>
-                <label style={labelStyle}>Adresse (optional)</label>
+                <label style={labelStyle}>Adresse *</label>
                 <input
                   type="text"
                   value={form.address_line1}
                   onChange={(e) => setForm((f) => ({ ...f, address_line1: e.target.value }))}
                   style={inputStyle}
                   placeholder="Strasse Nr."
+                  required
                 />
               </div>
               <div>
-                <label style={labelStyle}>PLZ (optional)</label>
+                <label style={labelStyle}>PLZ *</label>
                 <input
                   type="text"
                   value={form.postal_code}
                   onChange={(e) => setForm((f) => ({ ...f, postal_code: e.target.value }))}
                   style={inputStyle}
+                  required
                 />
               </div>
               <div>
-                <label style={labelStyle}>Ort (optional)</label>
+                <label style={labelStyle}>Ort *</label>
                 <input
                   type="text"
                   value={form.city}
                   onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
                   style={inputStyle}
+                  required
                 />
               </div>
               <div>
                 <label style={labelStyle}>Kanton (optional)</label>
-                <input
-                  type="text"
-                  value={form.canton}
+                <select
+                  value={form.canton || ""}
                   onChange={(e) => setForm((f) => ({ ...f, canton: e.target.value }))}
                   style={inputStyle}
-                  placeholder="z.B. ZH"
-                />
+                >
+                  <option value="">—</option>
+                  {form.canton && !SWISS_CANTON_CODES.includes(form.canton) ? (
+                    <option value={form.canton}>{form.canton}</option>
+                  ) : null}
+                  {SWISS_CANTON_CODES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label style={labelStyle}>Website (optional)</label>
