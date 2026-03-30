@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -6,6 +6,7 @@ import {
   deleteAdminLandlord,
   fetchAdminLandlord,
   fetchAdminLandlordNotes,
+  fetchAdminLandlordPropertyManagers,
   fetchAdminLandlordProperties,
   restoreAdminLandlord,
   updateAdminLandlordNote,
@@ -49,6 +50,11 @@ function formatDateTime(iso) {
   });
 }
 
+function propertyManagerDisplayName(pm) {
+  const n = pm != null ? String(pm.name ?? "").trim() : "";
+  return n || "Unbenannter Bewirtschafter";
+}
+
 function AdminLandlordDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -60,6 +66,9 @@ function AdminLandlordDetailPage() {
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [linkedProperties, setLinkedProperties] = useState([]);
+  const [propertyManagers, setPropertyManagers] = useState([]);
+  const [propertyManagersLoading, setPropertyManagersLoading] = useState(true);
+  const [propertyManagersError, setPropertyManagersError] = useState(null);
   const [notes, setNotes] = useState([]);
   const [newNoteDraft, setNewNoteDraft] = useState("");
   const [newNoteSaving, setNewNoteSaving] = useState(false);
@@ -93,6 +102,34 @@ function AdminLandlordDetailPage() {
       .then(setLinkedProperties)
       .catch(() => setLinkedProperties([]));
   }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    setPropertyManagersLoading(true);
+    setPropertyManagersError(null);
+    fetchAdminLandlordPropertyManagers(id)
+      .then((data) => {
+        setPropertyManagers(Array.isArray(data) ? data : []);
+        setPropertyManagersError(null);
+      })
+      .catch((e) => {
+        setPropertyManagers([]);
+        setPropertyManagersError(
+          e?.message?.trim() || "Bewirtschafter konnten nicht geladen werden."
+        );
+      })
+      .finally(() => setPropertyManagersLoading(false));
+  }, [id]);
+
+  const sortedPropertyManagers = useMemo(() => {
+    const arr = Array.isArray(propertyManagers) ? [...propertyManagers] : [];
+    arr.sort((a, b) =>
+      propertyManagerDisplayName(a).localeCompare(propertyManagerDisplayName(b), "de-CH", {
+        sensitivity: "base",
+      })
+    );
+    return arr;
+  }, [propertyManagers]);
 
   useEffect(() => {
     if (!id) return;
@@ -471,6 +508,48 @@ function AdminLandlordDetailPage() {
                   </li>
                 );
               })}
+            </ul>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6">
+          <h2 className="text-sm font-semibold text-slate-900 mb-4">Bewirtschafter</h2>
+          {propertyManagersLoading ? (
+            <div className="space-y-2" aria-busy="true">
+              <p className="text-sm text-slate-500">Lade Bewirtschafter …</p>
+              <div className="h-2 w-full max-w-xs rounded bg-slate-100 animate-pulse" />
+              <div className="h-2 w-full max-w-[14rem] rounded bg-slate-100 animate-pulse" />
+            </div>
+          ) : propertyManagersError ? (
+            <p className="text-sm text-red-700">{propertyManagersError}</p>
+          ) : sortedPropertyManagers.length === 0 ? (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-500">Kein Bewirtschafter zugeordnet</p>
+              <Link
+                to="/admin/bewirtschafter"
+                className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              >
+                Bewirtschafter zuweisen
+              </Link>
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-100 border border-slate-100 rounded-lg overflow-hidden">
+              {sortedPropertyManagers.map((pm) => (
+                <li key={pm.id} className="px-4 py-3 bg-slate-50/50">
+                  <Link
+                    to={`/admin/bewirtschafter?edit=${encodeURIComponent(pm.id)}`}
+                    className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 rounded-sm"
+                  >
+                    {propertyManagerDisplayName(pm)}
+                  </Link>
+                  {pm.email != null && String(pm.email).trim() !== "" ? (
+                    <p className="text-xs text-slate-600 mt-1">{String(pm.email).trim()}</p>
+                  ) : null}
+                  {pm.phone != null && String(pm.phone).trim() !== "" ? (
+                    <p className="text-xs text-slate-600 mt-0.5">{String(pm.phone).trim()}</p>
+                  ) : null}
+                </li>
+              ))}
             </ul>
           )}
         </section>

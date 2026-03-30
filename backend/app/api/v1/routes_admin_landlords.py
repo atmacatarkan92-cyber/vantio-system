@@ -12,7 +12,7 @@ from sqlalchemy import desc, not_
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Landlord, LandlordNote, Property, User
+from db.models import Landlord, LandlordNote, Property, PropertyManager, User
 from app.core.rate_limit import limiter
 from app.services.tenant_crm import load_users_by_ids
 
@@ -217,6 +217,38 @@ def admin_list_landlord_properties(
         }
         for p in rows
     ]
+
+
+def _landlord_property_manager_public_dict(p: PropertyManager) -> dict:
+    return {
+        "id": str(p.id),
+        "name": (getattr(p, "name", None) or "").strip(),
+        "email": getattr(p, "email", None),
+        "phone": getattr(p, "phone", None),
+        "landlord_id": getattr(p, "landlord_id", None),
+    }
+
+
+@router.get("/landlords/{landlord_id}/property-managers", response_model=List[dict])
+def admin_list_landlord_property_managers(
+    landlord_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    """Property managers linked to this Verwaltung (property_managers.landlord_id)."""
+    _landlord_in_org_or_404(session, landlord_id, org_id)
+    rows = list(
+        session.exec(
+            select(PropertyManager)
+            .where(
+                PropertyManager.landlord_id == landlord_id,
+                PropertyManager.organization_id == org_id,
+            )
+            .order_by(PropertyManager.name)
+        ).all()
+    )
+    return [_landlord_property_manager_public_dict(p) for p in rows]
 
 
 @router.post("/landlords", response_model=dict)
