@@ -1771,8 +1771,8 @@ function AdminUnitDetailPage() {
                 value={formatChfOrDash(metrics.runningCosts)}
                 hint={
                   landlordDepositInsuranceMonthly(unit) > 0
-                    ? "Miete + NK + Reinigung + Anteil Kautionsversicherung (Jahresprämie / 12)"
-                    : "Miete + NK + Reinigung"
+                    ? "Summe aller Kostenpositionen + Anteil Kautionsversicherung (Jahresprämie / 12)"
+                    : "Summe aller Kostenpositionen"
                 }
                 accent="slate"
               />
