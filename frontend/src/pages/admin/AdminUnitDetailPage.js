@@ -1376,8 +1376,7 @@ function AdminUnitDetailPage() {
       setRooms(Array.isArray(data) ? data.map(normalizeRoom) : []);
     } catch (err) {
       window.alert(
-        err?.message ||
-          "Room konnte nicht gelöscht werden."
+        String(err?.message ?? err) || "Room konnte nicht gelöscht werden."
       );
     }
   }

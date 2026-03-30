@@ -70,7 +70,7 @@ async function parseAdminErrorResponse(res) {
     if (typeof m === "string" && m.includes("body stream already read")) {
       return `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
     }
-    throw e;
+    throw new Error(String(e?.message ?? e));
   }
   let msg = parseAdminErrorBodyText(text).trim();
   if (!msg || msg === "Die Anfrage ist fehlgeschlagen.") {
