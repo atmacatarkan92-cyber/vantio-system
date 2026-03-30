@@ -13,7 +13,7 @@ ALLOWED_ROOM_STATUS = frozenset({"Frei", "Belegt", "Reserviert"})
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Unit, Room, Tenancy, TenancyStatus
+from db.models import Unit, Room, Tenancy
 from app.core.rate_limit import limiter
 
 
@@ -181,15 +181,14 @@ def admin_delete_room(
         .select_from(Tenancy)
         .where(Tenancy.room_id == room_id)
         .where(Tenancy.organization_id == org_id)
-        .where(Tenancy.status.in_([TenancyStatus.active, TenancyStatus.reserved]))
     ).scalar()
     blocking_count = int(_blocking) if _blocking is not None else 0
     if blocking_count > 0:
         raise HTTPException(
             status_code=400,
             detail=(
-                "Room kann nicht gelöscht werden, da noch aktive oder reservierte "
-                "Mietverhältnisse existieren."
+                "Room kann nicht gelöscht werden, da noch Mietverhältnisse mit "
+                "diesem Zimmer verknüpft sind."
             ),
         )
     session.delete(room)
