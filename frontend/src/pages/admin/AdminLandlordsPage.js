@@ -256,13 +256,12 @@ function AdminLandlordsPage() {
                 />
               </div>
               <div>
-                <label style={labelStyle}>Kontaktperson *</label>
+                <label style={labelStyle}>Kontaktperson (optional)</label>
                 <input
                   type="text"
                   value={form.contact_name}
                   onChange={(e) => setForm((f) => ({ ...f, contact_name: e.target.value }))}
                   style={inputStyle}
-                  required
                 />
               </div>
               <div>
