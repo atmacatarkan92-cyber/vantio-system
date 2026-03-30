@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { fetchAdminLandlord } from "../../api/adminData";
+import { toast } from "sonner";
+import { deleteAdminLandlord, fetchAdminLandlord } from "../../api/adminData";
 
 function dash(s) {
   const t = s != null ? String(s).trim() : "";
@@ -28,6 +29,8 @@ function AdminLandlordDetailPage() {
   const [row, setRow] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -90,7 +93,7 @@ function AdminLandlordDetailPage() {
               {title}
             </h1>
           </div>
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center justify-end gap-3 shrink-0">
             <span
               className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
                 isInactive ? "bg-slate-100 text-slate-600" : "bg-emerald-100 text-emerald-800"
@@ -98,8 +101,13 @@ function AdminLandlordDetailPage() {
             >
               {statusLabel}
             </span>
-            {/* Reserved for future actions (edit / delete) */}
-            <div className="flex items-center gap-2 min-h-[36px] min-w-[88px]" aria-hidden />
+            <button
+              type="button"
+              onClick={() => setArchiveModalOpen(true)}
+              className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold border border-red-200 bg-white text-red-700 hover:bg-red-50 transition-colors"
+            >
+              Archivieren
+            </button>
           </div>
         </div>
       </header>
@@ -171,6 +179,59 @@ function AdminLandlordDetailPage() {
           </div>
         </section>
       </div>
+
+      {archiveModalOpen && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/30 p-4"
+          onClick={() => !archiving && setArchiveModalOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="archive-landlord-title"
+          >
+            <h2 id="archive-landlord-title" className="text-lg font-semibold text-slate-900 mb-3">
+              Verwaltung archivieren?
+            </h2>
+            <p className="text-sm text-slate-600 mb-6">
+              Die Verwaltung wird archiviert. Sie erscheint nicht mehr in der normalen Verwaltungsliste.
+            </p>
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button
+                type="button"
+                disabled={archiving}
+                onClick={() => setArchiveModalOpen(false)}
+                className="px-4 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-800 text-sm font-semibold hover:bg-slate-100 disabled:opacity-50"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                disabled={archiving}
+                onClick={() => {
+                  setArchiving(true);
+                  deleteAdminLandlord(id)
+                    .then(() => {
+                      toast.success("Verwaltung wurde archiviert.");
+                      setArchiveModalOpen(false);
+                      navigate("/admin/landlords", { replace: true });
+                    })
+                    .catch((e) => {
+                      toast.error(e.message || "Archivieren fehlgeschlagen.");
+                    })
+                    .finally(() => setArchiving(false));
+                }}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50"
+              >
+                {archiving ? "…" : "Jetzt archivieren"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

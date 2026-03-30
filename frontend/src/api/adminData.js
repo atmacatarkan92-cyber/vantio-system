@@ -656,7 +656,7 @@ export function fetchAdminDashboardKpis(params = {}) {
 }
 
 /**
- * Landlords (Phase D). List, get, create, update.
+ * Landlords (Phase D). List, get, create, update, soft-delete (archive).
  */
 export function fetchAdminLandlords() {
   return fetch(`${API_BASE_URL}/api/admin/landlords`, { headers: getApiHeaders() }).then((res) => {
@@ -695,6 +695,19 @@ export function updateAdminLandlord(id, body) {
     body: JSON.stringify(body),
   }).then((res) => {
     if (!res.ok) throw new Error("Verwaltung konnte nicht gespeichert werden.");
+    return res.json();
+  });
+}
+
+export function deleteAdminLandlord(id) {
+  return fetch(`${API_BASE_URL}/api/admin/landlords/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: getApiHeaders(),
+  }).then((res) => {
+    if (!res.ok) {
+      if (res.status === 404) throw new Error("Verwaltung nicht gefunden.");
+      throw new Error("Archivieren fehlgeschlagen.");
+    }
     return res.json();
   });
 }

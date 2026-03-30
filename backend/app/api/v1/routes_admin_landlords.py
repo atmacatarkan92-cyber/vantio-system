@@ -3,6 +3,7 @@ Admin landlords API: list, get, create, update (Phase D table).
 Protected by require_roles("admin", "manager").
 """
 
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -152,6 +153,30 @@ def admin_create_landlord(
         notes=body.notes,
         status=(body.status or "active").strip() or "active",
     )
+    session.add(landlord)
+    session.commit()
+    session.refresh(landlord)
+    return _landlord_to_dict(landlord)
+
+
+@router.delete("/landlords/{landlord_id}", response_model=dict)
+def admin_archive_landlord(
+    landlord_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    """Soft-delete (archive) a landlord: sets deleted_at; does not remove related rows."""
+    landlord = session.get(Landlord, landlord_id)
+    if (
+        not landlord
+        or str(landlord.organization_id) != org_id
+        or getattr(landlord, "deleted_at", None) is not None
+    ):
+        raise HTTPException(status_code=404, detail="Landlord not found")
+    now = datetime.utcnow()
+    landlord.deleted_at = now
+    landlord.updated_at = now
     session.add(landlord)
     session.commit()
     session.refresh(landlord)
