@@ -15,6 +15,17 @@ const tdStyle = { padding: "12px 8px", borderBottom: "1px solid #E5E7EB" };
 const inputStyle = { width: "100%", padding: "8px 10px", borderRadius: "6px", border: "1px solid #E5E7EB" };
 const labelStyle = { display: "block", marginBottom: "4px", fontSize: "13px", fontWeight: 600 };
 
+/** Build Google Maps search URL (new tab) from address parts — no backend call. */
+function buildGoogleMapsSearchUrl(addressLine1, postalCode, city) {
+  const a1 = (addressLine1 || "").trim();
+  const plz = (postalCode || "").trim();
+  const c = (city || "").trim();
+  const line2 = [plz, c].filter(Boolean).join(" ");
+  const parts = [a1, line2].filter(Boolean);
+  const q = parts.join(", ");
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+}
+
 function AdminLandlordsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const deepLinkHandled = useRef(false);
@@ -38,8 +49,8 @@ function AdminLandlordsPage() {
   });
   const [saving, setSaving] = useState(false);
   const [listFilter, setListFilter] = useState("active");
-  const [addressVerify, setAddressVerify] = useState(null);
-  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [addressCheckBusy, setAddressCheckBusy] = useState(false);
+  const [cantonHint, setCantonHint] = useState("");
 
   const load = useCallback(() => {
     setLoading(true);
@@ -55,7 +66,7 @@ function AdminLandlordsPage() {
   }, [load]);
 
   useEffect(() => {
-    setAddressVerify(null);
+    setCantonHint("");
   }, [form.address_line1, form.postal_code, form.city]);
 
   const editParam = searchParams.get("edit");
@@ -386,8 +397,73 @@ function AdminLandlordsPage() {
                   required
                 />
               </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open(
+                        buildGoogleMapsSearchUrl(form.address_line1, form.postal_code, form.city),
+                        "_blank",
+                        "noopener,noreferrer"
+                      );
+                      setAddressCheckBusy(true);
+                      setCantonHint("Kanton wird ermittelt …");
+                      verifyAdminAddress({
+                        address_line1: form.address_line1,
+                        postal_code: form.postal_code,
+                        city: form.city,
+                      })
+                        .then((res) => {
+                          const c = res?.normalized?.canton;
+                          if (res?.valid && c != null && String(c).trim() !== "") {
+                            const code = String(c).trim().toUpperCase();
+                            setForm((f) => ({ ...f, canton: code }));
+                            setCantonHint("Kanton automatisch erkannt.");
+                          } else {
+                            setCantonHint(
+                              "Kein Kanton automatisch ermittelbar. Bitte bei Bedarf manuell wählen."
+                            );
+                          }
+                        })
+                        .catch(() =>
+                          setCantonHint("Kanton konnte nicht automatisch ermittelt werden.")
+                        )
+                        .finally(() => setAddressCheckBusy(false));
+                    }}
+                    disabled={
+                      saving ||
+                      addressCheckBusy ||
+                      !(form.address_line1 || "").trim() ||
+                      !(form.postal_code || "").trim() ||
+                      !(form.city || "").trim()
+                    }
+                    style={{
+                      padding: "8px 12px",
+                      background: "#FFF",
+                      border: "1px solid #CBD5E1",
+                      borderRadius: "8px",
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      cursor: saving || addressCheckBusy ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {addressCheckBusy ? "…" : "Adresse prüfen"}
+                  </button>
+                </div>
+                <p style={{ margin: 0, fontSize: "12px", color: "#64748B" }}>
+                  Öffnet Google Maps in einem neuen Tab. Der Kanton wird im Hintergrund ergänzt, wenn die
+                  Abfrage einen Wert liefert.
+                </p>
+                {cantonHint ? (
+                  <p style={{ margin: 0, fontSize: "12px", color: "#64748B" }}>{cantonHint}</p>
+                ) : null}
+              </div>
               <div>
-                <label style={labelStyle}>Kanton (optional)</label>
+                <label style={labelStyle}>Kanton</label>
+                <p style={{ margin: "0 0 6px 0", fontSize: "12px", color: "#64748B", fontWeight: 400 }}>
+                  Optional — oft nach «Adresse prüfen» gesetzt; manuelle Auswahl möglich.
+                </p>
                 <select
                   value={form.canton || ""}
                   onChange={(e) => setForm((f) => ({ ...f, canton: e.target.value }))}
@@ -404,96 +480,6 @@ function AdminLandlordsPage() {
                   ))}
                 </select>
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px" }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setVerifyLoading(true);
-                    verifyAdminAddress({
-                      address_line1: form.address_line1,
-                      postal_code: form.postal_code,
-                      city: form.city,
-                    })
-                      .then(setAddressVerify)
-                      .catch((e) =>
-                        setAddressVerify({
-                          valid: false,
-                          message: e.message || "Adressprüfung fehlgeschlagen.",
-                        })
-                      )
-                      .finally(() => setVerifyLoading(false));
-                  }}
-                  disabled={saving || verifyLoading}
-                  style={{
-                    padding: "8px 12px",
-                    background: "#FFF",
-                    border: "1px solid #CBD5E1",
-                    borderRadius: "8px",
-                    fontWeight: 600,
-                    fontSize: "13px",
-                    cursor: saving || verifyLoading ? "not-allowed" : "pointer",
-                  }}
-                >
-                  {verifyLoading ? "Prüfe …" : "Adresse prüfen"}
-                </button>
-              </div>
-              {addressVerify ? (
-                <div
-                  style={{
-                    padding: "12px",
-                    borderRadius: "8px",
-                    border: `1px solid ${addressVerify.valid ? "#BBF7D0" : "#FDE68A"}`,
-                    background: addressVerify.valid ? "#F0FDF4" : "#FFFBEB",
-                    fontSize: "13px",
-                  }}
-                >
-                  {!addressVerify.valid ? (
-                    <p style={{ margin: "0 0 8px 0", color: "#92400E" }}>
-                      {addressVerify.message || "Adresse konnte nicht bestätigt werden."}
-                    </p>
-                  ) : null}
-                  {addressVerify.valid && addressVerify.formatted_address ? (
-                    <p style={{ margin: "0 0 8px 0", color: "#0F172A" }}>
-                      <strong>Vorschlag:</strong> {addressVerify.formatted_address}
-                    </p>
-                  ) : null}
-                  {addressVerify.valid &&
-                  addressVerify.normalized &&
-                  Object.keys(addressVerify.normalized).length > 0 ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const n = addressVerify.normalized;
-                        setForm((f) => ({
-                          ...f,
-                          address_line1: n.address_line1 ?? f.address_line1,
-                          postal_code: n.postal_code ?? f.postal_code,
-                          city: n.city ?? f.city,
-                          canton:
-                            n.canton !== undefined &&
-                            n.canton !== null &&
-                            String(n.canton).trim() !== ""
-                              ? n.canton
-                              : f.canton,
-                        }));
-                        setAddressVerify(null);
-                      }}
-                      style={{
-                        padding: "6px 12px",
-                        background: "#0F172A",
-                        color: "#FFF",
-                        border: "none",
-                        borderRadius: "6px",
-                        fontWeight: 600,
-                        fontSize: "13px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Übernehmen
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
               <div>
                 <label style={labelStyle}>Website (optional)</label>
                 <input
