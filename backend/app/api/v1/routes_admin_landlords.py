@@ -14,7 +14,7 @@ from sqlmodel import select
 from auth.dependencies import get_current_organization, get_db_session, require_roles
 from db.models import Landlord, LandlordNote, Property, User
 from app.core.rate_limit import limiter
-from app.services.tenant_crm import author_display, load_users_by_ids
+from app.services.tenant_crm import load_users_by_ids
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-landlords"])
@@ -102,6 +102,19 @@ def _landlord_in_org_or_404(session, landlord_id: str, org_id: str) -> Landlord:
     return landlord
 
 
+def _landlord_note_user_display_name(user: Optional[User]) -> str:
+    """Prefer full_name, then email, else em dash (landlord notes API)."""
+    if user is None:
+        return "—"
+    fn = (getattr(user, "full_name", None) or "").strip()
+    if fn:
+        return fn
+    em = (getattr(user, "email", None) or "").strip()
+    if em:
+        return em
+    return "—"
+
+
 def _landlord_note_to_dict(
     note: LandlordNote,
     author_user: Optional[User],
@@ -112,10 +125,10 @@ def _landlord_note_to_dict(
         "content": note.content,
         "created_at": note.created_at.isoformat(),
         "created_by_user_id": note.created_by_user_id,
-        "author_name": author_display(author_user, note.created_by_user_id),
+        "author_name": _landlord_note_user_display_name(author_user),
         "updated_at": note.updated_at.isoformat() if note.updated_at else None,
         "updated_by_user_id": note.updated_by_user_id,
-        "editor_name": author_display(editor_user, note.updated_by_user_id)
+        "editor_name": _landlord_note_user_display_name(editor_user)
         if note.updated_at
         else None,
     }

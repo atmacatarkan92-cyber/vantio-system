@@ -432,8 +432,7 @@ function AdminLandlordDetailPage() {
                         </p>
                         {n.updated_at ? (
                           <p className="mt-1 text-xs text-slate-500">
-                            Bearbeitet {formatDateTime(n.updated_at)}
-                            {n.editor_name ? ` · ${n.editor_name}` : ""}
+                            Bearbeitet {formatDateTime(n.updated_at)} · {n.editor_name || "—"}
                           </p>
                         ) : null}
                         {!isArchived ? (
