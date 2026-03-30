@@ -136,26 +136,6 @@ function AdminLandlordsPage() {
     setFormOpen(true);
   };
 
-  const openEdit = (row) => {
-    setEditingId(row.id);
-    setCantonLockedByPlz(false);
-    setPlzNotFound(false);
-    setForm({
-      company_name: row.company_name || "",
-      contact_name: row.contact_name || "",
-      email: row.email || "",
-      phone: row.phone || "",
-      address_line1: row.address_line1 || "",
-      postal_code: row.postal_code || "",
-      city: row.city || "",
-      canton: row.canton || "",
-      website: row.website || "",
-      notes: row.notes || "",
-      status: row.status || "active",
-    });
-    setFormOpen(true);
-  };
-
   const handlePostalCodeChange = (e) => {
     const next = e.target.value;
     const plz = next.trim();
@@ -300,8 +280,16 @@ function AdminLandlordsPage() {
                     </Link>
                   </td>
                   <td style={tdStyle}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ flex: 1, minWidth: 0 }}>{addrDisplay}</span>
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        flexWrap: "wrap",
+                        maxWidth: "100%",
+                      }}
+                    >
+                      <span style={{ minWidth: 0 }}>{addrDisplay}</span>
                       {canOpenMap ? (
                         <button
                           type="button"
@@ -316,7 +304,8 @@ function AdminLandlordsPage() {
                           }
                           style={{
                             flexShrink: 0,
-                            padding: "4px",
+                            padding: "2px",
+                            margin: 0,
                             border: "none",
                             background: "transparent",
                             borderRadius: "6px",
@@ -325,6 +314,7 @@ function AdminLandlordsPage() {
                             display: "inline-flex",
                             alignItems: "center",
                             justifyContent: "center",
+                            verticalAlign: "middle",
                           }}
                         >
                           <svg
@@ -351,22 +341,22 @@ function AdminLandlordsPage() {
                     {row.deleted_at ? "Archiviert" : row.status === "inactive" ? "Inaktiv" : "Aktiv"}
                   </td>
                   <td style={tdStyle}>
-                    <button
-                      type="button"
-                      onClick={() => openEdit(row)}
-                      disabled={!!row.deleted_at}
+                    <Link
+                      to={`/admin/landlords/${row.id}`}
                       style={{
+                        display: "inline-block",
                         padding: "6px 12px",
-                        background: row.deleted_at ? "#F8FAFC" : "#F1F5F9",
+                        background: "#F1F5F9",
                         border: "1px solid #E2E8F0",
                         borderRadius: "6px",
-                        cursor: row.deleted_at ? "not-allowed" : "pointer",
                         fontSize: "13px",
-                        color: row.deleted_at ? "#94A3B8" : undefined,
+                        fontWeight: 600,
+                        color: "#0F172A",
+                        textDecoration: "none",
                       }}
                     >
-                      Bearbeiten
-                    </button>
+                      Öffnen
+                    </Link>
                   </td>
                 </tr>
               );

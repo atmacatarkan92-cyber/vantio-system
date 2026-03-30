@@ -140,6 +140,15 @@ function AdminLandlordDetailPage() {
             >
               {statusLabel}
             </span>
+            {!isArchived ? (
+              <button
+                type="button"
+                onClick={() => navigate(`/admin/landlords?edit=${encodeURIComponent(id)}`)}
+                className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 transition-colors"
+              >
+                Bearbeiten
+              </button>
+            ) : null}
             {isArchived ? (
               <button
                 type="button"
