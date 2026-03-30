@@ -91,10 +91,13 @@ def main() -> None:
             print("Passwords do not match. Aborting.")
             return
 
+        full_name_opt = input("Full name (optional, defaults to email): ").strip()
+        full_name = full_name_opt if full_name_opt else email
+
         user = User(
             organization_id=org_id,
             email=email,
-            full_name="Platform Admin",
+            full_name=full_name,
             role=UserRole.admin,
             is_active=True,
         )
