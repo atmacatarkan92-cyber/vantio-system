@@ -17,16 +17,34 @@ import {
   fetchAdminRooms,
   fetchAdminOccupancy,
   fetchAdminOccupancyRooms,
-  fetchAdminRevenueForecast,
   fetchAdminProfit,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
 import OccupancyMap from "../../components/OccupancyMap";
 
-const DEFAULT_MIN_STAY_MONTHS = 3;
-const DEFAULT_NOTICE_PERIOD_MONTHS = 3;
-const MONTH_FORECAST_COUNT = 6;
+function sumFilteredProfitField(profitResponse, filteredUnits, field) {
+  if (!profitResponse?.units || !Array.isArray(profitResponse.units)) return null;
+  const allowed = new Set(
+    filteredUnits.map((u) => String(u.id ?? u.unitId))
+  );
+  let sum = 0;
+  for (const row of profitResponse.units) {
+    if (allowed.has(String(row.unit_id))) {
+      sum += Number(row[field] ?? 0);
+    }
+  }
+  return sum;
+}
+
+function profitRowsByUnitId(profitResponse) {
+  const m = new Map();
+  if (!profitResponse?.units) return m;
+  for (const row of profitResponse.units) {
+    m.set(String(row.unit_id), row);
+  }
+  return m;
+}
 
 function roundCurrency(value) {
   return Math.round(Number(value || 0));
@@ -84,13 +102,6 @@ function startOfMonth(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
-function formatMonthLabel(date) {
-  return date.toLocaleDateString("de-CH", {
-    month: "short",
-    year: "2-digit",
-  });
-}
-
 function hasLeaseStarted(unit) {
   const c = String(unit?.leaseStartDate ?? unit?.lease_start_date ?? "").trim();
   if (c && /^\d{4}-\d{2}-\d{2}/.test(c)) {
@@ -109,11 +120,6 @@ function getMonthStart(date) {
 
 function getMonthEnd(date) {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0);
-}
-
-function isDateAfter(dateA, dateB) {
-  if (!dateA) return false;
-  return new Date(dateA) > new Date(dateB);
 }
 
 function isDateOnOrAfter(dateA, dateB) {
@@ -239,24 +245,14 @@ function getCoLivingMetricsForMonth(unit, activeMonth, allRooms = []) {
     return !isOccupiedInMonth && !isReservedInMonth;
   });
 
-  const fullRevenue = rooms.reduce(
-    (sum, room) => sum + Number(room.priceMonthly || 0),
-    0
-  );
-
-  const currentRevenue = occupiedRooms.reduce(
-    (sum, room) => sum + Number(room.priceMonthly || 0),
-    0
-  );
-
   return {
     occupiedCount: occupiedRooms.length,
     reservedCount: reservedRooms.length,
     freeCount: freeRooms.length,
     totalRooms: rooms.length,
-    fullRevenue,
-    currentRevenue,
-    vacancyLoss: Math.max(fullRevenue - currentRevenue, 0),
+    fullRevenue: null,
+    currentRevenue: null,
+    vacancyLoss: null,
     currentProfit: null,
     runningCosts: null,
     isFullyOccupied:
@@ -267,115 +263,16 @@ function getCoLivingMetricsForMonth(unit, activeMonth, allRooms = []) {
   };
 }
 
-function getRoomMonthType(room, monthIndex) {
-  const targetMonth = addMonths(startOfMonth(new Date()), monthIndex);
-  const monthStart = getMonthStart(targetMonth);
-  const monthEnd = getMonthEnd(targetMonth);
-
-  if (room.status === "Frei") return "free";
-
-  if (room.status === "Reserviert") {
-    const reservedFrom =
-      room.reservedFrom && room.reservedFrom !== "-"
-        ? room.reservedFrom
-        : room.moveInDate && room.moveInDate !== "-"
-        ? room.moveInDate
-        : null;
-
-    const reservedUntil =
-      room.reservedUntil && room.reservedUntil !== "-"
-        ? room.reservedUntil
-        : null;
-
-    if (!reservedFrom && !reservedUntil) return monthIndex <= 1 ? "reserved" : "free";
-    if (!reservedFrom && reservedUntil) {
-      return isDateOnOrAfter(reservedUntil, monthStart) ? "reserved" : "free";
-    }
-
-    return overlapsMonth(reservedFrom, reservedUntil, monthStart, monthEnd)
-      ? "reserved"
-      : "free";
-  }
-
-  if (room.status === "Belegt") {
-    if (!room.moveInDate || room.moveInDate === "-") return "free";
-
-    const moveOutDate =
-      room.moveOutDate && room.moveOutDate !== "-" ? room.moveOutDate : null;
-
-    if (moveOutDate) {
-      return overlapsMonth(room.moveInDate, moveOutDate, monthStart, monthEnd)
-        ? "secure"
-        : "free";
-    }
-
-    const minimumStayMonths = Number(
-      room.minimumStayMonths || DEFAULT_MIN_STAY_MONTHS
-    );
-    const noticePeriodMonths = Number(
-      room.noticePeriodMonths || DEFAULT_NOTICE_PERIOD_MONTHS
-    );
-    const secureMonths = minimumStayMonths + noticePeriodMonths;
-
-    const moveIn = new Date(room.moveInDate);
-    const monthsDiff =
-      (monthStart.getFullYear() - moveIn.getFullYear()) * 12 +
-      (monthStart.getMonth() - moveIn.getMonth());
-
-    if (monthsDiff < 0) return "free";
-    if (monthsDiff < secureMonths) return "secure";
-    if (monthsDiff === secureMonths) return "risk";
-    return "free";
-  }
-
-  return "free";
-}
-
-function buildMonthlyForecast(units, allRooms = []) {
-  const baseMonth = startOfMonth(new Date());
-
-  return Array.from({ length: MONTH_FORECAST_COUNT }, (_, index) => {
-    const monthDate = addMonths(baseMonth, index);
-
-    let secureRevenue = 0;
-    let reservedRevenue = 0;
-    let riskRevenue = 0;
-    let freeRevenue = 0;
-
-    units.forEach((unit) => {
-      const rooms = getRoomsForUnit(unit.unitId || unit.id, allRooms);
-
-      if (rooms.length === 0) {
-        return;
-      }
-
-      rooms.forEach((room) => {
-        const roomValue = Number(room.priceMonthly || 0);
-        const type = getRoomMonthType(room, index);
-
-        if (type === "secure") secureRevenue += roomValue;
-        if (type === "reserved") reservedRevenue += roomValue;
-        if (type === "risk") riskRevenue += roomValue * 0.5;
-        if (type === "free") freeRevenue += roomValue;
-      });
-    });
-
-    return {
-      month: formatMonthLabel(monthDate),
-      secureRevenue,
-      reservedRevenue,
-      riskRevenue,
-      freeRevenue,
-      forecastRevenue: secureRevenue + reservedRevenue + riskRevenue,
-    };
-  });
-}
-
-function buildWarnings(units, rankedUnits, activeMonth, allRooms = []) {
+function buildWarnings(units, rankedUnits, profitByUnitId) {
   const warnings = [];
 
   rankedUnits.forEach((unit) => {
-    if (unit.currentRevenue != null && unit.currentRevenue <= 0) {
+    const uid = String(unit.internalUnitId ?? "");
+    const prow = uid ? profitByUnitId.get(uid) : null;
+    const rev = prow != null ? Number(prow.revenue) : null;
+    const prof = prow != null ? Number(prow.profit) : null;
+
+    if (rev != null && rev <= 0) {
       warnings.push({
         type: "danger",
         title: `${unit.unitId} · ${unit.place}`,
@@ -383,13 +280,11 @@ function buildWarnings(units, rankedUnits, activeMonth, allRooms = []) {
       });
     }
 
-    if (unit.breakEvenGap != null && unit.breakEvenGap < 0) {
+    if (prof != null && prof < 0) {
       warnings.push({
         type: "danger",
         title: `${unit.unitId} · ${unit.place}`,
-        text: `Unter Break-Even um ${formatCurrency(
-          Math.abs(unit.breakEvenGap)
-        )}.`,
+        text: `Unter Break-Even um ${formatCurrency(Math.abs(prof))}.`,
       });
     }
 
@@ -400,23 +295,14 @@ function buildWarnings(units, rankedUnits, activeMonth, allRooms = []) {
         text: `${unit.freeCount} freie Rooms ohne aktuelle Belegung.`,
       });
     }
-
-    if (unit.vacancyDays > 0) {
-      warnings.push({
-        type: "warning",
-        title: `${unit.unitId} · ${unit.place}`,
-        text: `${unit.vacancyDays} Leerstandstage in der Vorschau erkannt.`,
-      });
-    }
   });
 
   units.forEach((unit) => {
     if (!hasLeaseStarted(unit)) {
-      const metrics = getCoLivingMetricsForMonth(unit, activeMonth, allRooms);
-      if (
-        metrics.currentRevenue != null &&
-        metrics.currentRevenue <= 0
-      ) {
+      const uid = String(unit.id ?? unit.unitId);
+      const prow = profitByUnitId.get(uid);
+      const rev = prow != null ? Number(prow.revenue) : null;
+      if (rev != null && rev <= 0) {
         warnings.push({
           type: "danger",
           title: `${unit.unitId} · ${unit.place}`,
@@ -630,25 +516,25 @@ function AdminCoLivingDashboardPage() {
   const [units, setUnits] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [occupancyApi, setOccupancyApi] = useState(null);
-  const [revenueForecastApi, setRevenueForecastApi] = useState(null);
   const [occupancyRoomsMap, setOccupancyRoomsMap] = useState(null);
-  const [profitForHeroMonth, setProfitForHeroMonth] = useState(null);
-  const [profitForHeroLoading, setProfitForHeroLoading] = useState(true);
+  const [profitSixMonth, setProfitSixMonth] = useState(null);
+  const [profitSixMonthLoading, setProfitSixMonthLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    const y = activeMonth.getFullYear();
-    const m = activeMonth.getMonth() + 1;
-    setProfitForHeroLoading(true);
-    fetchAdminProfit({ year: y, month: m })
-      .then((data) => {
-        if (!cancelled) setProfitForHeroMonth(data);
-      })
-      .catch(() => {
-        if (!cancelled) setProfitForHeroMonth(null);
+    const periods = Array.from({ length: 6 }, (_, index) => {
+      const d = addMonths(startOfMonth(activeMonth), index - 2);
+      return { year: d.getFullYear(), month: d.getMonth() + 1 };
+    });
+    setProfitSixMonthLoading(true);
+    Promise.all(
+      periods.map((p) => fetchAdminProfit(p).catch(() => null))
+    )
+      .then((arr) => {
+        if (!cancelled) setProfitSixMonth(arr);
       })
       .finally(() => {
-        if (!cancelled) setProfitForHeroLoading(false);
+        if (!cancelled) setProfitSixMonthLoading(false);
       });
     return () => {
       cancelled = true;
@@ -665,10 +551,6 @@ function AdminCoLivingDashboardPage() {
     fetchAdminOccupancy()
       .then((data) => setOccupancyApi(data))
       .catch(() => setOccupancyApi(null));
-    const y = new Date().getFullYear();
-    fetchAdminRevenueForecast({ year: y })
-      .then((data) => setRevenueForecastApi(data))
-      .catch(() => setRevenueForecastApi(null));
   }, []);
 
   const allCoLivingUnits = useMemo(() => {
@@ -704,21 +586,21 @@ function AdminCoLivingDashboardPage() {
       .catch(() => setOccupancyRoomsMap(null));
   }, [firstFilteredUnit]);
 
-  /** Hero "Aktueller Umsatz": backend prorated tenancy revenue for selected month (filtered Co-Living units only). */
+  const profitForActiveMonth = useMemo(
+    () => (profitSixMonth?.length === 6 ? profitSixMonth[2] : null),
+    [profitSixMonth]
+  );
+
+  const profitByUnitIdActive = useMemo(
+    () => profitRowsByUnitId(profitForActiveMonth),
+    [profitForActiveMonth]
+  );
+
+  /** Aktueller Monat (Index 2): Backend-Umsatz, gefiltert. */
   const heroCurrentRevenueBackend = useMemo(() => {
-    if (profitForHeroLoading) return null;
-    if (!profitForHeroMonth || !Array.isArray(profitForHeroMonth.units)) return null;
-    const allowed = new Set(
-      filteredUnits.map((u) => String(u.id ?? u.unitId))
-    );
-    let sum = 0;
-    for (const row of profitForHeroMonth.units) {
-      if (allowed.has(String(row.unit_id))) {
-        sum += Number(row.revenue ?? 0);
-      }
-    }
-    return sum;
-  }, [profitForHeroMonth, profitForHeroLoading, filteredUnits]);
+    if (profitSixMonthLoading) return null;
+    return sumFilteredProfitField(profitSixMonth?.[2], filteredUnits, "revenue");
+  }, [profitSixMonth, profitSixMonthLoading, filteredUnits]);
 
   const dashboard = useMemo(() => {
     const totals = {
@@ -735,28 +617,27 @@ function AdminCoLivingDashboardPage() {
       fullUnits: 0,
       partialUnits: 0,
       notStartedUnits: 0,
-      vacancyDays: 0,
-      lostRevenue7Days: 0,
+      vacancyDays: null,
+      lostRevenue7Days: null,
     };
+
+    let totalRev = 0;
+    let totalCost = 0;
+    let totalProf = 0;
 
     const unitPerformance = filteredUnits.map((unit) => {
       const metrics = getCoLivingMetricsForMonth(unit, activeMonth, rooms);
-      const unitRooms = getRoomsForUnit(unit.unitId || unit.id, rooms);
+      const uid = String(unit.id ?? unit.unitId);
+      const prow = profitByUnitIdActive.get(uid);
+      const currentRevenue = prow != null ? Number(prow.revenue) : null;
+      const currentProfit = prow != null ? Number(prow.profit) : null;
+      const runningCosts = prow != null ? Number(prow.costs) : null;
 
-      const unitVacancyDays = unitRooms.reduce((sum, room) => {
-        if (room.status === "Frei") return sum + 7;
-        if (room.status === "Reserviert") return sum + 4;
-        return sum;
-      }, 0);
-
-      const unitLostRevenue7Days = unitRooms.reduce((sum, room) => {
-        const monthly = Number(room.priceMonthly || 0);
-        const dailyRate = monthly / 30;
-
-        if (room.status === "Frei") return sum + dailyRate * 7;
-        if (room.status === "Reserviert") return sum + dailyRate * 4;
-        return sum;
-      }, 0);
+      if (prow != null) {
+        totalRev += Number(prow.revenue);
+        totalCost += Number(prow.costs);
+        totalProf += Number(prow.profit);
+      }
 
       const occupancyRate =
         metrics.totalRooms > 0
@@ -767,20 +648,6 @@ function AdminCoLivingDashboardPage() {
       totals.occupiedRooms += metrics.occupiedCount;
       totals.reservedRooms += metrics.reservedCount;
       totals.freeRooms += metrics.freeCount;
-      if (metrics.fullRevenue != null) {
-        totals.fullRevenue =
-          (totals.fullRevenue ?? 0) + metrics.fullRevenue;
-      }
-      if (metrics.currentRevenue != null) {
-        totals.currentRevenue =
-          (totals.currentRevenue ?? 0) + metrics.currentRevenue;
-      }
-      if (metrics.vacancyLoss != null) {
-        totals.vacancyLoss =
-          (totals.vacancyLoss ?? 0) + metrics.vacancyLoss;
-      }
-      totals.vacancyDays += unitVacancyDays;
-      totals.lostRevenue7Days += unitLostRevenue7Days;
 
       if (metrics.isFullyOccupied) totals.fullUnits += 1;
       if (metrics.isPartiallyOccupied) totals.partialUnits += 1;
@@ -788,26 +655,34 @@ function AdminCoLivingDashboardPage() {
 
       return {
         unitId: unit.unitId,
+        internalUnitId: uid,
         place: unit.place,
         totalRooms: metrics.totalRooms,
         occupiedCount: metrics.occupiedCount,
         reservedCount: metrics.reservedCount,
         freeCount: metrics.freeCount,
         occupancyRate,
-        currentRevenue: metrics.currentRevenue,
-        currentProfit: metrics.currentProfit,
-        vacancyLoss: metrics.vacancyLoss,
-        runningCosts: metrics.runningCosts,
-        fullRevenue: metrics.fullRevenue,
-        breakEvenRevenue: metrics.runningCosts,
+        currentRevenue,
+        currentProfit,
+        vacancyLoss: null,
+        runningCosts,
+        fullRevenue: null,
+        breakEvenRevenue: runningCosts,
         breakEvenGap:
-          metrics.currentRevenue != null && metrics.runningCosts != null
-            ? metrics.currentRevenue - metrics.runningCosts
+          currentRevenue != null && runningCosts != null
+            ? currentRevenue - runningCosts
             : null,
-        vacancyDays: unitVacancyDays,
-        lostRevenue7Days: unitLostRevenue7Days,
+        vacancyDays: null,
+        lostRevenue7Days: null,
       };
     });
+
+    totals.currentRevenue =
+      profitForActiveMonth != null ? totalRev : null;
+    totals.runningCosts =
+      profitForActiveMonth != null ? totalCost : null;
+    totals.currentProfit =
+      profitForActiveMonth != null ? totalProf : null;
 
     const occupiedRate =
       totals.totalRooms > 0
@@ -824,7 +699,10 @@ function AdminCoLivingDashboardPage() {
       totals.totalRooms > 0 && totals.currentRevenue != null
         ? totals.currentRevenue / totals.totalRooms
         : null;
-    const averageProfitPerUnit = null;
+    const averageProfitPerUnit =
+      filteredUnits.length > 0 && totals.currentProfit != null
+        ? totals.currentProfit / filteredUnits.length
+        : null;
 
     const rankedUnits = [...unitPerformance].sort((a, b) => {
       const br = b.currentRevenue ?? -Infinity;
@@ -846,81 +724,13 @@ function AdminCoLivingDashboardPage() {
       bestUnit,
       worstUnit,
     };
-  }, [filteredUnits, activeMonth, rooms]);
-
-  const forecast = useMemo(() => {
-    let forecastRevenue = null;
-    let forecastOccupiedRooms = 0;
-    let forecastReservedRooms = 0;
-    let forecastTotalRooms = 0;
-    let criticalUnits = 0;
-
-    filteredUnits.forEach((unit) => {
-      const metrics = getCoLivingMetricsForMonth(unit, activeMonth, rooms);
-      const totalRooms = Number(metrics.totalRooms || 0);
-      const occupiedCount = Number(metrics.occupiedCount || 0);
-      const reservedCount = Number(metrics.reservedCount || 0);
-      const fullRevenue =
-        metrics.fullRevenue != null ? Number(metrics.fullRevenue) : null;
-
-      let reservedWeight = 1;
-      if (selectedPeriod === "thisMonth") reservedWeight = 0.35;
-      if (selectedPeriod === "nextMonth") reservedWeight = 0.7;
-      if (selectedPeriod === "customMonth") reservedWeight = 0.7;
-
-      if (fullRevenue == null || totalRooms <= 0) {
-        forecastOccupiedRooms += occupiedCount;
-        forecastReservedRooms += reservedCount * reservedWeight;
-        forecastTotalRooms += totalRooms;
-        return;
-      }
-
-      const roomValue = fullRevenue / totalRooms;
-      const expectedBookedRooms = Math.min(
-        occupiedCount + reservedCount * reservedWeight,
-        totalRooms
-      );
-
-      const expectedRevenue = roomValue * expectedBookedRooms;
-
-      forecastRevenue = (forecastRevenue ?? 0) + expectedRevenue;
-      forecastOccupiedRooms += occupiedCount;
-      forecastReservedRooms += reservedCount * reservedWeight;
-      forecastTotalRooms += totalRooms;
-
-      if (expectedBookedRooms / Math.max(totalRooms, 1) < 0.5) {
-        criticalUnits += 1;
-      }
-    });
-
-    const expectedOccupancyRate =
-      forecastTotalRooms > 0
-        ? ((forecastOccupiedRooms + forecastReservedRooms) / forecastTotalRooms) *
-          100
-        : 0;
-
-    return {
-      forecastRevenue,
-      forecastCosts: null,
-      forecastProfit: null,
-      expectedOccupancyRate,
-      criticalUnits,
-    };
-  }, [filteredUnits, selectedPeriod, activeMonth, rooms]);
-
-  const monthlyRevenueForecast = useMemo(() => {
-    if (revenueForecastApi && Array.isArray(revenueForecastApi.by_month) && revenueForecastApi.by_month.length > 0) {
-      return revenueForecastApi.by_month.slice(0, 6).map((m) => ({
-        month: new Date(m.year, m.month - 1, 1).toLocaleDateString("de-CH", { month: "short" }),
-        secureRevenue: m.expected_revenue,
-        reservedRevenue: 0,
-        riskRevenue: 0,
-        freeRevenue: 0,
-        forecastRevenue: m.expected_revenue,
-      }));
-    }
-    return buildMonthlyForecast(filteredUnits, rooms);
-  }, [filteredUnits, rooms, revenueForecastApi]);
+  }, [
+    filteredUnits,
+    activeMonth,
+    rooms,
+    profitByUnitIdActive,
+    profitForActiveMonth,
+  ]);
 
   const dashboardDisplay = useMemo(() => {
     const base = dashboard;
@@ -935,9 +745,88 @@ function AdminCoLivingDashboardPage() {
     };
   }, [dashboard, occupancyApi]);
 
+  const forecast = useMemo(() => {
+    if (!profitForActiveMonth?.units) {
+      return {
+        forecastRevenue: null,
+        forecastCosts: null,
+        forecastProfit: null,
+        expectedOccupancyRate: 0,
+        criticalUnits: 0,
+      };
+    }
+    const forecastRevenue = sumFilteredProfitField(
+      profitForActiveMonth,
+      filteredUnits,
+      "revenue"
+    );
+    const forecastCosts = sumFilteredProfitField(
+      profitForActiveMonth,
+      filteredUnits,
+      "costs"
+    );
+    const forecastProfit = sumFilteredProfitField(
+      profitForActiveMonth,
+      filteredUnits,
+      "profit"
+    );
+    let criticalUnits = 0;
+    const allowed = new Set(
+      filteredUnits.map((u) => String(u.id ?? u.unitId))
+    );
+    for (const row of profitForActiveMonth.units) {
+      if (!allowed.has(String(row.unit_id))) continue;
+      if (Number(row.profit) < 0) criticalUnits += 1;
+    }
+    const expectedOccupancyRate =
+      occupancyApi?.summary?.occupancy_rate != null
+        ? Number(occupancyApi.summary.occupancy_rate)
+        : dashboard.occupiedRate;
+
+    return {
+      forecastRevenue,
+      forecastCosts,
+      forecastProfit,
+      expectedOccupancyRate,
+      criticalUnits,
+    };
+  }, [profitForActiveMonth, filteredUnits, occupancyApi, dashboard.occupiedRate]);
+
+  const monthlyRevenueForecast = useMemo(() => {
+    if (!profitSixMonth || profitSixMonth.length !== 6) {
+      return Array.from({ length: 6 }, (_, index) => {
+        const monthDate = addMonths(startOfMonth(activeMonth), index - 2);
+        return {
+          month: monthDate.toLocaleDateString("de-CH", { month: "short" }),
+          secureRevenue: null,
+          reservedRevenue: 0,
+          riskRevenue: 0,
+          freeRevenue: 0,
+          forecastRevenue: null,
+        };
+      });
+    }
+    return profitSixMonth.map((profitData, index) => {
+      const monthDate = addMonths(startOfMonth(activeMonth), index - 2);
+      const total = sumFilteredProfitField(profitData, filteredUnits, "revenue");
+      return {
+        month: monthDate.toLocaleDateString("de-CH", { month: "short" }),
+        secureRevenue: total,
+        reservedRevenue: 0,
+        riskRevenue: 0,
+        freeRevenue: 0,
+        forecastRevenue: total,
+      };
+    });
+  }, [profitSixMonth, activeMonth, filteredUnits]);
+
   const dashboardWarnings = useMemo(() => {
-    return buildWarnings(filteredUnits, dashboard.rankedUnits, activeMonth, rooms);
-  }, [filteredUnits, dashboard.rankedUnits, activeMonth, rooms]);
+    return buildWarnings(
+      filteredUnits,
+      dashboard.rankedUnits,
+      profitByUnitIdActive
+    );
+  }, [filteredUnits, dashboard.rankedUnits, profitByUnitIdActive]);
 
   const roomStatusChartData = [
     { name: "Belegt", value: dashboardDisplay.occupiedRooms },
@@ -946,23 +835,23 @@ function AdminCoLivingDashboardPage() {
   ];
 
   const monthlyChartData = useMemo(() => {
-    return Array.from({ length: 6 }, (_, index) => {
-      const monthDate = addMonths(startOfMonth(activeMonth), index - 2);
-      let umsatz = null;
-
-      filteredUnits.forEach((unit) => {
-        const metrics = getCoLivingMetricsForMonth(unit, monthDate, rooms);
-        if (metrics.currentRevenue != null) {
-          umsatz = (umsatz ?? 0) + metrics.currentRevenue;
-        }
+    if (!profitSixMonth || profitSixMonth.length !== 6) {
+      return Array.from({ length: 6 }, (_, index) => {
+        const monthDate = addMonths(startOfMonth(activeMonth), index - 2);
+        return {
+          month: monthDate.toLocaleDateString("de-CH", { month: "short" }),
+          umsatz: null,
+        };
       });
-
+    }
+    return profitSixMonth.map((profitData, index) => {
+      const monthDate = addMonths(startOfMonth(activeMonth), index - 2);
       return {
         month: monthDate.toLocaleDateString("de-CH", { month: "short" }),
-        umsatz,
+        umsatz: sumFilteredProfitField(profitData, filteredUnits, "revenue"),
       };
     });
-  }, [filteredUnits, activeMonth, rooms]);
+  }, [profitSixMonth, activeMonth, filteredUnits]);
 
   const revenueTrend = getTrendLabel(
     monthlyChartData[5]?.umsatz ?? 0,
@@ -1235,13 +1124,13 @@ function AdminCoLivingDashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <SmallStatCard
                 label="Leerstandstage gesamt"
-                value={dashboard.vacancyDays}
-                hint="Version 1 auf Basis von Room-Status"
+                value="—"
+                hint="Nicht berechnet"
               />
               <SmallStatCard
                 label="Umsatzverlust 7 Tage"
                 value={formatChfOrDash(dashboard.lostRevenue7Days)}
-                hint="Geschätzter Verlust durch frei / reserviert"
+                hint="Nicht berechnet"
               />
             </div>
           </SectionCard>
