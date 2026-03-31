@@ -1032,7 +1032,7 @@ function AdminLandlordDetailPage() {
               {sortedPropertyManagers.map((pm) => (
                 <li key={pm.id} className="px-4 py-3 bg-slate-50/50">
                   <Link
-                    to={`/admin/bewirtschafter?edit=${encodeURIComponent(pm.id)}`}
+                    to={`/admin/bewirtschafter/${encodeURIComponent(pm.id)}`}
                     className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 rounded-sm"
                   >
                     {propertyManagerDisplayName(pm)}
