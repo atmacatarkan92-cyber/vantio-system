@@ -422,6 +422,7 @@ function AdminOwnersPage() {
               >
                 <th style={{ padding: "12px" }}>Name</th>
                 <th style={{ padding: "12px" }}>Adresse</th>
+                <th style={{ padding: "12px" }}>Telefon</th>
                 <th style={{ padding: "12px" }}>E-Mail</th>
                 <th style={{ padding: "12px" }}>Status</th>
                 <th style={{ padding: "12px", whiteSpace: "nowrap" }}>Aktionen</th>
@@ -503,6 +504,7 @@ function AdminOwnersPage() {
                         ) : null}
                       </div>
                     </td>
+                    <td style={{ padding: "12px" }}>{item.phone || "—"}</td>
                     <td style={{ padding: "12px" }}>{item.email || "—"}</td>
                     <td style={{ padding: "12px" }}>
                       <span
