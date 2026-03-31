@@ -41,6 +41,81 @@ function landlordHasLinkedProperties(l) {
   return false;
 }
 
+function landlordSearchBlob(l) {
+  if (!l || typeof l !== "object") return "";
+  const parts = [
+    l.company_name,
+    l.contact_name,
+    l.email,
+    l.phone,
+    l.address_line1,
+    l.postal_code,
+    l.city,
+    l.canton,
+    l.website,
+    l.notes,
+  ];
+  try {
+    return parts
+      .map((x) => (x != null ? String(x) : ""))
+      .join(" ")
+      .toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+const toolbarCardStyle = {
+  background: "#FFFFFF",
+  border: "1px solid #E5E7EB",
+  borderRadius: "18px",
+  padding: "20px",
+  boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
+};
+
+const toolbarFieldLabelStyle = {
+  display: "block",
+  fontSize: "12px",
+  color: "#64748B",
+  marginBottom: "8px",
+  fontWeight: 600,
+};
+
+const toolbarInputStyle = {
+  width: "100%",
+  height: "44px",
+  borderRadius: "12px",
+  border: "1px solid #D1D5DB",
+  padding: "0 14px",
+  fontSize: "14px",
+  boxSizing: "border-box",
+};
+
+const toolbarSelectStyle = {
+  width: "100%",
+  minWidth: "160px",
+  height: "44px",
+  borderRadius: "12px",
+  border: "1px solid #D1D5DB",
+  padding: "0 12px",
+  fontSize: "14px",
+  boxSizing: "border-box",
+  background: "#FFFFFF",
+  color: "#0F172A",
+};
+
+const toolbarPrimaryButtonStyle = {
+  height: "44px",
+  padding: "0 18px",
+  borderRadius: "12px",
+  border: "none",
+  background: "#0F172A",
+  color: "#FFF",
+  fontWeight: 600,
+  fontSize: "14px",
+  cursor: "pointer",
+};
+
 function AdminLandlordsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const deepLinkHandled = useRef(false);
@@ -64,6 +139,7 @@ function AdminLandlordsPage() {
   });
   const [saving, setSaving] = useState(false);
   const [listFilter, setListFilter] = useState("active");
+  const [searchTerm, setSearchTerm] = useState("");
   const [addressCheckBusy, setAddressCheckBusy] = useState(false);
   const [cantonHint, setCantonHint] = useState("");
   const [cantonLockedByPlz, setCantonLockedByPlz] = useState(false);
@@ -88,6 +164,19 @@ function AdminLandlordsPage() {
     if (listFilter === "archived") return landlords.filter((l) => l.deleted_at);
     return landlords;
   }, [landlords, listFilter]);
+
+  const displayLandlords = useMemo(() => {
+    if (!Array.isArray(filteredLandlords)) return [];
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return filteredLandlords;
+    return filteredLandlords.filter((l) => {
+      try {
+        return landlordSearchBlob(l).includes(term);
+      } catch {
+        return false;
+      }
+    });
+  }, [filteredLandlords, searchTerm]);
 
   const kpiSummary = useMemo(() => {
     const arr = Array.isArray(landlords) ? landlords : [];
@@ -300,42 +389,62 @@ function AdminLandlordsPage() {
       {error && (
         <p style={{ color: "#B91C1C", marginBottom: "12px", fontSize: "14px" }}>{error}</p>
       )}
-      <div
-        style={{
-          marginBottom: "16px",
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          gap: "12px",
-        }}
-      >
-        <button
-          type="button"
-          onClick={openCreate}
+
+      <div style={{ ...toolbarCardStyle, marginBottom: "20px" }}>
+        <div
           style={{
-            padding: "10px 16px",
-            background: "#0F172A",
-            color: "#FFF",
-            border: "none",
-            borderRadius: "8px",
-            fontWeight: 600,
-            cursor: "pointer",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "16px",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
           }}
         >
-          + Neue Verwaltung
-        </button>
-        <label style={{ ...labelStyle, marginBottom: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-          <span>Anzeige</span>
-          <select
-            value={listFilter}
-            onChange={(e) => setListFilter(e.target.value)}
-            style={{ ...inputStyle, width: "auto", minWidth: "140px" }}
+          <div
+            style={{
+              flex: "1 1 280px",
+              minWidth: 0,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "16px",
+              alignItems: "flex-end",
+            }}
           >
-            <option value="active">Aktiv</option>
-            <option value="archived">Archiviert</option>
-            <option value="all">Alle</option>
-          </select>
-        </label>
+            <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+              <label htmlFor="admin-landlords-search" style={toolbarFieldLabelStyle}>
+                Suche
+              </label>
+              <input
+                id="admin-landlords-search"
+                type="search"
+                autoComplete="off"
+                placeholder="Nach Name, E-Mail, Telefon oder Verwaltung suchen"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={toolbarInputStyle}
+              />
+            </div>
+            <div style={{ flex: "0 1 180px", minWidth: "min(100%, 160px)" }}>
+              <label htmlFor="admin-landlords-anzeige" style={toolbarFieldLabelStyle}>
+                Anzeige
+              </label>
+              <select
+                id="admin-landlords-anzeige"
+                value={listFilter}
+                onChange={(e) => setListFilter(e.target.value)}
+                style={toolbarSelectStyle}
+                aria-label="Anzeige"
+              >
+                <option value="active">Aktiv</option>
+                <option value="archived">Archiviert</option>
+                <option value="all">Alle</option>
+              </select>
+            </div>
+          </div>
+          <button type="button" onClick={openCreate} style={toolbarPrimaryButtonStyle}>
+            + Neue Verwaltung
+          </button>
+        </div>
       </div>
 
       <table style={tableStyle}>
@@ -355,8 +464,14 @@ function AdminLandlordsPage() {
                 Noch keine Einträge. Erstellen Sie eine neue Verwaltung.
               </td>
             </tr>
+          ) : displayLandlords.length === 0 ? (
+            <tr>
+              <td colSpan={5} style={{ ...tdStyle, color: "#64748B" }}>
+                Keine Verwaltungen für diese Suche gefunden.
+              </td>
+            </tr>
           ) : (
-            filteredLandlords.map((row) => {
+            displayLandlords.map((row) => {
               const addrDisplay = formatLandlordAddressLine(row);
               const canOpenMap = addrDisplay !== "—";
               return (
