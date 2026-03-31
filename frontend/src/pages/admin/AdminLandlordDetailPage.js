@@ -10,33 +10,44 @@ import {
   fetchAdminLandlordDocuments,
   fetchAdminLandlordNotes,
   fetchAdminLandlordPropertyManagers,
-  fetchAdminLandlordProperties,
+  fetchAdminLandlordUnits,
+  normalizeUnit,
   restoreAdminLandlord,
   updateAdminLandlordNote,
   uploadAdminLandlordDocument,
 } from "../../api/adminData";
 import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
+import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 
 function dash(s) {
   const t = s != null ? String(s).trim() : "";
   return t || "—";
 }
 
-function propertyStatusLabel(status) {
-  const s = (status || "").toLowerCase();
-  if (s === "inactive") return "Inaktiv";
-  if (s === "active" || !s) return "Aktiv";
-  return status;
+function formatChfMonthly(value) {
+  const n = Number(value);
+  if (Number.isNaN(n)) return "—";
+  return `CHF ${n.toLocaleString("de-CH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function formatPropertyStreet(p) {
-  const parts = [p.street, p.house_number].filter((x) => x != null && String(x).trim() !== "");
-  return parts.length ? parts.join(" ") : "";
+function unitTypeBadgeClasses(type) {
+  const raw = String(type ?? "").trim();
+  const normalized = normalizeUnitTypeLabel(raw);
+  if (normalized === "Co-Living") {
+    return "border-sky-200 bg-sky-50 text-sky-800";
+  }
+  if (raw === "Business Apartment") {
+    return "border-violet-200 bg-violet-50 text-violet-800";
+  }
+  return "border-slate-200 bg-slate-50 text-slate-700";
 }
 
-function formatPropertyCityLine(p) {
-  const parts = [p.zip_code, p.city].filter((x) => x != null && String(x).trim() !== "");
-  return parts.length ? parts.join(" ") : "";
+function unitStatusBadgeClasses(status) {
+  const s = String(status ?? "").trim().toLowerCase();
+  if (s === "frei" || s === "") return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  if (s === "belegt" || s === "occupied") return "border-blue-200 bg-blue-50 text-blue-800";
+  if (s === "reserviert" || s === "reserved") return "border-amber-200 bg-amber-50 text-amber-900";
+  return "border-slate-200 bg-slate-50 text-slate-700";
 }
 
 function formatDateTime(iso) {
@@ -145,7 +156,9 @@ function AdminLandlordDetailPage() {
   const [archiving, setArchiving] = useState(false);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [restoring, setRestoring] = useState(false);
-  const [linkedProperties, setLinkedProperties] = useState([]);
+  const [assignedUnits, setAssignedUnits] = useState([]);
+  const [assignedUnitsLoading, setAssignedUnitsLoading] = useState(true);
+  const [assignedUnitsError, setAssignedUnitsError] = useState(null);
   const [propertyManagers, setPropertyManagers] = useState([]);
   const [propertyManagersLoading, setPropertyManagersLoading] = useState(true);
   const [propertyManagersError, setPropertyManagersError] = useState(null);
@@ -184,9 +197,18 @@ function AdminLandlordDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    fetchAdminLandlordProperties(id)
-      .then(setLinkedProperties)
-      .catch(() => setLinkedProperties([]));
+    setAssignedUnitsLoading(true);
+    setAssignedUnitsError(null);
+    fetchAdminLandlordUnits(id)
+      .then((data) => {
+        const arr = Array.isArray(data) ? data : [];
+        setAssignedUnits(arr.map((u) => normalizeUnit(u)));
+      })
+      .catch((e) => {
+        setAssignedUnits([]);
+        setAssignedUnitsError(e?.message?.trim() || "Units konnten nicht geladen werden.");
+      })
+      .finally(() => setAssignedUnitsLoading(false));
   }, [id]);
 
   useEffect(() => {
@@ -802,20 +824,73 @@ function AdminLandlordDetailPage() {
         </div>
 
         <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6">
-          <h2 className="text-sm font-semibold text-slate-900 mb-4">Zugeordnete Liegenschaften</h2>
-          {linkedProperties.length === 0 ? (
-            <p className="text-sm text-slate-500">Keine Liegenschaften zugeordnet</p>
+          <h2 className="text-sm font-semibold text-slate-900 mb-4">Zugeordnete Units</h2>
+          {assignedUnitsLoading ? (
+            <div className="space-y-2" aria-busy="true">
+              <p className="text-sm text-slate-500">Lade Units …</p>
+              <div className="h-2 w-full max-w-xs rounded bg-slate-100 animate-pulse" />
+              <div className="h-2 w-full max-w-[14rem] rounded bg-slate-100 animate-pulse" />
+            </div>
+          ) : assignedUnitsError ? (
+            <p className="text-sm text-red-700">{assignedUnitsError}</p>
+          ) : assignedUnits.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-8 text-center">
+              <p className="text-sm font-semibold text-slate-900">Keine Units zugeordnet</p>
+              <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
+                Dieser Verwaltung sind aktuell noch keine Units zugewiesen.
+              </p>
+            </div>
           ) : (
-            <ul className="divide-y divide-slate-100 border border-slate-100 rounded-lg overflow-hidden">
-              {linkedProperties.map((p) => {
-                const streetLine = formatPropertyStreet(p);
-                const cityLine = formatPropertyCityLine(p);
-                const sub = [streetLine, cityLine].filter(Boolean).join(" · ");
+            <ul className="space-y-3">
+              {assignedUnits.map((u) => {
+                const uid = u.unitId ?? u.id;
+                const title = (u.title || u.name || "").trim() || "—";
+                const typeLabel = normalizeUnitTypeLabel(u.type) || String(u.type || "").trim() || "—";
+                const addr = String(u.address || "").trim();
+                const zip = String(u.zip ?? "").trim();
+                const city = String(u.city || "").trim();
+                const zipCity = [zip, city].filter(Boolean).join(" ");
+                const propTitle = String(u.property_title || "").trim();
                 return (
-                  <li key={p.id} className="px-4 py-3 bg-slate-50/50">
-                    <p className="text-sm font-medium text-slate-900">{p.title?.trim() || "—"}</p>
-                    {sub ? <p className="text-xs text-slate-600 mt-0.5">{sub}</p> : null}
-                    <p className="text-xs text-slate-500 mt-1">Status: {propertyStatusLabel(p.status)}</p>
+                  <li
+                    key={String(uid)}
+                    className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 md:p-5 transition-shadow hover:shadow-md"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          to={`/admin/units/${encodeURIComponent(uid)}`}
+                          className="text-base font-semibold text-slate-900 hover:text-orange-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 rounded-sm"
+                        >
+                          {title}
+                        </Link>
+                        {propTitle ? (
+                          <p className="text-xs text-slate-500 mt-1">Liegenschaft: {propTitle}</p>
+                        ) : null}
+                        {addr ? <p className="text-sm text-slate-600 mt-2">{addr}</p> : null}
+                        {zipCity ? (
+                          <p className="text-sm text-slate-600">{zipCity}</p>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${unitTypeBadgeClasses(u.type)}`}
+                        >
+                          {typeLabel}
+                        </span>
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${unitStatusBadgeClasses(u.status)}`}
+                        >
+                          {u.status || "—"}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-slate-700 mt-3 pt-3 border-t border-slate-100">
+                      <span className="text-slate-500">Miete (Mieter): </span>
+                      <span className="font-semibold tabular-nums text-slate-900">
+                        {formatChfMonthly(u.tenantPriceMonthly)}
+                      </span>
+                    </p>
                   </li>
                 );
               })}

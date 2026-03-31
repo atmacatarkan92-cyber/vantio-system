@@ -691,6 +691,19 @@ export function fetchAdminLandlordProperties(landlordId) {
   });
 }
 
+export function fetchAdminLandlordUnits(landlordId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/landlords/${encodeURIComponent(landlordId)}/units`,
+    { headers: getApiHeaders() }
+  ).then((res) => {
+    if (!res.ok) {
+      if (res.status === 404) return [];
+      throw new Error("Units konnten nicht geladen werden.");
+    }
+    return res.json();
+  });
+}
+
 export function fetchAdminLandlordPropertyManagers(landlordId) {
   return fetch(
     `${API_BASE_URL}/api/admin/landlords/${encodeURIComponent(landlordId)}/property-managers`,
