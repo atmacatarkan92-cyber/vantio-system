@@ -8,11 +8,12 @@ from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, EmailStr, field_validator
-from sqlalchemy import desc, not_
+from sqlalchemy import and_, desc, not_, or_
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Landlord, LandlordNote, Property, PropertyManager, User
+from db.models import Landlord, LandlordNote, Property, PropertyManager, Unit, User
+from app.api.v1.routes_admin_units import _unit_to_dict
 from app.core.rate_limit import limiter
 from app.services.tenant_crm import load_users_by_ids
 
@@ -217,6 +218,43 @@ def admin_list_landlord_properties(
         }
         for p in rows
     ]
+
+
+@router.get("/landlords/{landlord_id}/units", response_model=List[dict])
+def admin_list_landlord_units(
+    landlord_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    """
+    Units assigned to this landlord: direct (unit.landlord_id) or indirect via
+    property (unit.property_id -> property.landlord_id). Non-deleted properties only for the indirect path.
+    """
+    landlord = session.get(Landlord, landlord_id)
+    if not landlord or str(landlord.organization_id) != org_id:
+        raise HTTPException(status_code=404, detail="Landlord not found")
+
+    stmt = (
+        select(Unit, Property)
+        .select_from(Unit)
+        .outerjoin(Property, Unit.property_id == Property.id)
+        .where(Unit.organization_id == org_id)
+        .where(
+            or_(
+                Unit.landlord_id == landlord_id,
+                and_(
+                    Property.id.isnot(None),
+                    Property.landlord_id == landlord_id,
+                    Property.organization_id == org_id,
+                    Property.deleted_at.is_(None),
+                ),
+            )
+        )
+        .order_by(Unit.title)
+    )
+    rows = list(session.exec(stmt).all())
+    return [_unit_to_dict(u, p.title if p else None) for u, p in rows]
 
 
 def _landlord_property_manager_public_dict(p: PropertyManager) -> dict:
