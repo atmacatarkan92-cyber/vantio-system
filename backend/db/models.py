@@ -93,6 +93,22 @@ class PropertyManager(SQLModel, table=True):
     phone: Optional[str] = Field(default=None)
     status: str = Field(default="active", max_length=32)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = Field(default=None, nullable=True)
+
+
+class PropertyManagerNote(SQLModel, table=True):
+    """Internal CRM note on a property manager (organization-scoped)."""
+
+    __tablename__ = "property_manager_notes"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    property_manager_id: str = Field(foreign_key="property_managers.id", index=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
+    content: str = Field(sa_column=Column(Text, nullable=False))
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    created_by_user_id: Optional[str] = Field(
+        default=None, foreign_key="users.id", index=True, nullable=True
+    )
 
 
 class Property(SQLModel, table=True):

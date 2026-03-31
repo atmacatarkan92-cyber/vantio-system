@@ -877,6 +877,40 @@ export function fetchAdminPropertyManagerUnits(propertyManagerId) {
   });
 }
 
+export function fetchAdminPropertyManagerNotes(propertyManagerId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/property-managers/${encodeURIComponent(propertyManagerId)}/notes`,
+    { headers: getApiHeaders() }
+  ).then((res) => {
+    if (!res.ok) {
+      if (res.status === 404) return { items: [] };
+      throw new Error("Notizen konnten nicht geladen werden.");
+    }
+    return res.json();
+  });
+}
+
+export async function createAdminPropertyManagerNote(propertyManagerId, content) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/property-managers/${encodeURIComponent(propertyManagerId)}/notes`,
+    {
+      method: "POST",
+      headers: getApiHeaders(),
+      body: JSON.stringify({ content }),
+    }
+  );
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(parseAdminErrorBodyText(text));
+  }
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch (e) {
+    console.warn("createAdminPropertyManagerNote: unexpected response body", e);
+    throw new Error("Notiz konnte nicht gespeichert werden.");
+  }
+}
+
 export async function createAdminPropertyManager(body) {
   const res = await fetch(`${API_BASE_URL}/api/admin/property-managers`, {
     method: "POST",

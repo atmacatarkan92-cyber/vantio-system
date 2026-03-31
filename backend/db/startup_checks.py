@@ -13,7 +13,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 # Bump when adding migrations; override with EXPECTED_ALEMBIC_REVISION for staged rollouts.
-_DEFAULT_EXPECTED_REVISION = "050_property_manager_status"
+_DEFAULT_EXPECTED_REVISION = "051_property_manager_notes"
 
 CRITICAL_TABLES: tuple[str, ...] = (
     "password_reset_tokens",

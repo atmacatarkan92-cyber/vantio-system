@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
+  createAdminPropertyManagerNote,
   fetchAdminLandlord,
   fetchAdminPropertyManager,
+  fetchAdminPropertyManagerNotes,
   fetchAdminPropertyManagerUnits,
   normalizeUnit,
   patchAdminPropertyManager,
@@ -43,6 +45,21 @@ function unitStatusBadgeClasses(status) {
   return "border-slate-200 bg-slate-50 text-slate-700";
 }
 
+function formatDateTime(iso) {
+  if (!iso) return "—";
+  const normalized = /Z|[+-]\d{2}:\d{2}$/.test(iso) ? iso : `${iso}Z`;
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("de-CH", {
+    timeZone: "Europe/Zurich",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function AdminPropertyManagerDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -55,6 +72,12 @@ function AdminPropertyManagerDetailPage() {
   const [unitsLoading, setUnitsLoading] = useState(true);
   const [unitsError, setUnitsError] = useState(null);
   const [statusSaving, setStatusSaving] = useState(false);
+  const [notes, setNotes] = useState([]);
+  const [notesLoading, setNotesLoading] = useState(true);
+  const [newNoteDraft, setNewNoteDraft] = useState("");
+  const [newNoteSaving, setNewNoteSaving] = useState(false);
+  const [newNoteErr, setNewNoteErr] = useState(null);
+  const [newNoteSubmitErr, setNewNoteSubmitErr] = useState(null);
 
   useEffect(() => {
     if (!id) return;
@@ -103,6 +126,18 @@ function AdminPropertyManagerDetailPage() {
       .finally(() => setUnitsLoading(false));
   }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+    setNotesLoading(true);
+    fetchAdminPropertyManagerNotes(id)
+      .then((data) => {
+        const items = data && Array.isArray(data.items) ? data.items : [];
+        setNotes(items);
+      })
+      .catch(() => setNotes([]))
+      .finally(() => setNotesLoading(false));
+  }, [id]);
+
   if (loading) {
     return <p className="px-2 text-slate-500">Lade Bewirtschafter …</p>;
   }
@@ -124,6 +159,31 @@ function AdminPropertyManagerDetailPage() {
 
   const displayName = String(pm.name || "").trim() || "Bewirtschafter";
   const isPmActive = String(pm.status || "active").toLowerCase() !== "inactive";
+
+  const saveNewNote = () => {
+    if (!id) return;
+    const raw = String(newNoteDraft || "").trim();
+    if (!raw) {
+      setNewNoteErr("Bitte eine Notiz eingeben.");
+      return;
+    }
+    setNewNoteErr(null);
+    setNewNoteSubmitErr(null);
+    setNewNoteSaving(true);
+    createAdminPropertyManagerNote(id, raw)
+      .then(() => {
+        setNewNoteDraft("");
+        return fetchAdminPropertyManagerNotes(id);
+      })
+      .then((data) => {
+        const items = data && Array.isArray(data.items) ? data.items : [];
+        setNotes(items);
+      })
+      .catch((err) => {
+        setNewNoteSubmitErr(err?.message || "Notiz konnte nicht gespeichert werden.");
+      })
+      .finally(() => setNewNoteSaving(false));
+  };
 
   const handleToggleStatus = () => {
     if (!id) return;
@@ -234,12 +294,84 @@ function AdminPropertyManagerDetailPage() {
 
       <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6 mb-4">
         <h2 className="text-sm font-semibold text-slate-900 mb-4">Notizen</h2>
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-8 text-center">
-          <p className="text-sm font-medium text-slate-700">Keine Notizen</p>
-          <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
-            Interne Notizen für Bewirtschafter sind in der aktuellen Version noch nicht verfügbar.
-          </p>
+        <form
+          className="mb-6"
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveNewNote();
+          }}
+        >
+          <label htmlFor="pm-new-note" className="text-xs font-medium text-slate-500 block mb-1.5">
+            Neue Notiz
+          </label>
+          <textarea
+            id="pm-new-note"
+            value={newNoteDraft}
+            onChange={(e) => {
+              setNewNoteDraft(e.target.value);
+              setNewNoteErr(null);
+            }}
+            disabled={newNoteSaving}
+            placeholder="Interne Notiz …"
+            rows={3}
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-60"
+          />
+          {newNoteErr ? <p className="mt-2 text-sm text-red-700">{newNoteErr}</p> : null}
+          {newNoteSubmitErr ? <p className="mt-2 text-sm text-red-700">{newNoteSubmitErr}</p> : null}
+          <div className="mt-3">
+            <button
+              type="submit"
+              disabled={newNoteSaving}
+              className="inline-flex items-center rounded-lg bg-orange-500 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              {newNoteSaving ? "Speichern …" : "Notiz speichern"}
+            </button>
+          </div>
+        </form>
+        <div className="border-t border-slate-100 pt-5">
+          <p className="text-xs font-medium text-slate-500 mb-3">Alle Notizen</p>
+          {notesLoading ? (
+            <p className="text-sm text-slate-500">Lade Notizen …</p>
+          ) : !notes.length ? (
+            <p className="text-sm text-slate-500">Noch keine Notizen vorhanden.</p>
+          ) : (
+            <ul className="space-y-4">
+              {notes.map((n) => (
+                <li key={n.id} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0">
+                  <p className="text-sm text-slate-900 whitespace-pre-wrap">{n.content}</p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    {formatDateTime(n.created_at)} · {n.author_name || "—"}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6 mb-4">
+        <h2 className="text-sm font-semibold text-slate-900 mb-4">Historie</h2>
+        <p className="text-xs text-slate-500 mb-3">
+          Basierend auf gespeicherten Stammdaten (kein vollständiges Audit-Protokoll).
+        </p>
+        <ul className="space-y-3 border-l-2 border-slate-200 pl-4 ml-1">
+          <li>
+            <p className="text-xs font-medium text-slate-500">Erstellt am</p>
+            <p className="text-sm font-medium text-slate-900 mt-0.5">{formatDateTime(pm.created_at)}</p>
+          </li>
+          <li>
+            <p className="text-xs font-medium text-slate-500">Zuletzt aktualisiert</p>
+            <p className="text-sm font-medium text-slate-900 mt-0.5">
+              {formatDateTime(pm.updated_at)}
+            </p>
+          </li>
+          <li>
+            <p className="text-xs font-medium text-slate-500">Status</p>
+            <p className="text-sm font-medium text-slate-900 mt-0.5">
+              {isPmActive ? "Aktiv" : "Inaktiv"}
+            </p>
+          </li>
+        </ul>
       </section>
 
       <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6 mb-4">
