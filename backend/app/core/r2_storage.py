@@ -77,6 +77,12 @@ def build_landlord_object_key(landlord_id: str, original_name: str) -> str:
     return f"landlords/{landlord_id}/{uid}-{safe}"
 
 
+def build_owner_object_key(owner_id: str, original_name: str) -> str:
+    uid = str(uuid.uuid4())
+    safe = safe_filename(original_name)
+    return f"owners/{owner_id}/{uid}-{safe}"
+
+
 def public_object_url(object_key: str) -> str:
     """Public HTTPS URL for the object (R2_PUBLIC_URL, e.g. r2.dev or custom domain)."""
     base = os.environ.get("R2_PUBLIC_URL", "").strip().rstrip("/")

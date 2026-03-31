@@ -1221,3 +1221,58 @@ export async function deleteAdminLandlordDocument(documentId) {
   }
   return res.json();
 }
+
+export function fetchAdminOwnerDocuments(ownerId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/owner-documents?owner_id=${encodeURIComponent(ownerId)}`,
+    { headers: getApiHeaders() }
+  )
+    .then((res) => {
+      if (!res.ok) throw new Error("Dokumente konnten nicht geladen werden.");
+      return res.json();
+    })
+    .then((data) => {
+      if (data != null && typeof data === "object" && Array.isArray(data.items)) {
+        return data.items;
+      }
+      throw new Error('Ungültige Antwort: erwartet { items: [] }.');
+    });
+}
+
+export async function uploadAdminOwnerDocument(ownerId, file, options = {}) {
+  const fd = new FormData();
+  fd.append("owner_id", ownerId);
+  fd.append("file", file);
+  const cat = options.category != null ? String(options.category).trim() : "";
+  if (cat) fd.append("category", cat);
+  const res = await fetch(`${API_BASE_URL}/api/admin/owner-documents`, {
+    method: "POST",
+    headers: getApiHeadersMultipart(),
+    body: fd,
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
+
+export function fetchAdminOwnerDocumentDownloadUrl(documentId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/owner-documents/${encodeURIComponent(documentId)}/download`,
+    { headers: getApiHeaders() }
+  ).then(async (res) => {
+    if (!res.ok) throw new Error(await parseAdminErrorResponse(res));
+    return res.json();
+  });
+}
+
+export async function deleteAdminOwnerDocument(documentId) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/owner-documents/${encodeURIComponent(documentId)}`, {
+    method: "DELETE",
+    headers: getApiHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
