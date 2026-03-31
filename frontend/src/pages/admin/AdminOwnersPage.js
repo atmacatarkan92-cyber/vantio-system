@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { createAdminOwner, fetchAdminOwners, verifyAdminAddress } from "../../api/adminData";
 import { SWISS_CANTON_CODES } from "../../constants/swissCantons";
 import { lookupSwissPlz } from "../../data/swissPlzLookup";
-import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
+import { buildGoogleMapsSearchUrl, formatLandlordAddressLine } from "../../utils/googleMapsUrl";
 
 const modalInputStyle = {
   width: "100%",
@@ -19,17 +19,6 @@ const modalLabelStyle = {
   fontWeight: 600,
   color: "#475569",
 };
-
-function formatDate(dateString) {
-  if (!dateString) return "—";
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return dateString;
-  return date.toLocaleDateString("de-CH", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-}
 
 function getCardStyle(accentColor) {
   return {
@@ -432,23 +421,89 @@ function AdminOwnersPage() {
                 }}
               >
                 <th style={{ padding: "12px" }}>Name</th>
+                <th style={{ padding: "12px" }}>Adresse</th>
                 <th style={{ padding: "12px" }}>E-Mail</th>
-                <th style={{ padding: "12px" }}>Telefon</th>
                 <th style={{ padding: "12px" }}>Status</th>
-                <th style={{ padding: "12px" }}>Erstellt</th>
                 <th style={{ padding: "12px", whiteSpace: "nowrap" }}>Aktionen</th>
               </tr>
             </thead>
             <tbody>
               {filteredRows.map((item) => {
                 const isActive = String(item.status || "active").toLowerCase() !== "inactive";
+                const addrDisplay = formatLandlordAddressLine(item);
+                const canOpenMap = addrDisplay !== "—";
                 return (
                   <tr key={item.id} style={{ borderBottom: "1px solid #F1F5F9" }}>
-                    <td style={{ padding: "12px", fontWeight: 700, color: "#0F172A" }}>
-                      {item.name || "—"}
+                    <td style={{ padding: "12px" }}>
+                      <Link
+                        to={`/admin/owners/${encodeURIComponent(item.id)}`}
+                        style={{ color: "#0F172A", fontWeight: 600, textDecoration: "none" }}
+                      >
+                        {item.name || "—"}
+                      </Link>
+                    </td>
+                    <td style={{ padding: "12px" }}>
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          flexWrap: "wrap",
+                          maxWidth: "100%",
+                        }}
+                      >
+                        <span style={{ minWidth: 0 }}>{addrDisplay}</span>
+                        {canOpenMap ? (
+                          <button
+                            type="button"
+                            title="In Google Maps öffnen"
+                            aria-label="In Google Maps öffnen"
+                            onClick={() =>
+                              window.open(
+                                buildGoogleMapsSearchUrl(
+                                  item.address_line1,
+                                  item.postal_code,
+                                  item.city
+                                ),
+                                "_blank",
+                                "noopener,noreferrer"
+                              )
+                            }
+                            style={{
+                              flexShrink: 0,
+                              padding: "2px",
+                              margin: 0,
+                              border: "none",
+                              background: "transparent",
+                              borderRadius: "6px",
+                              cursor: "pointer",
+                              color: "#64748B",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              verticalAlign: "middle",
+                            }}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden
+                            >
+                              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                              <circle cx="12" cy="10" r="3" />
+                            </svg>
+                          </button>
+                        ) : null}
+                      </div>
                     </td>
                     <td style={{ padding: "12px" }}>{item.email || "—"}</td>
-                    <td style={{ padding: "12px" }}>{item.phone || "—"}</td>
                     <td style={{ padding: "12px" }}>
                       <span
                         style={{
@@ -465,7 +520,6 @@ function AdminOwnersPage() {
                         {isActive ? "Aktiv" : "Inaktiv"}
                       </span>
                     </td>
-                    <td style={{ padding: "12px" }}>{formatDate(item.created_at)}</td>
                     <td style={{ padding: "12px" }}>
                       <Link
                         to={`/admin/owners/${encodeURIComponent(item.id)}`}
