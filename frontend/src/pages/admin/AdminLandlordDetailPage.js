@@ -17,6 +17,7 @@ import {
   updateAdminLandlordNote,
   uploadAdminLandlordDocument,
 } from "../../api/adminData";
+import { COMMON_AUDIT_FIELD_LABELS } from "../../utils/auditFieldLabels";
 import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 
@@ -118,18 +119,11 @@ function formatLandlordDocumentCategoryLabel(category) {
 }
 
 const LANDLORD_FIELD_LABELS = {
+  ...COMMON_AUDIT_FIELD_LABELS,
   user_id: "Portal-Benutzer",
   company_name: "Firmenname",
   contact_name: "Kontaktperson",
-  email: "E-Mail",
-  phone: "Telefonnummer",
-  address_line1: "Adresse",
-  postal_code: "PLZ",
-  city: "Ort",
-  canton: "Kanton",
   website: "Website",
-  notes: "Notizen",
-  status: "Status",
   deleted_at: "Archivierung",
 };
 

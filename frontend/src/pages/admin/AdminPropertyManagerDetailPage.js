@@ -10,6 +10,7 @@ import {
   normalizeUnit,
   patchAdminPropertyManager,
 } from "../../api/adminData";
+import { COMMON_AUDIT_FIELD_LABELS } from "../../utils/auditFieldLabels";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 
 function landlordLabel(l) {
@@ -63,11 +64,8 @@ function formatDateTime(iso) {
 }
 
 const PM_FIELD_LABELS = {
-  name: "Name",
-  email: "E-Mail",
-  phone: "Telefonnummer",
+  ...COMMON_AUDIT_FIELD_LABELS,
   landlord_id: "Verwaltung",
-  status: "Status",
 };
 
 function formatPmAuditDisplayValue(field, value) {

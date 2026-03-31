@@ -11,6 +11,7 @@ import {
 import { SWISS_CANTON_CODES } from "../../constants/swissCantons";
 import { lookupSwissPlz } from "../../data/swissPlzLookup";
 import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
+import { COMMON_AUDIT_FIELD_LABELS } from "../../utils/auditFieldLabels";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 
 function formatChfMonthly(value) {
@@ -56,15 +57,7 @@ function formatDateTime(iso) {
 }
 
 const OWNER_FIELD_LABELS = {
-  name: "Name",
-  email: "E-Mail",
-  phone: "Telefonnummer",
-  address_line1: "Adresse",
-  postal_code: "PLZ",
-  city: "Ort",
-  canton: "Kanton",
-  status: "Status",
-  notes: "Notizen",
+  ...COMMON_AUDIT_FIELD_LABELS,
 };
 
 function formatOwnerAuditDisplayValue(field, value) {
