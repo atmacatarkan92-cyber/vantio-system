@@ -5,7 +5,11 @@ import {
   fetchAdminOwnerUnits,
   normalizeUnit,
   patchAdminOwner,
+  verifyAdminAddress,
 } from "../../api/adminData";
+import { SWISS_CANTON_CODES } from "../../constants/swissCantons";
+import { lookupSwissPlz } from "../../data/swissPlzLookup";
+import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 
 function formatChfMonthly(value) {
@@ -66,8 +70,16 @@ function AdminOwnerDetailPage() {
     name: "",
     email: "",
     phone: "",
+    address_line1: "",
+    postal_code: "",
+    city: "",
+    canton: "",
     status: "active",
   });
+  const [editAddressCheckBusy, setEditAddressCheckBusy] = useState(false);
+  const [editCantonHint, setEditCantonHint] = useState("");
+  const [editCantonLockedByPlz, setEditCantonLockedByPlz] = useState(false);
+  const [editPlzNotFound, setEditPlzNotFound] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -105,13 +117,49 @@ function AdminOwnerDetailPage() {
       .finally(() => setUnitsLoading(false));
   }, [id]);
 
+  useEffect(() => {
+    setEditCantonHint("");
+  }, [editForm.address_line1, editForm.postal_code, editForm.city]);
+
+  const handleEditPostalCodeChange = (e) => {
+    const next = e.target.value;
+    const plz = next.trim();
+    if (!/^\d{4}$/.test(plz)) {
+      setEditCantonLockedByPlz(false);
+      setEditPlzNotFound(false);
+      setEditForm((f) => ({ ...f, postal_code: next }));
+      return;
+    }
+    const hit = lookupSwissPlz(plz);
+    if (hit) {
+      setEditForm((f) => ({
+        ...f,
+        postal_code: next,
+        city: hit.city,
+        canton: hit.canton,
+      }));
+      setEditCantonLockedByPlz(true);
+      setEditPlzNotFound(false);
+    } else {
+      setEditForm((f) => ({ ...f, postal_code: next }));
+      setEditCantonLockedByPlz(false);
+      setEditPlzNotFound(true);
+    }
+  };
+
   const openEdit = () => {
     if (!owner) return;
     setEditErr(null);
+    setEditCantonLockedByPlz(false);
+    setEditPlzNotFound(false);
     setEditForm({
       name: owner.name || "",
       email: owner.email || "",
       phone: owner.phone || "",
+      address_line1: owner.address_line1 || "",
+      postal_code: owner.postal_code || "",
+      city: owner.city || "",
+      canton: owner.canton || "",
       status: String(owner.status || "active").toLowerCase() === "inactive" ? "inactive" : "active",
     });
     setEditOpen(true);
@@ -120,12 +168,23 @@ function AdminOwnerDetailPage() {
   const submitEdit = (e) => {
     e.preventDefault();
     if (!id) return;
+    const addr1 = editForm.address_line1.trim();
+    const plz = editForm.postal_code.trim();
+    const ort = editForm.city.trim();
+    if (!addr1 || !plz || !ort) {
+      setEditErr("Bitte Adresse, PLZ und Ort ausfüllen.");
+      return;
+    }
     setEditSaving(true);
     setEditErr(null);
     patchAdminOwner(id, {
       name: editForm.name.trim(),
       email: editForm.email.trim() || null,
       phone: editForm.phone.trim() || null,
+      address_line1: addr1,
+      postal_code: plz,
+      city: ort,
+      canton: editForm.canton.trim() || null,
       status: editForm.status === "inactive" ? "inactive" : "active",
     })
       .then((row) => {
@@ -157,6 +216,12 @@ function AdminOwnerDetailPage() {
 
   const displayName = String(owner.name || "").trim() || "Eigentümer";
   const isOwnerActive = String(owner.status || "active").toLowerCase() !== "inactive";
+
+  const addrLine1 = owner.address_line1?.trim() || "";
+  const plz = owner.postal_code?.trim() || "";
+  const city = owner.city?.trim() || "";
+  const addrLine2 = [plz, city].filter(Boolean).join(" ");
+  const addrLine3 = owner.canton?.trim() || "";
 
   const handleToggleStatus = () => {
     if (!id) return;
@@ -240,6 +305,48 @@ function AdminOwnerDetailPage() {
             <p className="text-xs font-medium text-slate-500">Telefonnummer</p>
             <p className="text-sm font-medium text-slate-900 mt-1">{owner.phone?.trim() || "—"}</p>
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6 mb-4">
+        <h2 className="text-sm font-semibold text-slate-900 mb-4">Adresse</h2>
+        <div className="flex items-start gap-2">
+          <div className="text-sm font-medium text-slate-900 space-y-1 flex-1 min-w-0">
+            <p>{addrLine1 ? addrLine1 : "—"}</p>
+            <p>{addrLine2 ? addrLine2 : "—"}</p>
+            <p>{addrLine3 ? addrLine3 : "—"}</p>
+          </div>
+          {addrLine1 || plz || city ? (
+            <button
+              type="button"
+              title="In Google Maps öffnen"
+              aria-label="In Google Maps öffnen"
+              onClick={() =>
+                window.open(
+                  buildGoogleMapsSearchUrl(owner.address_line1, owner.postal_code, owner.city),
+                  "_blank",
+                  "noopener,noreferrer"
+                )
+              }
+              className="shrink-0 p-1 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-100 inline-flex items-center justify-center"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+            </button>
+          ) : null}
         </div>
       </section>
 
@@ -343,7 +450,7 @@ function AdminOwnerDetailPage() {
           role="presentation"
         >
           <div
-            className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-lg"
+            className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-lg max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -392,6 +499,131 @@ function AdminOwnerDetailPage() {
                   disabled={editSaving}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
                 />
+              </div>
+              <div>
+                <label htmlFor="owner-edit-addr" className="block text-xs font-medium text-slate-500 mb-1">
+                  Adresse *
+                </label>
+                <input
+                  id="owner-edit-addr"
+                  type="text"
+                  required
+                  value={editForm.address_line1}
+                  onChange={(e) => setEditForm((f) => ({ ...f, address_line1: e.target.value }))}
+                  disabled={editSaving}
+                  placeholder="Strasse Nr."
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                />
+              </div>
+              <div>
+                <label htmlFor="owner-edit-plz" className="block text-xs font-medium text-slate-500 mb-1">
+                  PLZ *
+                </label>
+                <input
+                  id="owner-edit-plz"
+                  type="text"
+                  required
+                  value={editForm.postal_code}
+                  onChange={handleEditPostalCodeChange}
+                  disabled={editSaving}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                />
+                {editPlzNotFound ? (
+                  <p className="mt-1 text-xs text-slate-400">PLZ nicht gefunden</p>
+                ) : null}
+              </div>
+              <div>
+                <label htmlFor="owner-edit-city" className="block text-xs font-medium text-slate-500 mb-1">
+                  Ort *
+                </label>
+                <input
+                  id="owner-edit-city"
+                  type="text"
+                  required
+                  value={editForm.city}
+                  onChange={(e) => setEditForm((f) => ({ ...f, city: e.target.value }))}
+                  disabled={editSaving}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.open(
+                      buildGoogleMapsSearchUrl(
+                        editForm.address_line1,
+                        editForm.postal_code,
+                        editForm.city
+                      ),
+                      "_blank",
+                      "noopener,noreferrer"
+                    );
+                    setEditAddressCheckBusy(true);
+                    setEditCantonHint("Kanton wird ermittelt …");
+                    verifyAdminAddress({
+                      address_line1: editForm.address_line1,
+                      postal_code: editForm.postal_code,
+                      city: editForm.city,
+                    })
+                      .then((res) => {
+                        const c = res?.normalized?.canton;
+                        if (res?.valid && c != null && String(c).trim() !== "") {
+                          const code = String(c).trim().toUpperCase();
+                          setEditForm((f) => ({ ...f, canton: code }));
+                          setEditCantonHint("Kanton automatisch erkannt.");
+                        } else {
+                          setEditCantonHint(
+                            "Kein Kanton automatisch ermittelbar. Bitte bei Bedarf manuell wählen."
+                          );
+                        }
+                      })
+                      .catch(() =>
+                        setEditCantonHint("Kanton konnte nicht automatisch ermittelt werden.")
+                      )
+                      .finally(() => setEditAddressCheckBusy(false));
+                  }}
+                  disabled={
+                    editSaving ||
+                    editAddressCheckBusy ||
+                    !(editForm.address_line1 || "").trim() ||
+                    !(editForm.postal_code || "").trim() ||
+                    !(editForm.city || "").trim()
+                  }
+                  className="self-start rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {editAddressCheckBusy ? "…" : "Adresse prüfen"}
+                </button>
+                <p className="text-xs text-slate-500">
+                  Öffnet Google Maps in einem neuen Tab. Der Kanton wird im Hintergrund ergänzt, wenn die
+                  Abfrage einen Wert liefert.
+                </p>
+                {editCantonHint ? <p className="text-xs text-slate-500">{editCantonHint}</p> : null}
+              </div>
+              <div>
+                <label htmlFor="owner-edit-canton" className="block text-xs font-medium text-slate-500 mb-1">
+                  Kanton
+                </label>
+                <p className="mb-1 text-xs text-slate-500">
+                  Optional — oft nach «Adresse prüfen» gesetzt; manuelle Auswahl möglich.
+                </p>
+                <select
+                  id="owner-edit-canton"
+                  value={editForm.canton || ""}
+                  onChange={(e) => setEditForm((f) => ({ ...f, canton: e.target.value }))}
+                  disabled={editSaving || editCantonLockedByPlz}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 bg-white disabled:opacity-60"
+                >
+                  <option value="">—</option>
+                  {editForm.canton && !SWISS_CANTON_CODES.includes(editForm.canton) ? (
+                    <option value={editForm.canton}>{editForm.canton}</option>
+                  ) : null}
+                  {SWISS_CANTON_CODES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label htmlFor="owner-edit-status" className="block text-xs font-medium text-slate-500 mb-1">

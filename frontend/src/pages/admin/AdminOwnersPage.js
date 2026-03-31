@@ -1,6 +1,24 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { createAdminOwner, fetchAdminOwners } from "../../api/adminData";
+import { createAdminOwner, fetchAdminOwners, verifyAdminAddress } from "../../api/adminData";
+import { SWISS_CANTON_CODES } from "../../constants/swissCantons";
+import { lookupSwissPlz } from "../../data/swissPlzLookup";
+import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
+
+const modalInputStyle = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: "12px",
+  border: "1px solid #D1D5DB",
+  fontSize: "14px",
+};
+const modalLabelStyle = {
+  display: "block",
+  marginBottom: "6px",
+  fontSize: "13px",
+  fontWeight: 600,
+  color: "#475569",
+};
 
 function formatDate(dateString) {
   if (!dateString) return "—";
@@ -36,9 +54,17 @@ function AdminOwnersPage() {
     name: "",
     email: "",
     phone: "",
+    address_line1: "",
+    postal_code: "",
+    city: "",
+    canton: "",
     status: "active",
   });
   const [saving, setSaving] = useState(false);
+  const [addressCheckBusy, setAddressCheckBusy] = useState(false);
+  const [cantonHint, setCantonHint] = useState("");
+  const [cantonLockedByPlz, setCantonLockedByPlz] = useState(false);
+  const [plzNotFound, setPlzNotFound] = useState(false);
 
   const load = (showSpinner = true) => {
     if (showSpinner) setLoading(true);
@@ -64,25 +90,73 @@ function AdminOwnersPage() {
     load(true);
   }, []);
 
+  useEffect(() => {
+    setCantonHint("");
+  }, [form.address_line1, form.postal_code, form.city]);
+
   const openCreate = () => {
     setError("");
+    setCantonLockedByPlz(false);
+    setPlzNotFound(false);
     setForm({
       name: "",
       email: "",
       phone: "",
+      address_line1: "",
+      postal_code: "",
+      city: "",
+      canton: "",
       status: "active",
     });
     setFormOpen(true);
+  };
+
+  const handlePostalCodeChange = (e) => {
+    const next = e.target.value;
+    const plz = next.trim();
+    if (!/^\d{4}$/.test(plz)) {
+      setCantonLockedByPlz(false);
+      setPlzNotFound(false);
+      setForm((f) => ({ ...f, postal_code: next }));
+      return;
+    }
+    const hit = lookupSwissPlz(plz);
+    if (hit) {
+      setForm((f) => ({
+        ...f,
+        postal_code: next,
+        city: hit.city,
+        canton: hit.canton,
+      }));
+      setCantonLockedByPlz(true);
+      setPlzNotFound(false);
+    } else {
+      setForm((f) => ({ ...f, postal_code: next }));
+      setCantonLockedByPlz(false);
+      setPlzNotFound(true);
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setSaving(true);
     setError("");
+    const addr1 = form.address_line1.trim();
+    const plz = form.postal_code.trim();
+    const ort = form.city.trim();
+    if (!addr1 || !plz || !ort) {
+      setError("Bitte Adresse, PLZ und Ort ausfüllen.");
+      setSaving(false);
+      return;
+    }
     const body = {
       name: form.name.trim(),
       email: form.email.trim() || null,
       phone: form.phone.trim() || null,
+      address_line1: addr1,
+      postal_code: plz,
+      city: ort,
+      canton: form.canton.trim() || null,
       status: form.status === "inactive" ? "inactive" : "active",
     };
     createAdminOwner(body)
@@ -109,7 +183,7 @@ function AdminOwnersPage() {
     const term = searchTerm.toLowerCase().trim();
     if (!term) return result;
     return result.filter((item) => {
-      const blob = `${item.name || ""} ${item.email || ""} ${item.phone || ""}`.toLowerCase();
+      const blob = `${item.name || ""} ${item.email || ""} ${item.phone || ""} ${item.address_line1 || ""} ${item.postal_code || ""} ${item.city || ""} ${item.canton || ""}`.toLowerCase();
       return blob.includes(term);
     });
   }, [statusFilteredItems, searchTerm]);
@@ -247,7 +321,7 @@ function AdminOwnersPage() {
               </label>
               <input
                 type="text"
-                placeholder="Nach Name, E-Mail oder Telefon suchen"
+                placeholder="Nach Name, E-Mail, Telefon oder Adresse suchen"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
@@ -487,39 +561,141 @@ function AdminOwnersPage() {
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: "12px",
-                    border: "1px solid #D1D5DB",
-                    fontSize: "14px",
-                  }}
+                  style={modalInputStyle}
                 />
               </div>
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "6px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    color: "#475569",
-                  }}
-                >
-                  Telefon (optional)
-                </label>
+                <label style={modalLabelStyle}>Telefon (optional)</label>
                 <input
                   type="text"
                   value={form.phone}
                   onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: "12px",
-                    border: "1px solid #D1D5DB",
-                    fontSize: "14px",
-                  }}
+                  style={modalInputStyle}
                 />
+              </div>
+              <div>
+                <label style={modalLabelStyle}>Adresse *</label>
+                <input
+                  type="text"
+                  value={form.address_line1}
+                  onChange={(e) => setForm((f) => ({ ...f, address_line1: e.target.value }))}
+                  style={modalInputStyle}
+                  placeholder="Strasse Nr."
+                  required
+                />
+              </div>
+              <div>
+                <label style={modalLabelStyle}>PLZ *</label>
+                <input
+                  type="text"
+                  value={form.postal_code}
+                  onChange={handlePostalCodeChange}
+                  style={modalInputStyle}
+                  required
+                />
+                {plzNotFound ? (
+                  <p style={{ margin: "6px 0 0 0", fontSize: "12px", color: "#94A3B8" }}>
+                    PLZ nicht gefunden
+                  </p>
+                ) : null}
+              </div>
+              <div>
+                <label style={modalLabelStyle}>Ort *</label>
+                <input
+                  type="text"
+                  value={form.city}
+                  onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                  style={modalInputStyle}
+                  required
+                />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open(
+                        buildGoogleMapsSearchUrl(form.address_line1, form.postal_code, form.city),
+                        "_blank",
+                        "noopener,noreferrer"
+                      );
+                      setAddressCheckBusy(true);
+                      setCantonHint("Kanton wird ermittelt …");
+                      verifyAdminAddress({
+                        address_line1: form.address_line1,
+                        postal_code: form.postal_code,
+                        city: form.city,
+                      })
+                        .then((res) => {
+                          const c = res?.normalized?.canton;
+                          if (res?.valid && c != null && String(c).trim() !== "") {
+                            const code = String(c).trim().toUpperCase();
+                            setForm((f) => ({ ...f, canton: code }));
+                            setCantonHint("Kanton automatisch erkannt.");
+                          } else {
+                            setCantonHint(
+                              "Kein Kanton automatisch ermittelbar. Bitte bei Bedarf manuell wählen."
+                            );
+                          }
+                        })
+                        .catch(() =>
+                          setCantonHint("Kanton konnte nicht automatisch ermittelt werden.")
+                        )
+                        .finally(() => setAddressCheckBusy(false));
+                    }}
+                    disabled={
+                      saving ||
+                      addressCheckBusy ||
+                      !(form.address_line1 || "").trim() ||
+                      !(form.postal_code || "").trim() ||
+                      !(form.city || "").trim()
+                    }
+                    style={{
+                      padding: "8px 12px",
+                      background: "#FFF",
+                      border: "1px solid #CBD5E1",
+                      borderRadius: "8px",
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      cursor: saving || addressCheckBusy ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {addressCheckBusy ? "…" : "Adresse prüfen"}
+                  </button>
+                </div>
+                <p style={{ margin: 0, fontSize: "12px", color: "#64748B" }}>
+                  Öffnet Google Maps in einem neuen Tab. Der Kanton wird im Hintergrund ergänzt, wenn die
+                  Abfrage einen Wert liefert.
+                </p>
+                {cantonHint ? (
+                  <p style={{ margin: 0, fontSize: "12px", color: "#64748B" }}>{cantonHint}</p>
+                ) : null}
+              </div>
+              <div>
+                <label style={modalLabelStyle}>Kanton</label>
+                <p style={{ margin: "0 0 6px 0", fontSize: "12px", color: "#64748B", fontWeight: 400 }}>
+                  Optional — oft nach «Adresse prüfen» gesetzt; manuelle Auswahl möglich.
+                </p>
+                <select
+                  value={form.canton || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, canton: e.target.value }))}
+                  disabled={cantonLockedByPlz}
+                  style={{
+                    ...modalInputStyle,
+                    background: "#fff",
+                    ...(cantonLockedByPlz ? { background: "#F8FAFC", color: "#64748B" } : {}),
+                  }}
+                >
+                  <option value="">—</option>
+                  {form.canton && !SWISS_CANTON_CODES.includes(form.canton) ? (
+                    <option value={form.canton}>{form.canton}</option>
+                  ) : null}
+                  {SWISS_CANTON_CODES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label

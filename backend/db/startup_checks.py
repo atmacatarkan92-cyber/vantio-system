@@ -13,7 +13,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 # Bump when adding migrations; override with EXPECTED_ALEMBIC_REVISION for staged rollouts.
-_DEFAULT_EXPECTED_REVISION = "052_owners_and_unit_owner_id"
+_DEFAULT_EXPECTED_REVISION = "053_owner_address_fields"
 
 CRITICAL_TABLES: tuple[str, ...] = (
     "password_reset_tokens",

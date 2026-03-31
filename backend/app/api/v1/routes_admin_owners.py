@@ -30,6 +30,10 @@ def _owner_to_dict(o: Owner) -> dict:
         "name": (getattr(o, "name", None) or "").strip(),
         "email": getattr(o, "email", None),
         "phone": getattr(o, "phone", None),
+        "address_line1": getattr(o, "address_line1", None),
+        "postal_code": getattr(o, "postal_code", None),
+        "city": getattr(o, "city", None),
+        "canton": getattr(o, "canton", None),
         "status": _owner_status(o),
         "notes": getattr(o, "notes", None),
         "created_at": o.created_at.isoformat() if getattr(o, "created_at", None) else None,
@@ -43,6 +47,10 @@ class OwnerCreate(BaseModel):
     name: str = Field(min_length=1, max_length=500)
     email: Optional[str] = None
     phone: Optional[str] = None
+    address_line1: Optional[str] = None
+    postal_code: Optional[str] = None
+    city: Optional[str] = None
+    canton: Optional[str] = None
     status: Optional[Literal["active", "inactive"]] = "active"
     notes: Optional[str] = None
 
@@ -51,6 +59,10 @@ class OwnerPatch(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=500)
     email: Optional[str] = None
     phone: Optional[str] = None
+    address_line1: Optional[str] = None
+    postal_code: Optional[str] = None
+    city: Optional[str] = None
+    canton: Optional[str] = None
     status: Optional[Literal["active", "inactive"]] = None
     notes: Optional[str] = None
 
@@ -153,6 +165,10 @@ def admin_create_owner(
         name=name,
         email=(body.email or "").strip() or None,
         phone=(body.phone or "").strip() or None,
+        address_line1=(body.address_line1 or "").strip() or None,
+        postal_code=(body.postal_code or "").strip() or None,
+        city=(body.city or "").strip() or None,
+        canton=(body.canton or "").strip() or None,
         status=st,
         notes=(body.notes or "").strip() or None,
         created_at=now,
@@ -185,6 +201,14 @@ def admin_patch_owner(
         data["email"] = (data["email"] or "").strip() or None
     if "phone" in data:
         data["phone"] = (data["phone"] or "").strip() or None
+    if "address_line1" in data:
+        data["address_line1"] = (data["address_line1"] or "").strip() or None
+    if "postal_code" in data:
+        data["postal_code"] = (data["postal_code"] or "").strip() or None
+    if "city" in data:
+        data["city"] = (data["city"] or "").strip() or None
+    if "canton" in data:
+        data["canton"] = (data["canton"] or "").strip() or None
     if "status" in data and data["status"] is not None:
         st = str(data["status"]).strip().lower()
         if st not in ("active", "inactive"):
