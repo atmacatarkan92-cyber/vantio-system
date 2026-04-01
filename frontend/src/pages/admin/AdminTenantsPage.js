@@ -618,7 +618,7 @@ function AdminTenantsPage() {
                 <th style={{ padding: "12px" }}>Zimmer</th>
                 <th style={{ padding: "12px" }}>Start</th>
                 <th style={{ padding: "12px" }}>Ende</th>
-                <th style={{ padding: "12px" }}>Monatsmiete</th>
+                <th style={{ padding: "12px" }}>Einnahmen / Monat (Äquivalent)</th>
                 <th style={{ padding: "12px" }}>Rechnungen offen</th>
                 <th style={{ padding: "12px" }}>Offener Betrag</th>
                 <th style={{ padding: "12px" }}>Status</th>

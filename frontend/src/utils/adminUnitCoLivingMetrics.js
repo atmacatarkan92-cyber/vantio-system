@@ -66,6 +66,7 @@ export function getCoLivingMetrics(unit, allRooms, tenancies) {
     tenancies == null
       ? 0
       : sumActiveTenancyMonthlyRentForUnit(unit, tenancies);
+  /** Sum of monthly_revenue_equivalent on tenancy rows (not backend KPI month). Unit detail overwrites with GET /admin/profit. */
   const currentRevenue = activeRentFromTenancies;
   const vacancyLoss =
     fullRevenue != null

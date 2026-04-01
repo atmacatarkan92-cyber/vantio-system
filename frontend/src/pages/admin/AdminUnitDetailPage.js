@@ -158,6 +158,22 @@ const LEASE_STATUS_LABELS = {
   ended: "Beendet",
 };
 
+/** When unit.lease_status is empty: same rules as getUnitContractState, for read-only UI only. */
+const DERIVED_LANDLORD_CONTRACT_STATE_LABELS = {
+  active: "Laufend",
+  expiring_soon: "Endet bald",
+  expired: "Abgelaufen",
+  ended: "Beendet",
+  unknown: "Mietbeginn offen",
+};
+
+function landlordContractStateDerivedTone(state) {
+  if (state === "expiring_soon") return "orange";
+  if (state === "expired" || state === "ended") return "rose";
+  if (state === "active") return "green";
+  return "slate";
+}
+
 function dashEmpties(value) {
   if (value == null || value === "") return "—";
   const s = String(value);
@@ -1794,6 +1810,9 @@ function AdminUnitDetailPage() {
     unit.landlordDepositType ||
     "—";
   const landlordLeaseContractStatusStr = landlordLeaseContractStatus(unit);
+  const landlordContractDerivedState = landlordLeaseContractStatusStr
+    ? null
+    : getUnitContractState(unit);
   const leaseContractEnded =
     String(unit.leaseStatus ?? unit.lease_status ?? "").trim() === "ended";
 
@@ -2037,7 +2056,21 @@ function AdminUnitDetailPage() {
                             landlordLeaseContractStatusStr}
                         </Badge>
                       ) : (
-                        "—"
+                        <>
+                          <Badge
+                            tone={landlordContractStateDerivedTone(
+                              landlordContractDerivedState
+                            )}
+                          >
+                            {DERIVED_LANDLORD_CONTRACT_STATE_LABELS[
+                              landlordContractDerivedState
+                            ] || landlordContractDerivedState}
+                          </Badge>
+                          <span className="block text-xs text-slate-500 font-normal mt-1">
+                            Abgeleitet aus Mietbeginn und Vertragsende (kein gespeicherter
+                            Vertragsstatus).
+                          </span>
+                        </>
                       )}
                     </p>
                   </div>
@@ -2065,8 +2098,16 @@ function AdminUnitDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <SmallStatCard
                 label="Potenzial bei Vollbelegung"
-                value={formatChfOrDash(metrics.fullRevenue)}
-                hint="Basierend auf Listenpreisen / Zimmerpreisen (kein Backend KPI)"
+                value={
+                  metrics.fullRevenue != null
+                    ? formatChfOrDash(metrics.fullRevenue)
+                    : "—"
+                }
+                hint={
+                  metrics.fullRevenue != null
+                    ? "Basierend auf Listenpreisen / Zimmerpreisen (kein Backend KPI)"
+                    : "Kein Potenzial berechenbar: Zimmerpreise fehlen oder Apartment ohne Mieterpreis."
+                }
                 accent="orange"
                 valueTone="muted"
               />
@@ -2478,7 +2519,7 @@ function AdminUnitDetailPage() {
 
         <SectionCard
           title="Mieter"
-          subtitle="Aktive Mietverhältnisse für diese Unit (Status: active)"
+          subtitle="Aktive Mietverhältnisse (Status: active). Einnahmen-Spalte: Monatsäquivalent aus TenancyRevenue (Backend), nicht klassische Monatsmiete."
         >
           {unitTenancies === null ? (
             <p className="text-sm text-slate-500">Lade Mietverhältnisse …</p>
@@ -2490,7 +2531,9 @@ function AdminUnitDetailPage() {
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500">
                     <th className="py-2 pr-4 font-medium">Name</th>
-                    <th className="py-2 pr-4 font-medium text-right">Monatsmiete</th>
+                    <th className="py-2 pr-4 font-medium text-right">
+                      Monatsäquivalent (Einnahmen)
+                    </th>
                     <th className="py-2 pr-4 font-medium">Kautionsart</th>
                     <th className="py-2 pr-4 font-medium text-right">Kautionsbetrag</th>
                     <th className="py-2 pr-4 font-medium">Anbieter</th>
@@ -2566,15 +2609,23 @@ function AdminUnitDetailPage() {
             value={formatPercent(occupancyRate)}
             hint={
               unitKpiOcc != null
-                ? "Backend GET /api/admin/occupancy (heute)"
-                : "Aus Zimmer- und Mietverhältnis-Heuristik (nicht KPI-Monat)"
+                ? "Operativ: Backend-Belegung für heute (nicht KPI-Monat)."
+                : "Operativ: Schätzung aus Zimmern und Mietverhältnissen (heute, nicht KPI-Monat)."
             }
             accent="blue"
           />
           <SmallStatCard
             label="Leerstand"
-            value={formatChfOrDash(metrics.vacancyLoss)}
-            hint="Potenzial bei Vollbelegung minus Aktueller Umsatz (Backend-KPI); kein separater Forecast"
+            value={
+              metrics.vacancyLoss != null
+                ? formatChfOrDash(metrics.vacancyLoss)
+                : "—"
+            }
+            hint={
+              metrics.vacancyLoss != null
+                ? "Potenzial bei Vollbelegung minus Aktueller Umsatz (Backend-KPI); kein separater Forecast."
+                : "Nur wenn Potenzial und KPI-Umsatz vorliegen; sonst nicht berechenbar."
+            }
             accent="rose"
             valueTone="muted"
           />
@@ -2707,7 +2758,7 @@ function AdminUnitDetailPage() {
 
           <SectionCard
             title="Room Status Übersicht"
-            subtitle="Schneller Blick auf alle Zimmer"
+            subtitle="Operativ pro Zimmer (heute); nicht identisch mit dem Finanz-KPI-Monat oben."
           >
             <div className="space-y-3">
               {unitRooms.map((room) => {

@@ -311,7 +311,7 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
               <th className="py-3 pr-4">Zimmer</th>
               <th className="py-3 pr-4">Mieterpreis</th>
               <th className="py-3 pr-4">Mietkosten</th>
-              <th className="py-3 pr-4">Gewinn aktuell</th>
+              <th className="py-3 pr-4">Mieterpreis − Kosten</th>
               <th className="py-3 pr-4">Verfügbar ab</th>
               <th className="py-3 pr-4">Mietbeginn (Vertrag)</th>
               <th className="py-3 pr-4">Aktionen</th>
@@ -428,7 +428,7 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
   return (
     <SectionCard
       title="Co-Living Units"
-      subtitle="Mehrzimmer-Einheiten mit Room-Logik, Belegung und Umsatzberechnung."
+      subtitle="Operative Kennzahlen aus Zimmerpreisen und Mietverhältnissen (Listenpreise / TenancyRevenue-Äquivalent). Auf der Unit-Detailseite: Backend-KPI-Monat."
     >
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
@@ -443,10 +443,10 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
               <th className="py-3 pr-4">Belegt</th>
               <th className="py-3 pr-4">Reserviert</th>
               <th className="py-3 pr-4">Frei</th>
-              <th className="py-3 pr-4">Vollbelegung</th>
-              <th className="py-3 pr-4">Aktuell</th>
-              <th className="py-3 pr-4">Leerstand</th>
-              <th className="py-3 pr-4">Gewinn aktuell</th>
+              <th className="py-3 pr-4">Potenzial (Listen)</th>
+              <th className="py-3 pr-4">Einnahmen (Äquivalent)</th>
+              <th className="py-3 pr-4">Differenz (Listen − Äquivalent)</th>
+              <th className="py-3 pr-4">Deckungsbeitrag (Frontend)</th>
               <th className="py-3 pr-4">Mietbeginn (Vertrag)</th>
               <th className="py-3 pr-4">Aktionen</th>
             </tr>
@@ -1418,14 +1418,14 @@ function AdminApartmentsPage() {
               hint="Mehrzimmer-Einheiten"
             />
             <StatCard
-              label="Aktueller Umsatz"
+              label="Σ Einnahmen (Mieter-Äquivalent)"
               value={formatCurrency(summary.currentRevenue)}
-              hint="Auf Basis der aktuellen Daten"
+              hint="Summe aktiver Verträge (TenancyRevenue-Monatsäquivalent, heute). Kein Backend-KPI-Monatsumsatz."
             />
             <StatCard
-              label="Gewinn aktuell"
+              label="Deckungsbeitrag (Übersicht)"
               value={formatCurrency(summary.currentProfit)}
-              hint="Umsatz minus laufende Kosten"
+              hint="Einnahmen-Äquivalent minus laufende Kosten (Frontend). Kein profit_service-Monat."
             />
           </div>
 
@@ -2180,7 +2180,7 @@ function AdminApartmentsPage() {
                 {!isCoLivingType ? (
                   <>
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                      <p className="text-sm text-slate-500">Gewinn aktuell</p>
+                      <p className="text-sm text-slate-500">Mieterpreis − Kosten (Stammdaten)</p>
                       <p className="text-2xl font-bold text-slate-800 mt-1">
                         {formatCurrency(currentApartmentProfit)}
                       </p>
@@ -2196,21 +2196,24 @@ function AdminApartmentsPage() {
                 ) : (
                   <>
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                      <p className="text-sm text-slate-500">Aktueller Monatsumsatz</p>
+                      <p className="text-sm text-slate-500">Einnahmen (Mieter-Äquivalent)</p>
                       <p className="text-2xl font-bold text-slate-800 mt-1">
                         {formatCurrency(currentCoLivingRevenue)}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Aus TenancyRevenue-Äquivalent; kein Backend-KPI-Monat.
                       </p>
                     </div>
 
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                      <p className="text-sm text-slate-500">Leerstandsverlust</p>
+                      <p className="text-sm text-slate-500">Potenzial − Äquivalent</p>
                       <p className="text-2xl font-bold text-slate-800 mt-1">
                         {formatCurrency(currentCoLivingVacancy)}
                       </p>
                     </div>
 
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                      <p className="text-sm text-slate-500">Gewinn aktuell</p>
+                      <p className="text-sm text-slate-500">Deckungsbeitrag (Frontend)</p>
                       <p className="text-2xl font-bold text-slate-800 mt-1">
                         {formatCurrency(currentCoLivingProfit)}
                       </p>
