@@ -502,7 +502,14 @@ function SectionCard({ title, subtitle, children, rightSlot = null }) {
   );
 }
 
-function SmallStatCard({ label, value, hint, accent = "slate", valueTone = "strong" }) {
+function SmallStatCard({
+  label,
+  value,
+  hint,
+  accent = "slate",
+  valueTone = "strong",
+  progressPercent,
+}) {
   const accentStyles = {
     slate: "bg-slate-50 border-slate-200 text-slate-900",
     green: "bg-emerald-50 border-emerald-200 text-emerald-700",
@@ -523,6 +530,10 @@ function SmallStatCard({ label, value, hint, accent = "slate", valueTone = "stro
       ? "text-[11px] text-slate-500 mt-2 leading-relaxed"
       : "text-xs opacity-70 mt-2";
 
+  const pctRaw = progressPercent != null ? Number(progressPercent) : NaN;
+  const showProgress = Number.isFinite(pctRaw);
+  const pctClamped = showProgress ? Math.min(100, Math.max(0, pctRaw)) : 0;
+
   return (
     <div
       className={`rounded-2xl border p-4 ${
@@ -531,6 +542,19 @@ function SmallStatCard({ label, value, hint, accent = "slate", valueTone = "stro
     >
       <p className={labelClass}>{label}</p>
       <p className={valueClass}>{value}</p>
+      {showProgress ? (
+        <div
+          className="mt-2 h-1.5 w-full rounded-full bg-black/10 overflow-hidden"
+          aria-hidden
+        >
+          <div
+            className={`h-full rounded-full ${
+              accent === "amber" ? "bg-amber-500" : "bg-slate-500/70"
+            }`}
+            style={{ width: `${pctClamped}%` }}
+          />
+        </div>
+      ) : null}
       {hint ? <p className={hintClass}>{hint}</p> : null}
     </div>
   );
@@ -2196,26 +2220,40 @@ function AdminUnitDetailPage() {
               <p className="text-sm text-slate-500 mb-3">KPI werden geladen …</p>
             ) : null}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SmallStatCard
-                label="Potenzial bei Vollbelegung"
-                value={
-                  metrics.fullRevenue != null
-                    ? formatChfOrDash(metrics.fullRevenue)
-                    : "—"
-                }
-                hint={
-                  metrics.fullRevenue != null
-                    ? "Basierend auf Listenpreisen / Zimmerpreisen (kein Backend KPI)"
-                    : "Kein Potenzial berechenbar: Zimmerpreise fehlen oder Apartment ohne Mieterpreis."
-                }
-                accent="orange"
-                valueTone="muted"
-              />
+              {safeUnit.type === "Apartment" ? (
+                <SmallStatCard
+                  label="Belegt in %"
+                  value={formatPercent(occupancyRate)}
+                  progressPercent={occupancyRate}
+                  hint={
+                    unitKpiOcc != null
+                      ? "Operativ: Backend-Belegung für heute (nicht KPI-Monat)."
+                      : "Operativ: Schätzung aus Zimmern und Mietverhältnissen (heute, nicht KPI-Monat)."
+                  }
+                  accent="amber"
+                />
+              ) : (
+                <SmallStatCard
+                  label="Potenzial bei Vollbelegung"
+                  value={
+                    metrics.fullRevenue != null
+                      ? formatChfOrDash(metrics.fullRevenue)
+                      : "—"
+                  }
+                  hint={
+                    metrics.fullRevenue != null
+                      ? "Basierend auf Listenpreisen / Zimmerpreisen (kein Backend KPI)"
+                      : "Kein Potenzial berechenbar: Zimmerpreise fehlen oder Apartment ohne Mieterpreis."
+                  }
+                  accent="orange"
+                  valueTone="muted"
+                />
+              )}
               <SmallStatCard
                 label="Aktueller Umsatz"
                 value={formatChfOrDash(metrics.currentRevenue)}
                 hint={`Berechnet aus tatsächlichen Einnahmen (Backend KPI). Zeitraum: ${String(kpiMonth).padStart(2, "0")}/${kpiYear}.`}
-                accent="green"
+                accent="blue"
               />
               <SmallStatCard
                 label="Laufende Kosten"
@@ -2227,7 +2265,7 @@ function AdminUnitDetailPage() {
                 label="Gewinn aktuell"
                 value={formatChfOrDash(metrics.currentProfit)}
                 hint="Umsatz minus Kosten (Backend berechnet)"
-                accent="slate"
+                accent="green"
               />
             </div>
             <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 text-sm text-emerald-950">
@@ -2910,7 +2948,7 @@ function AdminUnitDetailPage() {
                 label="Aktueller Umsatz"
                 value={formatChfOrDash(nextUnitForecast.revenue)}
                 hint={`Berechnet aus tatsächlichen Einnahmen (Backend KPI). Zeitraum: ${String(kpiMonth).padStart(2, "0")}/${kpiYear}.`}
-                accent="green"
+                accent="blue"
               />
               <SmallStatCard
                 label="Prognose (geschätzt) · 30 Tage"
@@ -2976,7 +3014,7 @@ function AdminUnitDetailPage() {
                 label="Gewinn aktuell"
                 value={formatChfOrDash(nextUnitForecast.profit)}
                 hint="Umsatz minus Kosten (Backend berechnet)"
-                accent="slate"
+                accent="green"
               />
             </div>
           </SectionCard>
@@ -3043,7 +3081,7 @@ function AdminUnitDetailPage() {
                 label="Aktueller Umsatz"
                 value={formatChfOrDash(metrics.currentRevenue)}
                 hint={`Berechnet aus tatsächlichen Einnahmen (Backend KPI). Zeitraum: ${String(kpiMonth).padStart(2, "0")}/${kpiYear}.`}
-                accent="green"
+                accent="blue"
               />
               <SmallStatCard
                 label="Break-Even"
