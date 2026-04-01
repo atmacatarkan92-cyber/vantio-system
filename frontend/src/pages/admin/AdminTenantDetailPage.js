@@ -2114,38 +2114,73 @@ export default function AdminTenantDetailPage() {
                                     <div style={{ color: "#475569" }}>
                                       <div
                                         style={{
-                                          marginBottom: "8px",
-                                          paddingBottom: "8px",
-                                          borderBottom: "1px solid #E2E8F0",
+                                          marginBottom: "10px",
+                                          padding: "8px 8px 10px",
+                                          borderRadius: "6px",
+                                          background: "#FFFFFF",
+                                          border: "1px solid #E2E8F0",
+                                          boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
                                         }}
                                       >
-                                        <div style={{ fontSize: "10px", fontWeight: 700, color: "#64748B", letterSpacing: "0.02em" }}>
+                                        <div
+                                          style={{
+                                            fontSize: "11px",
+                                            fontWeight: 800,
+                                            color: "#0F172A",
+                                            letterSpacing: "0.02em",
+                                          }}
+                                        >
                                           Mietende / Vertragsende
                                         </div>
-                                        <div style={{ fontSize: "14px", fontWeight: 800, color: "#0F172A", marginTop: "2px" }}>
+                                        <div
+                                          style={{
+                                            fontSize: "15px",
+                                            fontWeight: 800,
+                                            color: "#0F172A",
+                                            marginTop: "4px",
+                                            lineHeight: 1.25,
+                                          }}
+                                        >
                                           {formatDateOnly(tenancyDisplayEndIso(tn) || "") || "—"}
                                         </div>
                                       </div>
-                                      <div style={{ fontSize: "10px", fontWeight: 700, color: "#94A3B8", marginBottom: "4px" }}>
-                                        Kündigung &amp; Rückgabe
-                                      </div>
-                                      <div>
-                                        <span style={{ color: "#64748B", fontWeight: 600 }}>
-                                          Kündigung eingegangen am{" "}
-                                        </span>
-                                        {formatDateOnly(dateOnlyOrNull(tn.notice_given_at) || "")}
-                                      </div>
-                                      <div>
-                                        <span style={{ color: "#64748B", fontWeight: 600 }}>
-                                          Kündigung wirksam per{" "}
-                                        </span>
-                                        {formatDateOnly(dateOnlyOrNull(tn.termination_effective_date) || "")}
-                                      </div>
-                                      <div>
-                                        <span style={{ color: "#64748B", fontWeight: 600 }}>
-                                          Rückgabe erfolgt am{" "}
-                                        </span>
-                                        {formatDateOnly(dateOnlyOrNull(tn.actual_move_out_date) || "")}
+                                      <div
+                                        style={{
+                                          marginTop: "2px",
+                                          paddingTop: "6px",
+                                          borderTop: "1px solid #EEF2F7",
+                                          fontSize: "10px",
+                                          lineHeight: 1.55,
+                                          color: "#64748B",
+                                        }}
+                                      >
+                                        <div style={{ fontWeight: 700, color: "#94A3B8", marginBottom: "6px" }}>
+                                          Kündigung &amp; Rückgabe
+                                        </div>
+                                        <div>
+                                          <span style={{ color: "#64748B", fontWeight: 600 }}>
+                                            Kündigung eingegangen am{" "}
+                                          </span>
+                                          <span style={{ color: "#475569", fontWeight: 500 }}>
+                                            {formatDateOnly(dateOnlyOrNull(tn.notice_given_at) || "") || "—"}
+                                          </span>
+                                        </div>
+                                        <div style={{ marginTop: "3px" }}>
+                                          <span style={{ color: "#64748B", fontWeight: 600 }}>
+                                            Kündigung wirksam per{" "}
+                                          </span>
+                                          <span style={{ color: "#475569", fontWeight: 500 }}>
+                                            {formatDateOnly(dateOnlyOrNull(tn.termination_effective_date) || "") || "—"}
+                                          </span>
+                                        </div>
+                                        <div style={{ marginTop: "3px" }}>
+                                          <span style={{ color: "#64748B", fontWeight: 600 }}>
+                                            Rückgabe erfolgt am{" "}
+                                          </span>
+                                          <span style={{ color: "#475569", fontWeight: 500 }}>
+                                            {formatDateOnly(dateOnlyOrNull(tn.actual_move_out_date) || "") || "—"}
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
                                     {urgencyNote ? (
@@ -2358,14 +2393,18 @@ export default function AdminTenantDetailPage() {
                                       style={{
                                         fontSize: "11px",
                                         color: "#64748B",
-                                        marginBottom: "8px",
+                                        marginBottom: "10px",
                                         width: "100%",
+                                        lineHeight: 1.45,
                                       }}
                                     >
-                                      <strong style={{ color: "#334155" }}>Vorschau Mietende / Vertragsende</strong>
-                                      {" · "}
-                                      ergibt sich aus Kündigung &amp; Rückgabe:{" "}
-                                      <strong style={{ color: "#0F172A" }}>
+                                      <div style={{ fontWeight: 700, color: "#334155" }}>
+                                        Mietende (automatisch berechnet)
+                                      </div>
+                                      <div style={{ fontSize: "10px", color: "#94A3B8", marginTop: "2px", marginBottom: "4px" }}>
+                                        ergibt sich aus Kündigung &amp; Rückgabe
+                                      </div>
+                                      <strong style={{ fontSize: "13px", color: "#0F172A", fontWeight: 800 }}>
                                         {formatDateOnly(
                                           tenancyDraftDisplayEndIso(
                                             tenancyEditActualMoveOut,
