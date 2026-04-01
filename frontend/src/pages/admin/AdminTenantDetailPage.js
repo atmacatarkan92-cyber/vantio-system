@@ -311,6 +311,63 @@ function monthlyEquivalentFromRevenueRows(rows) {
   return sum;
 }
 
+function totalOneTimeRevenueFromRows(rows) {
+  if (!Array.isArray(rows)) return 0;
+  let sum = 0;
+  for (const r of rows) {
+    if (normalizeRevenueFrequency(r?.frequency) !== "one_time") continue;
+    const amt = Number(r?.amount_chf);
+    if (!Number.isFinite(amt)) continue;
+    sum += amt;
+  }
+  return sum;
+}
+
+/** Recurring rows only: summed monthly-equivalent per stored type key */
+function recurringMonthlyBreakdownEntries(rows) {
+  if (!Array.isArray(rows)) return [];
+  const map = new Map();
+  for (const r of rows) {
+    const f = normalizeRevenueFrequency(r?.frequency);
+    if (f === "one_time") continue;
+    const amt = Number(r?.amount_chf);
+    if (!Number.isFinite(amt)) continue;
+    const monthly = f === "yearly" ? amt / 12 : amt;
+    const typeKey = String(r?.type || "").trim();
+    const k = typeKey || "__empty__";
+    map.set(k, (map.get(k) || 0) + monthly);
+  }
+  return Array.from(map.entries())
+    .map(([typeKey, total]) => ({
+      typeKey,
+      label: typeKey === "__empty__" ? "—" : revenueTypeLabelForDisplay(typeKey),
+      total,
+    }))
+    .filter((x) => x.total !== 0)
+    .sort((a, b) => a.label.localeCompare(b.label, "de"));
+}
+
+function oneTimeBreakdownEntries(rows) {
+  if (!Array.isArray(rows)) return [];
+  const map = new Map();
+  for (const r of rows) {
+    if (normalizeRevenueFrequency(r?.frequency) !== "one_time") continue;
+    const amt = Number(r?.amount_chf);
+    if (!Number.isFinite(amt)) continue;
+    const typeKey = String(r?.type || "").trim();
+    const k = typeKey || "__empty__";
+    map.set(k, (map.get(k) || 0) + amt);
+  }
+  return Array.from(map.entries())
+    .map(([typeKey, total]) => ({
+      typeKey,
+      label: typeKey === "__empty__" ? "—" : revenueTypeLabelForDisplay(typeKey),
+      total,
+    }))
+    .filter((x) => x.total !== 0)
+    .sort((a, b) => a.label.localeCompare(b.label, "de"));
+}
+
 function deriveTenancyStatusFromDates(moveInRaw, moveOutRaw, todayIso = getTodayIsoForOccupancy()) {
   const today = String(todayIso || "").slice(0, 10);
   const mi = moveInRaw != null ? String(moveInRaw).slice(0, 10) : "";
@@ -1884,15 +1941,46 @@ export default function AdminTenantDetailPage() {
                                     {tn.status || "—"}
                                   </span>
                                 </td>
-                                <td style={{ ...tdCell, textAlign: "right", fontWeight: 600, color: "#0F172A" }}>
+                                <td style={{ ...tdCell, textAlign: "right", fontWeight: 600, color: "#0F172A", verticalAlign: "top" }}>
                                   {(() => {
                                     const tidStr = String(tn.id);
                                     const revRowsForCell = tenancyRevenueByTenancyId[tidStr];
-                                    if (revRowsForCell === undefined) {
+                                    const loadingRow = tenancyRevenueLoadingId === tidStr;
+                                    if (revRowsForCell === undefined || loadingRow) {
                                       return <span style={{ color: "#94A3B8", fontWeight: 500 }}>…</span>;
                                     }
+                                    if (!revRowsForCell.length) {
+                                      return (
+                                        <span style={{ fontSize: "12px", fontWeight: 600, color: "#64748B" }}>
+                                          Keine Einnahmen definiert
+                                        </span>
+                                      );
+                                    }
                                     const monthlyFromSaved = monthlyEquivalentFromRevenueRows(revRowsForCell);
-                                    return formatChfRent(monthlyFromSaved);
+                                    const oneTimeTotal = totalOneTimeRevenueFromRows(revRowsForCell);
+                                    return (
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          flexDirection: "column",
+                                          alignItems: "flex-end",
+                                          gap: "4px",
+                                        }}
+                                      >
+                                        <div style={{ fontSize: "11px", fontWeight: 600, color: "#64748B" }}>
+                                          Gesamteinnahmen / Monat
+                                        </div>
+                                        <span>{formatChfRent(monthlyFromSaved)}</span>
+                                        <div style={{ marginTop: "2px", textAlign: "right" }}>
+                                          <div style={{ fontSize: "11px", fontWeight: 600, color: "#64748B" }}>
+                                            Einmalige Einnahmen gesamt
+                                          </div>
+                                          <span style={{ fontSize: "13px", color: "#0F172A" }}>
+                                            {formatChfRent(oneTimeTotal)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
                                   })()}
                                 </td>
                                 <td style={tdCell}>{tenantDepositTypeLabel(tn.tenant_deposit_type)}</td>
@@ -2105,6 +2193,128 @@ export default function AdminTenantDetailPage() {
                                         Einnahmen
                                       </div>
 
+                                      {(() => {
+                                        const tidKpi = String(tn.id);
+                                        const rowsKpi = tenancyRevenueByTenancyId[tidKpi];
+                                        const kpiLoading = tenancyRevenueLoadingId === tidKpi;
+                                        if (rowsKpi === undefined || kpiLoading) {
+                                          return (
+                                            <div
+                                              style={{
+                                                marginBottom: "10px",
+                                                padding: "10px 12px",
+                                                background: "#F8FAFC",
+                                                borderRadius: "8px",
+                                                fontSize: "12px",
+                                                color: "#94A3B8",
+                                              }}
+                                            >
+                                              …
+                                            </div>
+                                          );
+                                        }
+                                        const monthlyKpi = monthlyEquivalentFromRevenueRows(rowsKpi);
+                                        const oneTimeKpi = totalOneTimeRevenueFromRows(rowsKpi);
+                                        const recBr = recurringMonthlyBreakdownEntries(rowsKpi);
+                                        const otBr = oneTimeBreakdownEntries(rowsKpi);
+                                        return (
+                                          <div
+                                            style={{
+                                              marginBottom: "10px",
+                                              padding: "10px 12px",
+                                              background: "#F1F5F9",
+                                              borderRadius: "8px",
+                                              fontSize: "12px",
+                                              color: "#334155",
+                                            }}
+                                          >
+                                            <div style={{ fontWeight: 800, color: "#0F172A", marginBottom: "8px" }}>
+                                              Einnahmen-Übersicht
+                                            </div>
+                                            <div style={{ marginBottom: "4px" }}>
+                                              <span style={{ color: "#64748B", fontWeight: 600 }}>Gesamteinnahmen / Monat:</span>{" "}
+                                              <span style={{ fontWeight: 700 }}>{formatChfRent(monthlyKpi)}</span>
+                                            </div>
+                                            <div style={{ marginBottom: recBr.length || otBr.length ? "8px" : 0 }}>
+                                              <span style={{ color: "#64748B", fontWeight: 600 }}>Einmalige Einnahmen gesamt:</span>{" "}
+                                              <span style={{ fontWeight: 700 }}>{formatChfRent(oneTimeKpi)}</span>
+                                            </div>
+                                            {recBr.length || otBr.length ? (
+                                              <div
+                                                style={{
+                                                  marginTop: "8px",
+                                                  paddingTop: "8px",
+                                                  borderTop: "1px solid #E2E8F0",
+                                                }}
+                                              >
+                                                {recBr.length ? (
+                                                  <div style={{ marginBottom: otBr.length ? "8px" : 0 }}>
+                                                    <div
+                                                      style={{
+                                                        fontSize: "11px",
+                                                        fontWeight: 700,
+                                                        color: "#64748B",
+                                                        marginBottom: "4px",
+                                                      }}
+                                                    >
+                                                      Monatlich (normalisiert)
+                                                    </div>
+                                                    {recBr.map((b) => (
+                                                      <div
+                                                        key={b.typeKey}
+                                                        style={{
+                                                          display: "flex",
+                                                          justifyContent: "space-between",
+                                                          gap: "12px",
+                                                          fontSize: "12px",
+                                                          lineHeight: 1.45,
+                                                        }}
+                                                      >
+                                                        <span>{b.label}</span>
+                                                        <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
+                                                          {formatChfRent(b.total)}
+                                                        </span>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                ) : null}
+                                                {otBr.length ? (
+                                                  <div>
+                                                    <div
+                                                      style={{
+                                                        fontSize: "11px",
+                                                        fontWeight: 700,
+                                                        color: "#64748B",
+                                                        marginBottom: "4px",
+                                                      }}
+                                                    >
+                                                      Einmalig
+                                                    </div>
+                                                    {otBr.map((b) => (
+                                                      <div
+                                                        key={b.typeKey}
+                                                        style={{
+                                                          display: "flex",
+                                                          justifyContent: "space-between",
+                                                          gap: "12px",
+                                                          fontSize: "12px",
+                                                          lineHeight: 1.45,
+                                                        }}
+                                                      >
+                                                        <span>{b.label}</span>
+                                                        <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
+                                                          {formatChfRent(b.total)}
+                                                        </span>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                ) : null}
+                                              </div>
+                                            ) : null}
+                                          </div>
+                                        );
+                                      })()}
+
                                       {tenancyRevenueErr ? (
                                         <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#B91C1C" }}>
                                           {tenancyRevenueErr}
@@ -2304,13 +2514,8 @@ export default function AdminTenantDetailPage() {
                                         </table>
                                       </div>
 
-                                      <p style={{ margin: "10px 0 0 0", fontSize: "12px", color: "#64748B" }}>
-                                        Normalisiert (pro Monat): CHF{" "}
-                                        {monthlyEquivalentFromRevenueRows(tenancyRevenueByTenancyId?.[String(tn.id)] || []).toLocaleString("de-CH", {
-                                          minimumFractionDigits: 2,
-                                          maximumFractionDigits: 2,
-                                        })}
-                                        {" "}— Einmalig wird nicht in Monats-KPIs berücksichtigt.
+                                      <p style={{ margin: "10px 0 0 0", fontSize: "11px", color: "#64748B" }}>
+                                        Berechnung Gesamteinnahmen / Monat: monatlich voll, jährlich ÷12; einmalige Beträge unter „Einmalige Einnahmen gesamt“ und „Einmalig“.
                                       </p>
                                     </div>
                                   </td>
