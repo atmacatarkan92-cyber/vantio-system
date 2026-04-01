@@ -1287,6 +1287,29 @@ function AdminUnitDetailPage() {
     "0"
   )}`;
 
+  const recurringUnitCosts = useMemo(
+    () =>
+      Array.isArray(unitCosts)
+        ? unitCosts.filter(
+            (r) => String(r?.frequency || "monthly").trim().toLowerCase() !== "one_time"
+          )
+        : [],
+    [unitCosts]
+  );
+  const oneTimeUnitCosts = useMemo(
+    () =>
+      Array.isArray(unitCosts)
+        ? unitCosts.filter(
+            (r) => String(r?.frequency || "monthly").trim().toLowerCase() === "one_time"
+          )
+        : [],
+    [unitCosts]
+  );
+  const unitCostsTotalMonthly = useMemo(
+    () => getUnitCostsTotal(recurringUnitCosts),
+    [recurringUnitCosts]
+  );
+
   if (loading) {
     return (
       <div>
@@ -1656,29 +1679,6 @@ function AdminUnitDetailPage() {
       setCostLoading(false);
     }
   }
-
-  const recurringUnitCosts = useMemo(
-    () =>
-      Array.isArray(unitCosts)
-        ? unitCosts.filter(
-            (r) => String(r?.frequency || "monthly").trim().toLowerCase() !== "one_time"
-          )
-        : [],
-    [unitCosts]
-  );
-  const oneTimeUnitCosts = useMemo(
-    () =>
-      Array.isArray(unitCosts)
-        ? unitCosts.filter(
-            (r) => String(r?.frequency || "monthly").trim().toLowerCase() === "one_time"
-          )
-        : [],
-    [unitCosts]
-  );
-  const unitCostsTotalMonthly = useMemo(
-    () => getUnitCostsTotal(recurringUnitCosts),
-    [recurringUnitCosts]
-  );
 
   const landlordDepositTypeKey = String(unit.landlordDepositType || "")
     .trim()
