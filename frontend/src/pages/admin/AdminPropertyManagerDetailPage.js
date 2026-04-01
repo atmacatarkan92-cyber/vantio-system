@@ -33,20 +33,20 @@ function unitTypeBadgeClasses(type) {
   const raw = String(type ?? "").trim();
   const normalized = normalizeUnitTypeLabel(raw);
   if (normalized === "Co-Living") {
-    return "border-sky-200 bg-sky-50 text-sky-800";
+    return "border-sky-500/20 bg-sky-500/10 text-sky-300";
   }
   if (raw === "Business Apartment") {
-    return "border-violet-200 bg-violet-50 text-violet-800";
+    return "border-purple-500/20 bg-purple-500/10 text-purple-300";
   }
-  return "border-slate-200 bg-slate-50 text-slate-700";
+  return "border-white/[0.08] bg-white/[0.05] text-[#6b7a9a]";
 }
 
 function unitStatusBadgeClasses(status) {
   const s = String(status ?? "").trim().toLowerCase();
-  if (s === "frei" || s === "") return "border-emerald-200 bg-emerald-50 text-emerald-800";
-  if (s === "belegt" || s === "occupied") return "border-blue-200 bg-blue-50 text-blue-800";
-  if (s === "reserviert" || s === "reserved") return "border-amber-200 bg-amber-50 text-amber-900";
-  return "border-slate-200 bg-slate-50 text-slate-700";
+  if (s === "frei" || s === "") return "border-green-500/20 bg-green-500/10 text-green-400";
+  if (s === "belegt" || s === "occupied") return "border-blue-500/20 bg-blue-500/10 text-blue-300";
+  if (s === "reserviert" || s === "reserved") return "border-amber-500/20 bg-amber-500/10 text-amber-400";
+  return "border-white/[0.08] bg-white/[0.05] text-[#6b7a9a]";
 }
 
 function formatDateTime(iso) {
@@ -254,17 +254,19 @@ function AdminPropertyManagerDetailPage() {
   }, [id]);
 
   if (loading) {
-    return <p className="px-2 text-slate-500">Lade Bewirtschafter …</p>;
+    return (
+      <p className="min-h-[40vh] bg-[#07090f] px-2 py-8 text-[#6b7a9a]">Lade Bewirtschafter …</p>
+    );
   }
 
   if (error || !pm) {
     return (
-      <div className="px-2 max-w-3xl">
-        <p className="text-red-700 mb-3">{error || "Nicht gefunden."}</p>
+      <div className="max-w-3xl bg-[#07090f] px-2 py-6 text-[#eef2ff]">
+        <p className="mb-3 text-[#f87171]">{error || "Nicht gefunden."}</p>
         <button
           type="button"
           onClick={() => navigate("/admin/bewirtschafter")}
-          className="px-4 py-2 rounded-lg bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800"
+          className="rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04]"
         >
           Zurück zur Liste
         </button>
@@ -373,11 +375,11 @@ function AdminPropertyManagerDetailPage() {
   };
 
   return (
-    <div className="px-2 max-w-3xl">
+    <div className="min-h-screen max-w-3xl bg-[#07090f] px-2 py-6 text-[#eef2ff]">
       <p className="mb-4">
         <Link
           to="/admin/bewirtschafter"
-          className="text-sm font-semibold text-slate-900 hover:underline"
+          className="text-sm font-semibold text-[#7aaeff] hover:underline"
         >
           ← Bewirtschafter
         </Link>
@@ -386,24 +388,24 @@ function AdminPropertyManagerDetailPage() {
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 gap-y-2">
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">{displayName}</h1>
+            <h1 className="text-[22px] font-bold tracking-tight text-[#eef2ff]">{displayName}</h1>
             <span
               className={
                 isPmActive
-                  ? "inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800"
-                  : "inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600"
+                  ? "inline-flex items-center rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-0.5 text-[10px] font-bold text-green-400"
+                  : "inline-flex items-center rounded-full border border-white/[0.08] bg-white/[0.05] px-2.5 py-0.5 text-[10px] font-bold text-[#6b7a9a]"
               }
             >
               {isPmActive ? "Aktiv" : "Inaktiv"}
             </span>
           </div>
-          <p className="text-sm text-slate-500 mt-1">Bewirtschafter / Property Manager</p>
+          <p className="mt-1 text-[12px] text-[#6b7a9a]">Bewirtschafter / Property Manager</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={openEditModal}
-            className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+            className="inline-flex items-center rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04]"
           >
             Bearbeiten
           </button>
@@ -411,7 +413,11 @@ function AdminPropertyManagerDetailPage() {
             type="button"
             disabled={statusSaving}
             onClick={handleToggleStatus}
-            className="inline-flex items-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
+            className={
+              isPmActive
+                ? "inline-flex items-center rounded-[8px] border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm font-semibold text-[#f87171] hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+                : "inline-flex items-center rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-3 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+            }
           >
             {statusSaving
               ? "…"
@@ -422,48 +428,50 @@ function AdminPropertyManagerDetailPage() {
         </div>
       </div>
 
-      <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6 mb-4">
-        <h2 className="text-sm font-semibold text-slate-900 mb-4">Stammdaten</h2>
+      <section className="mb-4 rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
+        <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Stammdaten</h2>
         <div className="space-y-4">
           <div>
-            <p className="text-xs font-medium text-slate-500">Name</p>
-            <p className="text-sm font-medium text-slate-900 mt-1">{displayName}</p>
+            <p className="text-[10px] text-[#6b7a9a]">Name</p>
+            <p className="mt-1 text-[13px] font-medium text-[#eef2ff]">{displayName}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500">E-Mail</p>
-            <p className="text-sm font-medium text-slate-900 mt-1">{pm.email?.trim() || "—"}</p>
+            <p className="text-[10px] text-[#6b7a9a]">E-Mail</p>
+            <p className="mt-1 text-[13px] font-medium text-[#eef2ff]">{pm.email?.trim() || "—"}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500">Telefonnummer</p>
-            <p className="text-sm font-medium text-slate-900 mt-1">{pm.phone?.trim() || "—"}</p>
+            <p className="text-[10px] text-[#6b7a9a]">Telefonnummer</p>
+            <p className="mt-1 text-[13px] font-medium text-[#eef2ff]">{pm.phone?.trim() || "—"}</p>
           </div>
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6 mb-4">
-        <h2 className="text-sm font-semibold text-slate-900 mb-4">Zugeordnete Verwaltung</h2>
+      <section className="mb-4 rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
+        <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+          Zugeordnete Verwaltung
+        </h2>
         {!pm.landlord_id ? (
-          <p className="text-sm text-slate-500">Keine Verwaltung zugeordnet</p>
+          <p className="text-sm text-[#6b7a9a]">Keine Verwaltung zugeordnet</p>
         ) : landlordRow === undefined ? (
-          <p className="text-sm text-slate-500">Lade Verwaltung …</p>
+          <p className="text-sm text-[#6b7a9a]">Lade Verwaltung …</p>
         ) : landlordRow ? (
           <div>
             <Link
               to={`/admin/landlords/${encodeURIComponent(pm.landlord_id)}`}
-              className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline underline-offset-2"
+              className="text-sm font-semibold text-[#7aaeff] underline-offset-2 hover:underline"
             >
               {landlordLabel(landlordRow)}
             </Link>
           </div>
         ) : (
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-[#6b7a9a]">
             Die zugeordnete Verwaltung konnte nicht geladen werden.
           </p>
         )}
       </section>
 
-      <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6 mb-4">
-        <h2 className="text-sm font-semibold text-slate-900 mb-4">Notizen</h2>
+      <section className="mb-4 rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
+        <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Notizen</h2>
         <form
           className="mb-6"
           onSubmit={(e) => {
@@ -471,7 +479,7 @@ function AdminPropertyManagerDetailPage() {
             saveNewNote();
           }}
         >
-          <label htmlFor="pm-new-note" className="text-xs font-medium text-slate-500 block mb-1.5">
+          <label htmlFor="pm-new-note" className="mb-1.5 block text-[10px] text-[#6b7a9a]">
             Neue Notiz
           </label>
           <textarea
@@ -484,34 +492,39 @@ function AdminPropertyManagerDetailPage() {
             disabled={newNoteSaving}
             placeholder="Interne Notiz …"
             rows={3}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-60"
+            className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] placeholder:text-[#6b7a9a]/70 focus:outline-none focus:ring-2 focus:ring-[#7aaeff]/30 disabled:opacity-60"
           />
-          {newNoteErr ? <p className="mt-2 text-sm text-red-700">{newNoteErr}</p> : null}
-          {newNoteSubmitErr ? <p className="mt-2 text-sm text-red-700">{newNoteSubmitErr}</p> : null}
+          {newNoteErr ? <p className="mt-2 text-sm text-[#f87171]">{newNoteErr}</p> : null}
+          {newNoteSubmitErr ? <p className="mt-2 text-sm text-[#f87171]">{newNoteSubmitErr}</p> : null}
           <div className="mt-3">
             <button
               type="submit"
               disabled={newNoteSaving}
-              className="inline-flex items-center rounded-lg bg-orange-500 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-400"
+              className="inline-flex items-center rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-3.5 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {newNoteSaving ? "Speichern …" : "Notiz speichern"}
             </button>
           </div>
         </form>
-        <div className="border-t border-slate-100 pt-5">
-          <p className="text-xs font-medium text-slate-500 mb-3">Alle Notizen</p>
+        <div className="border-t border-white/[0.05] pt-5">
+          <p className="mb-3 text-[10px] text-[#6b7a9a]">Alle Notizen</p>
           {notesLoading ? (
-            <p className="text-sm text-slate-500">Lade Notizen …</p>
+            <p className="text-sm text-[#6b7a9a]">Lade Notizen …</p>
           ) : !notes.length ? (
-            <p className="text-sm text-slate-500">Noch keine Notizen vorhanden.</p>
+            <p className="text-sm text-[#6b7a9a]">Noch keine Notizen vorhanden.</p>
           ) : (
             <ul className="space-y-4">
               {notes.map((n) => (
-                <li key={n.id} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0">
-                  <p className="text-sm text-slate-900 whitespace-pre-wrap">{n.content}</p>
-                  <p className="mt-2 text-xs text-slate-500">
-                    {formatDateTime(n.created_at)} · {n.author_name || "—"}
-                  </p>
+                <li
+                  key={n.id}
+                  className="border-b border-white/[0.05] pb-4 last:border-0 last:pb-0"
+                >
+                  <div className="rounded-[10px] bg-[#111520] p-3">
+                    <p className="whitespace-pre-wrap text-sm text-[#eef2ff]">{n.content}</p>
+                    <p className="mt-2 text-xs text-[#6b7a9a]">
+                      {formatDateTime(n.created_at)} · {n.author_name || "—"}
+                    </p>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -519,19 +532,19 @@ function AdminPropertyManagerDetailPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6 mb-4">
-        <h2 className="text-sm font-semibold text-slate-900 mb-4">Historie</h2>
-        <p className="text-xs text-slate-500 mb-3">
+      <section className="mb-4 rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
+        <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Historie</h2>
+        <p className="mb-3 text-[10px] text-[#6b7a9a]">
           Änderungen an Stammdaten (wer, wann, welches Feld).
         </p>
         {auditLoading ? (
-          <p className="text-sm text-slate-500">Lade Verlauf …</p>
+          <p className="text-sm text-[#6b7a9a]">Lade Verlauf …</p>
         ) : auditError ? (
-          <p className="text-sm text-red-700">{auditError}</p>
+          <p className="text-sm text-[#f87171]">{auditError}</p>
         ) : auditLogs.length === 0 ? (
-          <p className="text-sm text-slate-600">Noch keine Einträge im Audit-Protokoll.</p>
+          <p className="text-sm text-[#6b7a9a]">Noch keine Einträge im Audit-Protokoll.</p>
         ) : (
-          <ul className="space-y-4 border-l-2 border-slate-200 pl-4 ml-1">
+          <ul className="ml-1 space-y-4 border-l-2 border-white/[0.08] pl-4">
             {auditLogs.map((log) => {
               const actor =
                 (log.actor_name && String(log.actor_name).trim()) ||
@@ -542,8 +555,8 @@ function AdminPropertyManagerDetailPage() {
               if (log.action === "create") {
                 return (
                   <li key={log.id}>
-                    <p className="text-sm font-medium text-slate-900">Bewirtschafter angelegt</p>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-sm font-medium text-[#eef2ff]">Bewirtschafter angelegt</p>
+                    <p className="mt-0.5 text-xs text-[#6b7a9a]">
                       {formatDateTime(log.created_at)}
                       {actorSuffix}
                     </p>
@@ -558,8 +571,8 @@ function AdminPropertyManagerDetailPage() {
               if (!field) {
                 return (
                   <li key={log.id}>
-                    <p className="text-sm text-slate-700">Eintrag</p>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-sm text-[#eef2ff]">Eintrag</p>
+                    <p className="mt-0.5 text-xs text-[#6b7a9a]">
                       {formatDateTime(log.created_at)}
                       {actorSuffix}
                     </p>
@@ -571,13 +584,13 @@ function AdminPropertyManagerDetailPage() {
               const newD = formatPmAuditDisplayValue(field, nv[field], landlordNameById);
               return (
                 <li key={log.id}>
-                  <p className="text-sm text-slate-900">
+                  <p className="text-sm text-[#eef2ff]">
                     <span className="font-semibold">{label} geändert:</span>{" "}
                     <span className="font-medium tabular-nums">{oldD}</span>
-                    <span className="text-slate-400 mx-1">→</span>
+                    <span className="mx-1 text-[#6b7a9a]">→</span>
                     <span className="font-medium tabular-nums">{newD}</span>
                   </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="mt-0.5 text-xs text-[#6b7a9a]">
                     {formatDateTime(log.created_at)}
                     {actorSuffix}
                   </p>
@@ -588,20 +601,22 @@ function AdminPropertyManagerDetailPage() {
         )}
       </section>
 
-      <section className="rounded-xl border border-slate-200 shadow-sm bg-white p-5 md:p-6 mb-4">
-        <h2 className="text-sm font-semibold text-slate-900 mb-4">Zugeordnete Units</h2>
+      <section className="mb-4 rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
+        <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+          Zugeordnete Units
+        </h2>
         {unitsLoading ? (
           <div className="space-y-2" aria-busy="true">
-            <p className="text-sm text-slate-500">Lade Units …</p>
-            <div className="h-2 w-full max-w-xs rounded bg-slate-100 animate-pulse" />
-            <div className="h-2 w-full max-w-[14rem] rounded bg-slate-100 animate-pulse" />
+            <p className="text-sm text-[#6b7a9a]">Lade Units …</p>
+            <div className="h-2 w-full max-w-xs animate-pulse rounded bg-[#111520]" />
+            <div className="h-2 w-full max-w-[14rem] animate-pulse rounded bg-[#111520]" />
           </div>
         ) : unitsError ? (
-          <p className="text-sm text-red-700">{unitsError}</p>
+          <p className="text-sm text-[#f87171]">{unitsError}</p>
         ) : units.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-8 text-center">
-            <p className="text-sm font-semibold text-slate-900">Keine Units zugeordnet</p>
-            <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
+          <div className="rounded-[10px] border border-dashed border-white/[0.07] bg-[#111520] px-5 py-8 text-center">
+            <p className="text-sm font-semibold text-[#eef2ff]">Keine Units zugeordnet</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-[#6b7a9a]">
               Diesem Bewirtschafter sind aktuell keine Units als Ansprechpartner zugewiesen.
             </p>
           </div>
@@ -619,38 +634,38 @@ function AdminPropertyManagerDetailPage() {
               return (
                 <li
                   key={String(uid)}
-                  className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 md:p-5 transition-shadow hover:shadow-md"
+                  className="rounded-[14px] border border-white/[0.07] bg-[#111520] p-4 transition-shadow hover:shadow-lg md:p-5"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <Link
                         to={`/admin/units/${encodeURIComponent(uid)}`}
-                        className="text-base font-semibold text-slate-900 hover:text-orange-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 rounded-sm"
+                        className="rounded-sm text-base font-semibold text-[#7aaeff] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7aaeff]/40"
                       >
                         {title}
                       </Link>
                       {propTitle ? (
-                        <p className="text-xs text-slate-500 mt-1">Liegenschaft: {propTitle}</p>
+                        <p className="mt-1 text-xs text-[#6b7a9a]">Liegenschaft: {propTitle}</p>
                       ) : null}
-                      {addr ? <p className="text-sm text-slate-600 mt-2">{addr}</p> : null}
-                      {zipCity ? <p className="text-sm text-slate-600">{zipCity}</p> : null}
+                      {addr ? <p className="mt-2 text-sm text-[#eef2ff]">{addr}</p> : null}
+                      {zipCity ? <p className="text-sm text-[#eef2ff]">{zipCity}</p> : null}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
                       <span
-                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${unitTypeBadgeClasses(u.type)}`}
+                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold ${unitTypeBadgeClasses(u.type)}`}
                       >
                         {typeLabel}
                       </span>
                       <span
-                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${unitStatusBadgeClasses(u.status)}`}
+                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold ${unitStatusBadgeClasses(u.status)}`}
                       >
                         {u.status || "—"}
                       </span>
                     </div>
                   </div>
-                  <p className="text-sm text-slate-700 mt-3 pt-3 border-t border-slate-100">
-                    <span className="text-slate-500">Miete (Mieter): </span>
-                    <span className="font-semibold tabular-nums text-slate-900">
+                  <p className="mt-3 border-t border-white/[0.05] pt-3 text-sm text-[#eef2ff]">
+                    <span className="text-[#6b7a9a]">Miete (Mieter): </span>
+                    <span className="font-semibold tabular-nums text-[#4ade80]">
                       {formatChfMonthly(u.tenantPriceMonthly)}
                     </span>
                   </p>
@@ -663,26 +678,26 @@ function AdminPropertyManagerDetailPage() {
 
       {editOpen && (
         <div
-          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35 p-4"
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4"
           onClick={() => !editSaving && setEditOpen(false)}
           role="presentation"
         >
           <div
-            className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-lg max-h-[90vh] overflow-y-auto"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[14px] border border-white/[0.07] bg-[#141824] p-6 shadow-lg"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="pm-edit-title"
           >
-            <h2 id="pm-edit-title" className="text-lg font-semibold text-slate-900 mb-4">
+            <h2 id="pm-edit-title" className="mb-4 text-lg font-semibold text-[#eef2ff]">
               Bewirtschafter bearbeiten
             </h2>
             {landlordsEditLoading ? (
-              <p className="text-sm text-slate-500 mb-4">Lade Verwaltungen …</p>
+              <p className="mb-4 text-sm text-[#6b7a9a]">Lade Verwaltungen …</p>
             ) : null}
             <div className="space-y-4">
               <div>
-                <label htmlFor="pm-edit-name" className="block text-xs font-medium text-slate-500 mb-1">
+                <label htmlFor="pm-edit-name" className="mb-1 block text-[10px] text-[#6b7a9a]">
                   Name *
                 </label>
                 <input
@@ -691,11 +706,11 @@ function AdminPropertyManagerDetailPage() {
                   value={editForm.name}
                   onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
                   disabled={editSaving}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
                 />
               </div>
               <div>
-                <label htmlFor="pm-edit-email" className="block text-xs font-medium text-slate-500 mb-1">
+                <label htmlFor="pm-edit-email" className="mb-1 block text-[10px] text-[#6b7a9a]">
                   E-Mail
                 </label>
                 <input
@@ -704,11 +719,11 @@ function AdminPropertyManagerDetailPage() {
                   value={editForm.email}
                   onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
                   disabled={editSaving}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
                 />
               </div>
               <div>
-                <label htmlFor="pm-edit-phone" className="block text-xs font-medium text-slate-500 mb-1">
+                <label htmlFor="pm-edit-phone" className="mb-1 block text-[10px] text-[#6b7a9a]">
                   Telefon
                 </label>
                 <input
@@ -717,11 +732,11 @@ function AdminPropertyManagerDetailPage() {
                   value={editForm.phone}
                   onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
                   disabled={editSaving}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
                 />
               </div>
               <div>
-                <label htmlFor="pm-edit-landlord" className="block text-xs font-medium text-slate-500 mb-1">
+                <label htmlFor="pm-edit-landlord" className="mb-1 block text-[10px] text-[#6b7a9a]">
                   Verwaltung
                 </label>
                 <select
@@ -729,7 +744,7 @@ function AdminPropertyManagerDetailPage() {
                   value={editForm.landlord_id}
                   onChange={(e) => setEditForm((f) => ({ ...f, landlord_id: e.target.value }))}
                   disabled={editSaving || landlordsEditLoading}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 bg-white disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
                 >
                   <option value="">—</option>
                   {landlordsForEdit.map((l) => (
@@ -740,7 +755,7 @@ function AdminPropertyManagerDetailPage() {
                 </select>
               </div>
               <div>
-                <label htmlFor="pm-edit-status" className="block text-xs font-medium text-slate-500 mb-1">
+                <label htmlFor="pm-edit-status" className="mb-1 block text-[10px] text-[#6b7a9a]">
                   Status
                 </label>
                 <select
@@ -748,19 +763,19 @@ function AdminPropertyManagerDetailPage() {
                   value={editForm.status}
                   onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
                   disabled={editSaving}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 bg-white disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
                 >
                   <option value="active">Aktiv</option>
                   <option value="inactive">Inaktiv</option>
                 </select>
               </div>
-              {editErr ? <p className="text-sm text-red-700">{editErr}</p> : null}
+              {editErr ? <p className="text-sm text-[#f87171]">{editErr}</p> : null}
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
                   onClick={submitEdit}
                   disabled={editSaving || landlordsEditLoading}
-                  className="flex-1 rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-60"
+                  className="flex-1 rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-3 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-60"
                 >
                   {editSaving ? "Speichern …" : "Speichern"}
                 </button>
@@ -768,7 +783,7 @@ function AdminPropertyManagerDetailPage() {
                   type="button"
                   disabled={editSaving}
                   onClick={() => setEditOpen(false)}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                  className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04]"
                 >
                   Abbrechen
                 </button>

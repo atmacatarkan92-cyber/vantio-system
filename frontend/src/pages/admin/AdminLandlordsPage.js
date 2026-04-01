@@ -12,21 +12,31 @@ import { lookupSwissPlz } from "../../data/swissPlzLookup";
 import { buildGoogleMapsSearchUrl, formatLandlordAddressLine } from "../../utils/googleMapsUrl";
 
 const tableStyle = { width: "100%", borderCollapse: "collapse" };
-const thStyle = { textAlign: "left", padding: "12px 8px", borderBottom: "2px solid #E5E7EB" };
-const tdStyle = { padding: "12px 8px", borderBottom: "1px solid #E5E7EB" };
-const inputStyle = { width: "100%", padding: "8px 10px", borderRadius: "6px", border: "1px solid #E5E7EB" };
-const labelStyle = { display: "block", marginBottom: "4px", fontSize: "13px", fontWeight: 600 };
-
-function getKpiCardStyle(accentColor) {
-  return {
-    background: "#FFFFFF",
-    border: "1px solid #E5E7EB",
-    borderTop: `4px solid ${accentColor}`,
-    borderRadius: "18px",
-    padding: "20px",
-    boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
-  };
-}
+const thStyle = {
+  textAlign: "left",
+  padding: "12px 8px",
+  borderBottom: "1px solid rgba(255,255,255,0.05)",
+  background: "#111520",
+  color: "#6b7a9a",
+  fontSize: "9px",
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.8px",
+};
+const tdStyle = {
+  padding: "12px 8px",
+  borderBottom: "1px solid rgba(255,255,255,0.05)",
+  color: "#eef2ff",
+};
+const inputStyle = {
+  width: "100%",
+  padding: "8px 10px",
+  borderRadius: "8px",
+  border: "1px solid rgba(255,255,255,0.08)",
+  background: "#111520",
+  color: "#eef2ff",
+};
+const labelStyle = { display: "block", marginBottom: "4px", fontSize: "10px", fontWeight: 500, color: "#6b7a9a" };
 
 function landlordHasLinkedProperties(l) {
   if (!l || typeof l !== "object") return false;
@@ -66,50 +76,51 @@ function landlordSearchBlob(l) {
 }
 
 const toolbarCardStyle = {
-  background: "#FFFFFF",
-  border: "1px solid #E5E7EB",
-  borderRadius: "18px",
+  background: "#141824",
+  border: "1px solid rgba(255,255,255,0.07)",
+  borderRadius: "14px",
   padding: "20px",
-  boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
 };
 
 const toolbarFieldLabelStyle = {
   display: "block",
-  fontSize: "12px",
-  color: "#64748B",
+  fontSize: "10px",
+  color: "#6b7a9a",
   marginBottom: "8px",
-  fontWeight: 600,
+  fontWeight: 500,
 };
 
 const toolbarInputStyle = {
   width: "100%",
   height: "44px",
-  borderRadius: "12px",
-  border: "1px solid #D1D5DB",
+  borderRadius: "8px",
+  border: "1px solid rgba(255,255,255,0.08)",
   padding: "0 14px",
   fontSize: "14px",
   boxSizing: "border-box",
+  background: "#111520",
+  color: "#eef2ff",
 };
 
 const toolbarSelectStyle = {
   width: "100%",
   minWidth: "160px",
   height: "44px",
-  borderRadius: "12px",
-  border: "1px solid #D1D5DB",
+  borderRadius: "8px",
+  border: "1px solid rgba(255,255,255,0.08)",
   padding: "0 12px",
   fontSize: "14px",
   boxSizing: "border-box",
-  background: "#FFFFFF",
-  color: "#0F172A",
+  background: "#111520",
+  color: "#eef2ff",
 };
 
 const toolbarPrimaryButtonStyle = {
   height: "44px",
   padding: "0 18px",
-  borderRadius: "12px",
+  borderRadius: "8px",
   border: "none",
-  background: "#0F172A",
+  background: "linear-gradient(to right, #5b8cff, #7c5cfc)",
   color: "#FFF",
   fontWeight: 600,
   fontSize: "14px",
@@ -332,62 +343,45 @@ function AdminLandlordsPage() {
   };
 
   if (loading) {
-    return <p>Lade Verwaltungen …</p>;
+    return (
+      <div className="min-h-[40vh] bg-[#07090f] px-4 py-8 text-[#6b7a9a]">
+        Lade Verwaltungen …
+      </div>
+    );
   }
 
   return (
-    <div style={{ padding: "0 8px" }}>
-      <h2 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "16px" }}>
-        Verwaltungen / Vermieter (Landlords)
-      </h2>
+    <div className="min-h-screen bg-[#07090f] px-4 py-6 text-[#eef2ff]">
+      <h2 className="mb-6 text-[22px] font-bold">Verwaltungen / Vermieter (Landlords)</h2>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "16px",
-          marginBottom: "20px",
-        }}
-      >
-        <div style={getKpiCardStyle("#334155")}>
-          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
-            Verwaltungen gesamt
-          </div>
-          <div style={{ fontSize: "34px", fontWeight: 800, color: "#0F172A" }}>{kpiSummary.total}</div>
-          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
-            Alle erfassten Verwaltungen
-          </div>
+      <div className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#7aaeff] bg-[#141824] p-5">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Verwaltungen gesamt</p>
+          <p className="mt-2 text-[24px] font-bold text-[#eef2ff]">{kpiSummary.total}</p>
+          <p className="mt-2 text-[11px] text-[#6b7a9a]">Alle erfassten Verwaltungen</p>
         </div>
 
-        <div style={getKpiCardStyle("#16A34A")}>
-          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>Aktiv</div>
-          <div style={{ fontSize: "34px", fontWeight: 800, color: "#166534" }}>{kpiSummary.active}</div>
-          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
-            Status aktiv, nicht archiviert
-          </div>
+        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#4ade80] bg-[#141824] p-5">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Aktiv</p>
+          <p className="mt-2 text-[24px] font-bold text-[#4ade80]">{kpiSummary.active}</p>
+          <p className="mt-2 text-[11px] text-[#6b7a9a]">Status aktiv, nicht archiviert</p>
         </div>
 
-        <div style={getKpiCardStyle("#EA580C")}>
-          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>Archiviert</div>
-          <div style={{ fontSize: "34px", fontWeight: 800, color: "#C2410C" }}>{kpiSummary.archived}</div>
-          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
-            Soft-deleted / archiviert
-          </div>
+        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#fb923c] bg-[#141824] p-5">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Archiviert</p>
+          <p className="mt-2 text-[24px] font-bold text-[#fb923c]">{kpiSummary.archived}</p>
+          <p className="mt-2 text-[11px] text-[#6b7a9a]">Soft-deleted / archiviert</p>
         </div>
 
-        <div style={getKpiCardStyle("#2563EB")}>
-          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>Mit Objekten</div>
-          <div style={{ fontSize: "34px", fontWeight: 800, color: "#1D4ED8" }}>
-            {kpiSummary.withProperties}
-          </div>
-          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
-            Mit Liegenschaft verknüpft
-          </div>
+        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#a78bfa] bg-[#141824] p-5">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Mit Objekten</p>
+          <p className="mt-2 text-[24px] font-bold text-[#7aaeff]">{kpiSummary.withProperties}</p>
+          <p className="mt-2 text-[11px] text-[#6b7a9a]">Mit Liegenschaft verknüpft</p>
         </div>
       </div>
 
       {error && (
-        <p style={{ color: "#B91C1C", marginBottom: "12px", fontSize: "14px" }}>{error}</p>
+        <p className="mb-3 text-[14px] text-[#f87171]">{error}</p>
       )}
 
       <div style={{ ...toolbarCardStyle, marginBottom: "20px" }}>
@@ -447,7 +441,8 @@ function AdminLandlordsPage() {
         </div>
       </div>
 
-      <table style={tableStyle}>
+      <div className="overflow-hidden rounded-[14px] border border-white/[0.07] bg-[#141824]">
+        <table style={tableStyle}>
         <thead>
           <tr>
             <th style={thStyle}>Firma / Name</th>
@@ -460,13 +455,13 @@ function AdminLandlordsPage() {
         <tbody>
           {filteredLandlords.length === 0 ? (
             <tr>
-              <td colSpan={5} style={{ ...tdStyle, color: "#64748B" }}>
+              <td colSpan={5} style={{ ...tdStyle, color: "#6b7a9a" }}>
                 Noch keine Einträge. Erstellen Sie eine neue Verwaltung.
               </td>
             </tr>
           ) : displayLandlords.length === 0 ? (
             <tr>
-              <td colSpan={5} style={{ ...tdStyle, color: "#64748B" }}>
+              <td colSpan={5} style={{ ...tdStyle, color: "#6b7a9a" }}>
                 Keine Verwaltungen für diese Suche gefunden.
               </td>
             </tr>
@@ -479,7 +474,7 @@ function AdminLandlordsPage() {
                   <td style={tdStyle}>
                     <Link
                       to={`/admin/landlords/${row.id}`}
-                      style={{ color: "#0F172A", fontWeight: 600, textDecoration: "none" }}
+                      className="font-semibold text-[#7aaeff] no-underline hover:underline"
                     >
                       {row.company_name?.trim() || row.contact_name?.trim() || "—"}
                     </Link>
@@ -511,11 +506,11 @@ function AdminLandlordsPage() {
                             flexShrink: 0,
                             padding: "2px",
                             margin: 0,
-                            border: "none",
+                            border: "1px solid rgba(255,255,255,0.1)",
                             background: "transparent",
-                            borderRadius: "6px",
+                            borderRadius: "8px",
                             cursor: "pointer",
-                            color: "#64748B",
+                            color: "#8090b0",
                             display: "inline-flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -548,17 +543,7 @@ function AdminLandlordsPage() {
                   <td style={tdStyle}>
                     <Link
                       to={`/admin/landlords/${row.id}`}
-                      style={{
-                        display: "inline-block",
-                        padding: "6px 12px",
-                        background: "#F1F5F9",
-                        border: "1px solid #E2E8F0",
-                        borderRadius: "6px",
-                        fontSize: "13px",
-                        fontWeight: 600,
-                        color: "#0F172A",
-                        textDecoration: "none",
-                      }}
+                      className="inline-block rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] no-underline hover:bg-white/[0.04]"
                     >
                       Öffnen
                     </Link>
@@ -569,32 +554,18 @@ function AdminLandlordsPage() {
           )}
         </tbody>
       </table>
+      </div>
 
       {formOpen && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.3)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60"
           onClick={() => !saving && setFormOpen(false)}
         >
           <div
-            style={{
-              background: "#FFF",
-              padding: "24px",
-              borderRadius: "12px",
-              maxWidth: "480px",
-              width: "100%",
-              boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
-            }}
+            className="w-full max-w-[480px] rounded-[14px] border border-white/[0.07] bg-[#141824] p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ marginBottom: "16px", fontSize: "18px" }}>
+            <h3 className="mb-1 text-[18px] font-bold text-[#eef2ff]">
               {editingId ? "Verwaltung bearbeiten" : "Neue Verwaltung"}
             </h3>
             <form onSubmit={handleSubmit} style={{ display: "grid", gap: "12px" }}>
@@ -657,9 +628,7 @@ function AdminLandlordsPage() {
                   required
                 />
                 {plzNotFound ? (
-                  <p style={{ margin: "6px 0 0 0", fontSize: "12px", color: "#94A3B8" }}>
-                    PLZ nicht gefunden
-                  </p>
+                  <p className="mt-1.5 text-xs text-[#6b7a9a]">PLZ nicht gefunden</p>
                 ) : null}
               </div>
               <div>
@@ -713,30 +682,25 @@ function AdminLandlordsPage() {
                       !(form.postal_code || "").trim() ||
                       !(form.city || "").trim()
                     }
+                    className="self-start rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-xs font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50"
                     style={{
-                      padding: "8px 12px",
-                      background: "#FFF",
-                      border: "1px solid #CBD5E1",
-                      borderRadius: "8px",
-                      fontWeight: 600,
-                      fontSize: "13px",
                       cursor: saving || addressCheckBusy ? "not-allowed" : "pointer",
                     }}
                   >
                     {addressCheckBusy ? "…" : "Adresse prüfen"}
                   </button>
                 </div>
-                <p style={{ margin: 0, fontSize: "12px", color: "#64748B" }}>
+                <p className="m-0 text-xs text-[#6b7a9a]">
                   Öffnet Google Maps in einem neuen Tab. Der Kanton wird im Hintergrund ergänzt, wenn die
                   Abfrage einen Wert liefert.
                 </p>
                 {cantonHint ? (
-                  <p style={{ margin: 0, fontSize: "12px", color: "#64748B" }}>{cantonHint}</p>
+                  <p className="m-0 text-xs text-[#6b7a9a]">{cantonHint}</p>
                 ) : null}
               </div>
               <div>
                 <label style={labelStyle}>Kanton</label>
-                <p style={{ margin: "0 0 6px 0", fontSize: "12px", color: "#64748B", fontWeight: 400 }}>
+                <p className="mb-1.5 text-xs font-normal text-[#6b7a9a]">
                   Optional — oft nach «Adresse prüfen» gesetzt; manuelle Auswahl möglich.
                 </p>
                 <select
@@ -745,7 +709,7 @@ function AdminLandlordsPage() {
                   disabled={cantonLockedByPlz}
                   style={{
                     ...inputStyle,
-                    ...(cantonLockedByPlz ? { background: "#F8FAFC", color: "#64748B" } : {}),
+                    ...(cantonLockedByPlz ? { opacity: 0.85 } : {}),
                   }}
                 >
                   <option value="">—</option>
@@ -789,32 +753,18 @@ function AdminLandlordsPage() {
                   rows={2}
                 />
               </div>
-              <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+              <div className="mt-2 flex gap-2">
                 <button
                   type="submit"
                   disabled={saving}
-                  style={{
-                    padding: "10px 16px",
-                    background: "#0F172A",
-                    color: "#FFF",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontWeight: 600,
-                    cursor: saving ? "not-allowed" : "pointer",
-                  }}
+                  className="rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-4 py-2.5 font-semibold text-white hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {saving ? "Speichern …" : "Speichern"}
                 </button>
                 <button
                   type="button"
                   onClick={() => !saving && setFormOpen(false)}
-                  style={{
-                    padding: "10px 16px",
-                    background: "#F1F5F9",
-                    border: "1px solid #E2E8F0",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                  }}
+                  className="rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-2.5 font-semibold text-[#8090b0] hover:bg-white/[0.04]"
                 >
                   Abbrechen
                 </button>
