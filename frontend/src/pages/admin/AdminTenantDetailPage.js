@@ -184,6 +184,56 @@ const TENANCY_STATUS_BADGE = {
   ended: { bg: "#F1F5F9", color: "#64748B", border: "#E2E8F0" },
 };
 
+const TENANCY_DISPLAY_STATUS_BADGE = {
+  active: TENANCY_STATUS_BADGE.active,
+  notice_given: { bg: "#FEF3C7", color: "#92400E", border: "#FCD34D" },
+  reserved: TENANCY_STATUS_BADGE.upcoming,
+  ended: TENANCY_STATUS_BADGE.ended,
+};
+
+function tenancyDisplayEndIso(tn) {
+  if (!tn) return null;
+  return dateOnlyOrNull(tn.display_end_date) || dateOnlyOrNull(tn.move_out_date);
+}
+
+function tenancyDisplayStatusLabelDe(ds) {
+  const k = String(ds || "").toLowerCase();
+  if (k === "active") return "Aktiv";
+  if (k === "reserved") return "Reserviert";
+  if (k === "notice_given") return "Gekündigt";
+  if (k === "ended") return "Beendet";
+  return "—";
+}
+
+function tenancyDraftDisplayEndIso(actualRaw, terminationRaw) {
+  return dateOnlyOrNull(actualRaw) || dateOnlyOrNull(terminationRaw) || "";
+}
+
+function deriveTenancyLifecyclePreviewForAssign(
+  moveInRaw,
+  terminationEffectiveRaw,
+  actualMoveOutRaw,
+  todayIso = getTodayIsoForOccupancy()
+) {
+  const today = String(todayIso || "").slice(0, 10);
+  const mi = moveInRaw != null ? String(moveInRaw).slice(0, 10) : "";
+  const act = dateOnlyOrNull(actualMoveOutRaw);
+  const te = dateOnlyOrNull(terminationEffectiveRaw);
+  if (act && act < today) return "ended";
+  if (te && te >= today) return "notice_given";
+  if (te && te < today && (!act || act >= today)) return "notice_given";
+  if (mi && mi > today) return "reserved";
+  if (mi) return "active";
+  return "active";
+}
+
+function storedTenancyStatusForApi(displayKey) {
+  const k = String(displayKey || "").toLowerCase();
+  if (k === "ended") return "ended";
+  if (k === "reserved") return "reserved";
+  return "active";
+}
+
 function formatChfRent(amount) {
   const n = Number(amount);
   if (Number.isNaN(n)) return "CHF —";
@@ -296,7 +346,7 @@ function tenancyStatusLabelFromDerived(key) {
 
 function tenancyDateRangeLabel(tn) {
   const mi = tn.move_in_date;
-  const mo = tn.move_out_date;
+  const mo = tenancyDisplayEndIso(tn);
   if (mo == null || mo === "") {
     return `seit ${formatDateOnly(mi)}`;
   }
@@ -636,7 +686,10 @@ export default function AdminTenantDetailPage() {
   const [assignUnitId, setAssignUnitId] = useState("");
   const [assignRoomId, setAssignRoomId] = useState("");
   const [assignMoveIn, setAssignMoveIn] = useState("");
-  const [assignMoveOut, setAssignMoveOut] = useState("");
+  const [assignNoticeGivenAt, setAssignNoticeGivenAt] = useState("");
+  const [assignTerminationEffective, setAssignTerminationEffective] = useState("");
+  const [assignActualMoveOut, setAssignActualMoveOut] = useState("");
+  const [assignTerminatedBy, setAssignTerminatedBy] = useState("");
   const [assignTenantDepositType, setAssignTenantDepositType] = useState("");
   const [assignTenantDepositAmount, setAssignTenantDepositAmount] = useState("");
   const [assignTenantDepositProvider, setAssignTenantDepositProvider] = useState("");
@@ -653,14 +706,17 @@ export default function AdminTenantDetailPage() {
   });
 
   const [tenancyEditingId, setTenancyEditingId] = useState(null);
-  const [tenancyEditMoveOut, setTenancyEditMoveOut] = useState("");
+  const [tenancyEditNoticeGivenAt, setTenancyEditNoticeGivenAt] = useState("");
+  const [tenancyEditTerminationEffective, setTenancyEditTerminationEffective] = useState("");
+  const [tenancyEditActualMoveOut, setTenancyEditActualMoveOut] = useState("");
+  const [tenancyEditTerminatedBy, setTenancyEditTerminatedBy] = useState("");
   const [tenancyEditTenantDepositType, setTenancyEditTenantDepositType] = useState("");
   const [tenancyEditTenantDepositAmount, setTenancyEditTenantDepositAmount] = useState("");
   const [tenancyEditTenantDepositProvider, setTenancyEditTenantDepositProvider] = useState("");
   const [tenancyEditSaving, setTenancyEditSaving] = useState(false);
   const [tenancyEditErr, setTenancyEditErr] = useState(null);
-  const tenancyEditBaselineMoveOutRef = useRef("");
-  const tenancyEditPrevMoveOutRef = useRef("");
+  const tenancyEditBaselineDisplayEndRef = useRef("");
+  const tenancyEditPrevDisplayEndRef = useRef("");
 
   const [tenancyRevenueByTenancyId, setTenancyRevenueByTenancyId] = useState({});
   const [tenancyRevenueLoadingId, setTenancyRevenueLoadingId] = useState(null);
@@ -726,12 +782,15 @@ export default function AdminTenantDetailPage() {
   const cancelTenancyEdit = () => {
     setTenancyEditingId(null);
     setTenancyEditErr(null);
-    setTenancyEditMoveOut("");
+    setTenancyEditNoticeGivenAt("");
+    setTenancyEditTerminationEffective("");
+    setTenancyEditActualMoveOut("");
+    setTenancyEditTerminatedBy("");
     setTenancyEditTenantDepositType("");
     setTenancyEditTenantDepositAmount("");
     setTenancyEditTenantDepositProvider("");
-    tenancyEditBaselineMoveOutRef.current = "";
-    tenancyEditPrevMoveOutRef.current = "";
+    tenancyEditBaselineDisplayEndRef.current = "";
+    tenancyEditPrevDisplayEndRef.current = "";
     setTenancyRevenueErr(null);
     setRevenueEditingId(null);
     setRevenueForm({
@@ -747,12 +806,19 @@ export default function AdminTenantDetailPage() {
   const startTenancyEdit = (tn) => {
     setTenancyEditingId(String(tn.id));
     setTenancyEditErr(null);
-    const raw = tn.move_out_date;
-    const s = raw != null && raw !== "" ? String(raw) : "";
-    const moNorm = /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : "";
-    setTenancyEditMoveOut(moNorm);
-    tenancyEditBaselineMoveOutRef.current = moNorm;
-    tenancyEditPrevMoveOutRef.current = moNorm;
+    const ng = dateOnlyOrNull(tn.notice_given_at) || "";
+    setTenancyEditNoticeGivenAt(ng);
+    const teInit =
+      dateOnlyOrNull(tn.termination_effective_date) || dateOnlyOrNull(tn.move_out_date) || "";
+    setTenancyEditTerminationEffective(teInit);
+    setTenancyEditActualMoveOut(dateOnlyOrNull(tn.actual_move_out_date) || "");
+    setTenancyEditTerminatedBy(String(tn.terminated_by || "").toLowerCase() || "");
+    const baseEnd = tenancyDisplayEndIso(tn) || "";
+    tenancyEditBaselineDisplayEndRef.current = baseEnd;
+    tenancyEditPrevDisplayEndRef.current = tenancyDraftDisplayEndIso(
+      dateOnlyOrNull(tn.actual_move_out_date),
+      teInit
+    );
     const tdt = String(tn.tenant_deposit_type || "").toLowerCase();
     setTenancyEditTenantDepositType(tdt || "");
     const tda = tn.tenant_deposit_amount;
@@ -767,7 +833,7 @@ export default function AdminTenantDetailPage() {
     setTenancyRevenueErr(null);
     setRevenueEditingId(null);
     const mi = dateOnlyOrNull(tn.move_in_date) || "";
-    const mo = dateOnlyOrNull(tn.move_out_date) || "";
+    const mo = tenancyDisplayEndIso(tn) || "";
     setRevenueForm({
       type: "rent",
       amount_chf: "",
@@ -797,7 +863,10 @@ export default function AdminTenantDetailPage() {
     const tdt = String(tenancyEditTenantDepositType || "").trim().toLowerCase();
     const tprov = String(tenancyEditTenantDepositProvider || "").trim().toLowerCase();
     const body = {
-      move_out_date: tenancyEditMoveOut.trim() ? tenancyEditMoveOut.trim() : null,
+      notice_given_at: dateOnlyOrNull(tenancyEditNoticeGivenAt),
+      termination_effective_date: dateOnlyOrNull(tenancyEditTerminationEffective),
+      actual_move_out_date: dateOnlyOrNull(tenancyEditActualMoveOut),
+      terminated_by: String(tenancyEditTerminatedBy || "").trim().toLowerCase() || null,
       tenant_deposit_type: tdt || null,
       tenant_deposit_amount: parseOptionalTenantDepositFloat(tenancyEditTenantDepositAmount),
       tenant_deposit_provider:
@@ -851,10 +920,12 @@ export default function AdminTenantDetailPage() {
       return;
     }
     const mi = dateOnlyOrNull(tn.move_in_date) || "";
-    const moDb = dateOnlyOrNull(tn.move_out_date) || "";
+    const moDb = tenancyDisplayEndIso(tn) || "";
     const tid = String(tn.id);
     const moForm =
-      parentTenancyId && String(parentTenancyId) === tid ? dateOnlyOrNull(tenancyEditMoveOut) || "" : "";
+      parentTenancyId && String(parentTenancyId) === tid
+        ? tenancyDraftDisplayEndIso(tenancyEditActualMoveOut, tenancyEditTerminationEffective)
+        : "";
     const moEff = moForm || moDb;
     setRevenueForm({
       type: "rent",
@@ -870,14 +941,14 @@ export default function AdminTenantDetailPage() {
   useEffect(() => {
     if (!tenancyEditingId) return;
     const tid = String(tenancyEditingId);
-    const prev = tenancyEditPrevMoveOutRef.current;
-    const next = dateOnlyOrNull(tenancyEditMoveOut) || "";
+    const prev = tenancyEditPrevDisplayEndRef.current;
+    const next = tenancyDraftDisplayEndIso(tenancyEditActualMoveOut, tenancyEditTerminationEffective);
     if (prev === next) return;
 
     setTenancyRevenueByTenancyId((prevState) => {
       const rows = prevState?.[tid];
       if (!Array.isArray(rows)) return prevState;
-      const baseline = tenancyEditBaselineMoveOutRef.current;
+      const baseline = tenancyEditBaselineDisplayEndRef.current;
       const updated = rows.map((row) => {
         const f = normalizeRevenueFrequency(row.frequency);
         if (f === "one_time") return row;
@@ -889,8 +960,8 @@ export default function AdminTenantDetailPage() {
       });
       return { ...prevState, [tid]: updated };
     });
-    tenancyEditPrevMoveOutRef.current = next;
-  }, [tenancyEditMoveOut, tenancyEditingId]);
+    tenancyEditPrevDisplayEndRef.current = next;
+  }, [tenancyEditActualMoveOut, tenancyEditTerminationEffective, tenancyEditingId]);
 
   const submitRevenueForm = async (tenancyId, tnForDefaults) => {
     const tid = tenancyId != null ? String(tenancyId) : "";
@@ -1171,7 +1242,10 @@ export default function AdminTenantDetailPage() {
     setAssignUnitId("");
     setAssignRoomId("");
     setAssignMoveIn(today);
-    setAssignMoveOut("");
+    setAssignNoticeGivenAt("");
+    setAssignTerminationEffective("");
+    setAssignActualMoveOut("");
+    setAssignTerminatedBy("");
     setAssignTenantDepositType("");
     setAssignTenantDepositAmount("");
     setAssignTenantDepositProvider("");
@@ -1231,7 +1305,12 @@ export default function AdminTenantDetailPage() {
       setAssignErr(UNIT_LANDLORD_LEASE_ENDED_TENANCY_MESSAGE);
       return;
     }
-    const derivedStatus = deriveTenancyStatusFromDates(assignMoveIn.trim(), assignMoveOut.trim());
+    const preview = deriveTenancyLifecyclePreviewForAssign(
+      assignMoveIn.trim(),
+      assignTerminationEffective,
+      assignActualMoveOut
+    );
+    const derivedStatus = storedTenancyStatusForApi(preview);
     setAssignSaving(true);
     const tdt = String(assignTenantDepositType || "").trim().toLowerCase();
     const body = {
@@ -1239,7 +1318,10 @@ export default function AdminTenantDetailPage() {
       unit_id: String(assignUnitId),
       room_id: String(assignRoomId),
       move_in_date: assignMoveIn.trim(),
-      move_out_date: assignMoveOut.trim() ? assignMoveOut.trim() : null,
+      notice_given_at: dateOnlyOrNull(assignNoticeGivenAt),
+      termination_effective_date: dateOnlyOrNull(assignTerminationEffective),
+      actual_move_out_date: dateOnlyOrNull(assignActualMoveOut),
+      terminated_by: String(assignTerminatedBy || "").trim().toLowerCase() || null,
       status: derivedStatus || "active",
     };
     if (tdt) body.tenant_deposit_type = tdt;
@@ -1822,7 +1904,9 @@ export default function AdminTenantDetailPage() {
                         {tenancies.map((tn) => {
                           const st = (tn.status || "").toLowerCase();
                           const tenantDepType = String(tn.tenant_deposit_type || "").toLowerCase();
+                          const dStat = String(tn.display_status || "").toLowerCase();
                           const badge =
+                            TENANCY_DISPLAY_STATUS_BADGE[dStat] ||
                             TENANCY_STATUS_BADGE[st] ||
                             (st === "reserved" ? TENANCY_STATUS_BADGE.upcoming : TENANCY_STATUS_BADGE.ended);
                           const rowKey = tn.id != null ? String(tn.id) : `${tn.move_in_date}-${tn.room_id}`;
@@ -1847,7 +1931,9 @@ export default function AdminTenantDetailPage() {
                                       border: `1px solid ${badge.border}`,
                                     }}
                                   >
-                                    {tn.status || "—"}
+                                    {dStat
+                                      ? tenancyDisplayStatusLabelDe(tn.display_status)
+                                      : tn.status || "—"}
                                   </span>
                                 </td>
                                 <td style={{ ...tdCell, textAlign: "right", fontWeight: 600, color: "#0F172A", verticalAlign: "top" }}>
@@ -2026,23 +2112,86 @@ export default function AdminTenantDetailPage() {
                                     <div style={{ fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "8px" }}>
                                       Mietverhältnis bearbeiten
                                     </div>
+                                    <div
+                                      style={{
+                                        fontSize: "11px",
+                                        color: "#64748B",
+                                        marginBottom: "8px",
+                                        width: "100%",
+                                      }}
+                                    >
+                                      <strong style={{ color: "#334155" }}>Kündigung / Mietende</strong>
+                                      {" · "}
+                                      Mietende / Vertragsende (angezeigt):{" "}
+                                      <strong style={{ color: "#0F172A" }}>
+                                        {formatDateOnly(
+                                          tenancyDraftDisplayEndIso(
+                                            tenancyEditActualMoveOut,
+                                            tenancyEditTerminationEffective
+                                          ) || tenancyDisplayEndIso(tn)
+                                        )}
+                                      </strong>
+                                    </div>
                                     <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "flex-end" }}>
                                       <div>
-                                        <label htmlFor={`ten-out-${rowKey}`} style={labelStyle}>
-                                          Auszug / Kündigung (Datum)
+                                        <label htmlFor={`ten-ng-${rowKey}`} style={labelStyle}>
+                                          Kündigung eingegangen am
                                         </label>
                                         <input
-                                          id={`ten-out-${rowKey}`}
+                                          id={`ten-ng-${rowKey}`}
                                           type="date"
                                           style={inputStyle}
-                                          value={tenancyEditMoveOut}
-                                          onChange={(e) => setTenancyEditMoveOut(e.target.value)}
+                                          value={tenancyEditNoticeGivenAt}
+                                          onChange={(e) => setTenancyEditNoticeGivenAt(e.target.value)}
                                           disabled={tenancyEditSaving}
                                         />
                                       </div>
                                       <div>
+                                        <label htmlFor={`ten-te-${rowKey}`} style={labelStyle}>
+                                          Kündigung wirksam per
+                                        </label>
+                                        <input
+                                          id={`ten-te-${rowKey}`}
+                                          type="date"
+                                          style={inputStyle}
+                                          value={tenancyEditTerminationEffective}
+                                          onChange={(e) => setTenancyEditTerminationEffective(e.target.value)}
+                                          disabled={tenancyEditSaving}
+                                        />
+                                      </div>
+                                      <div>
+                                        <label htmlFor={`ten-am-${rowKey}`} style={labelStyle}>
+                                          Rückgabe erfolgt am
+                                        </label>
+                                        <input
+                                          id={`ten-am-${rowKey}`}
+                                          type="date"
+                                          style={inputStyle}
+                                          value={tenancyEditActualMoveOut}
+                                          onChange={(e) => setTenancyEditActualMoveOut(e.target.value)}
+                                          disabled={tenancyEditSaving}
+                                        />
+                                      </div>
+                                      <div>
+                                        <label htmlFor={`ten-tb-${rowKey}`} style={labelStyle}>
+                                          Gekündigt durch
+                                        </label>
+                                        <select
+                                          id={`ten-tb-${rowKey}`}
+                                          style={{ ...inputStyle, cursor: tenancyEditSaving ? "default" : "pointer" }}
+                                          value={tenancyEditTerminatedBy}
+                                          onChange={(e) => setTenancyEditTerminatedBy(e.target.value)}
+                                          disabled={tenancyEditSaving}
+                                        >
+                                          <option value="">—</option>
+                                          <option value="tenant">Mieter</option>
+                                          <option value="landlord">Vermieter / Verwaltung</option>
+                                          <option value="other">Sonstiges</option>
+                                        </select>
+                                      </div>
+                                      <div>
                                         <label htmlFor={`ten-st-${rowKey}`} style={labelStyle}>
-                                          Status
+                                          Status (abgeleitet)
                                         </label>
                                         <div
                                           style={{
@@ -2054,11 +2203,13 @@ export default function AdminTenantDetailPage() {
                                           }}
                                         >
                                           {(() => {
-                                            const key = deriveTenancyStatusFromDates(
+                                            const key = deriveTenancyLifecyclePreviewForAssign(
                                               tn.move_in_date,
-                                              tenancyEditMoveOut || tn.move_out_date
+                                              tenancyEditTerminationEffective,
+                                              tenancyEditActualMoveOut
                                             );
                                             const badge =
+                                              TENANCY_DISPLAY_STATUS_BADGE[key] ||
                                               TENANCY_STATUS_BADGE[key === "reserved" ? "upcoming" : key] ||
                                               TENANCY_STATUS_BADGE.ended;
                                             return (
@@ -2074,7 +2225,7 @@ export default function AdminTenantDetailPage() {
                                                   border: `1px solid ${badge.border}`,
                                                 }}
                                               >
-                                                {tenancyStatusLabelFromDerived(key)}
+                                                {tenancyDisplayStatusLabelDe(key)}
                                               </span>
                                             );
                                           })()}
@@ -2346,7 +2497,11 @@ export default function AdminTenantDetailPage() {
                                                   f,
                                                   e.target.value,
                                                   tn.move_in_date,
-                                                  tenancyEditMoveOut || tn.move_out_date
+                                                  tenancyDraftDisplayEndIso(
+                                                    tenancyEditActualMoveOut,
+                                                    tenancyEditTerminationEffective
+                                                  ) || tenancyDisplayEndIso(tn) ||
+                                                    tn.move_out_date
                                                 )
                                               )
                                             }
@@ -2625,17 +2780,60 @@ export default function AdminTenantDetailPage() {
                         />
                       </div>
                       <div>
-                        <label htmlFor="assign-move-out" style={labelStyle}>
-                          Auszugsdatum
+                        <label htmlFor="assign-notice" style={labelStyle}>
+                          Kündigung eingegangen am
                         </label>
                         <input
-                          id="assign-move-out"
+                          id="assign-notice"
                           type="date"
                           style={inputStyle}
-                          value={assignMoveOut}
-                          onChange={(e) => setAssignMoveOut(e.target.value)}
+                          value={assignNoticeGivenAt}
+                          onChange={(e) => setAssignNoticeGivenAt(e.target.value)}
                           disabled={assignSaving}
                         />
+                      </div>
+                      <div>
+                        <label htmlFor="assign-te" style={labelStyle}>
+                          Kündigung wirksam per
+                        </label>
+                        <input
+                          id="assign-te"
+                          type="date"
+                          style={inputStyle}
+                          value={assignTerminationEffective}
+                          onChange={(e) => setAssignTerminationEffective(e.target.value)}
+                          disabled={assignSaving}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="assign-am" style={labelStyle}>
+                          Rückgabe erfolgt am
+                        </label>
+                        <input
+                          id="assign-am"
+                          type="date"
+                          style={inputStyle}
+                          value={assignActualMoveOut}
+                          onChange={(e) => setAssignActualMoveOut(e.target.value)}
+                          disabled={assignSaving}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="assign-tb" style={labelStyle}>
+                          Gekündigt durch
+                        </label>
+                        <select
+                          id="assign-tb"
+                          style={{ ...inputStyle, cursor: assignSaving ? "default" : "pointer" }}
+                          value={assignTerminatedBy}
+                          onChange={(e) => setAssignTerminatedBy(e.target.value)}
+                          disabled={assignSaving}
+                        >
+                          <option value="">—</option>
+                          <option value="tenant">Mieter</option>
+                          <option value="landlord">Vermieter / Verwaltung</option>
+                          <option value="other">Sonstiges</option>
+                        </select>
                       </div>
                       <div>
                         <label style={labelStyle}>Einnahmen / Monat</label>
@@ -2644,10 +2842,14 @@ export default function AdminTenantDetailPage() {
                         </div>
                       </div>
                       <div>
-                        <label style={labelStyle}>Status</label>
+                        <label style={labelStyle}>Status (abgeleitet)</label>
                         <div style={{ ...inputStyle, background: "#F8FAFC", border: "1px solid #E2E8F0" }}>
-                          {tenancyStatusLabelFromDerived(
-                            deriveTenancyStatusFromDates(assignMoveIn, assignMoveOut)
+                          {tenancyDisplayStatusLabelDe(
+                            deriveTenancyLifecyclePreviewForAssign(
+                              assignMoveIn,
+                              assignTerminationEffective,
+                              assignActualMoveOut
+                            )
                           )}
                         </div>
                       </div>
@@ -2692,7 +2894,7 @@ export default function AdminTenantDetailPage() {
                                     f,
                                     e.target.value,
                                     assignMoveIn,
-                                    assignMoveOut
+                                    tenancyDraftDisplayEndIso(assignActualMoveOut, assignTerminationEffective)
                                   )
                                 )
                               }
@@ -2740,7 +2942,8 @@ export default function AdminTenantDetailPage() {
                               const id = `ar-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
                               const freq = normalizeRevenueFrequency(assignRevenueForm.frequency);
                               const mi = dateOnlyOrNull(assignMoveIn) || "";
-                              const mo = dateOnlyOrNull(assignMoveOut) || "";
+                              const mo =
+                                tenancyDraftDisplayEndIso(assignActualMoveOut, assignTerminationEffective) || "";
                               let sd = assignRevenueForm.start_date;
                               let ed = assignRevenueForm.end_date;
                               if (freq === "monthly" || freq === "yearly") {

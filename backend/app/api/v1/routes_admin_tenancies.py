@@ -17,6 +17,13 @@ from db.models import Tenancy, TenancyRevenue, TenancyStatus, Tenant, Room, Unit
 from db.audit import create_audit_log, model_snapshot
 from app.core.rate_limit import limiter
 from app.services.tenant_crm import record_tenant_event
+from app.services.tenancy_lifecycle import (
+    scheduling_end_date_from_parts,
+    sync_tenancy_move_out_date,
+    tenancy_derived_display_status,
+    tenancy_display_end_date,
+    tenancy_scheduling_end_date,
+)
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-tenancies"])
@@ -26,9 +33,11 @@ ALLOWED_TENANT_DEPOSIT_PROVIDERS = frozenset(
     {"swisscaution", "smartcaution", "firstcaution", "gocaution", "other"}
 )
 ALLOWED_TENANCY_REVENUE_FREQUENCIES = frozenset({"monthly", "yearly", "one_time"})
+ALLOWED_TERMINATED_BY = frozenset({"tenant", "landlord", "other"})
 
 
 def _tenancy_to_dict(t: Tenancy) -> dict:
+    de = tenancy_display_end_date(t)
     return {
         "id": str(t.id),
         "tenant_id": str(t.tenant_id),
@@ -36,6 +45,22 @@ def _tenancy_to_dict(t: Tenancy) -> dict:
         "unit_id": str(t.unit_id),
         "move_in_date": t.move_in_date.isoformat() if t.move_in_date else None,
         "move_out_date": t.move_out_date.isoformat() if t.move_out_date else None,
+        "notice_given_at": (
+            t.notice_given_at.isoformat() if getattr(t, "notice_given_at", None) else None
+        ),
+        "termination_effective_date": (
+            t.termination_effective_date.isoformat()
+            if getattr(t, "termination_effective_date", None)
+            else None
+        ),
+        "actual_move_out_date": (
+            t.actual_move_out_date.isoformat()
+            if getattr(t, "actual_move_out_date", None)
+            else None
+        ),
+        "terminated_by": getattr(t, "terminated_by", None),
+        "display_end_date": de.isoformat() if de else None,
+        "display_status": tenancy_derived_display_status(t),
         "monthly_rent": float(t.monthly_rent),
         # Optional: computed by list endpoints to support tenancy-driven revenue UI/KPIs.
         "monthly_revenue_equivalent": getattr(t, "_monthly_revenue_equivalent", None),
@@ -102,7 +127,8 @@ def _monthly_revenue_equivalent_for_tenancy_on_date(
         return 0.0
     if tenancy.move_in_date and on_date < tenancy.move_in_date:
         return 0.0
-    if tenancy.move_out_date and on_date > tenancy.move_out_date:
+    sched_end = tenancy_scheduling_end_date(tenancy)
+    if sched_end and on_date > sched_end:
         return 0.0
     total = 0.0
     for r in revenue_rows or []:
@@ -110,7 +136,7 @@ def _monthly_revenue_equivalent_for_tenancy_on_date(
         if f == "one_time":
             continue
         sd = getattr(r, "start_date", None) or tenancy.move_in_date
-        ed = getattr(r, "end_date", None) or tenancy.move_out_date or date(9999, 12, 31)
+        ed = getattr(r, "end_date", None) or sched_end or date(9999, 12, 31)
         if on_date < sd or on_date > ed:
             continue
         total += _monthly_equivalent_amount(f, float(getattr(r, "amount_chf", 0) or 0))
@@ -254,6 +280,10 @@ class TenancyCreate(BaseModel):
     unit_id: str
     move_in_date: date
     move_out_date: Optional[date] = None
+    notice_given_at: Optional[date] = None
+    termination_effective_date: Optional[date] = None
+    actual_move_out_date: Optional[date] = None
+    terminated_by: Optional[str] = None
     monthly_rent: float = Field(default=0, ge=0)
     deposit_amount: Optional[float] = Field(default=None, ge=0)
     tenant_deposit_type: Optional[str] = None
@@ -297,7 +327,24 @@ class TenancyCreate(BaseModel):
             raise ValueError("unit_id must not be empty")
         if self.move_out_date is not None and self.move_out_date < self.move_in_date:
             raise ValueError("move_out_date must be on/after move_in_date")
+        if (
+            self.termination_effective_date is not None
+            and self.termination_effective_date < self.move_in_date
+        ):
+            raise ValueError("termination_effective_date must be on/after move_in_date")
+        if self.actual_move_out_date is not None and self.actual_move_out_date < self.move_in_date:
+            raise ValueError("actual_move_out_date must be on/after move_in_date")
         return self
+
+    @field_validator("terminated_by", mode="before")
+    @classmethod
+    def _normalize_terminated_by_create(cls, v):
+        if v is None or v == "":
+            return None
+        s = str(v).strip().lower()
+        if s not in ALLOWED_TERMINATED_BY:
+            raise ValueError("terminated_by must be one of: tenant, landlord, other")
+        return s
 
     @model_validator(mode="after")
     def _clear_tenant_deposit_provider_if_not_insurance_create(self):
@@ -310,6 +357,10 @@ class TenancyCreate(BaseModel):
 class TenancyPatch(BaseModel):
     move_in_date: Optional[date] = None
     move_out_date: Optional[date] = None
+    notice_given_at: Optional[date] = None
+    termination_effective_date: Optional[date] = None
+    actual_move_out_date: Optional[date] = None
+    terminated_by: Optional[str] = None
     monthly_rent: Optional[float] = Field(default=None, ge=0)
     deposit_amount: Optional[float] = Field(default=None, ge=0)
     tenant_deposit_type: Optional[str] = None
@@ -343,11 +394,27 @@ class TenancyPatch(BaseModel):
             )
         return s
 
+    @field_validator("terminated_by", mode="before")
+    @classmethod
+    def _normalize_terminated_by_patch(cls, v):
+        if v is None or v == "":
+            return None
+        s = str(v).strip().lower()
+        if s not in ALLOWED_TERMINATED_BY:
+            raise ValueError("terminated_by must be one of: tenant, landlord, other")
+        return s
+
     @model_validator(mode="after")
     def _validate_dates_if_both_present(self):
         if self.move_in_date is not None and self.move_out_date is not None:
             if self.move_out_date < self.move_in_date:
                 raise ValueError("move_out_date must be on/after move_in_date")
+        if self.move_in_date is not None and self.termination_effective_date is not None:
+            if self.termination_effective_date < self.move_in_date:
+                raise ValueError("termination_effective_date must be on/after move_in_date")
+        if self.move_in_date is not None and self.actual_move_out_date is not None:
+            if self.actual_move_out_date < self.move_in_date:
+                raise ValueError("actual_move_out_date must be on/after move_in_date")
         return self
 
     @model_validator(mode="after")
@@ -391,10 +458,10 @@ def _overlaps(
     if exclude_tenancy_id:
         q = q.where(Tenancy.id != exclude_tenancy_id)
     for t in session.exec(q).all():
-        t_out = t.move_out_date or date(9999, 12, 31)
+        t_end = tenancy_scheduling_end_date(t) or date(9999, 12, 31)
         # overlap: our start < their end and our end > their start
         our_end = move_out or date(9999, 12, 31)
-        if move_in < t_out and our_end > t.move_in_date:
+        if move_in < t_end and our_end > t.move_in_date:
             return True
     return False
 
@@ -489,7 +556,12 @@ def admin_create_tenancy(
     """Create a tenancy. Validates tenant/room/unit and prevents overlapping tenancies."""
     _validate_relations(session, body.tenant_id, body.room_id, body.unit_id, org_id)
     status = body.status
-    if _overlaps(session, body.room_id, body.move_in_date, body.move_out_date, org_id):
+    eff_move_out = scheduling_end_date_from_parts(
+        body.move_out_date,
+        body.termination_effective_date,
+        body.actual_move_out_date,
+    )
+    if _overlaps(session, body.room_id, body.move_in_date, eff_move_out, org_id):
         raise HTTPException(status_code=400, detail="Another tenancy overlaps this room for the given dates")
     tenancy = Tenancy(
         organization_id=org_id,
@@ -498,6 +570,10 @@ def admin_create_tenancy(
         unit_id=body.unit_id,
         move_in_date=body.move_in_date,
         move_out_date=body.move_out_date,
+        notice_given_at=body.notice_given_at,
+        termination_effective_date=body.termination_effective_date,
+        actual_move_out_date=body.actual_move_out_date,
+        terminated_by=body.terminated_by,
         monthly_rent=body.monthly_rent,
         deposit_amount=body.deposit_amount,
         tenant_deposit_type=body.tenant_deposit_type,
@@ -506,6 +582,7 @@ def admin_create_tenancy(
         tenant_deposit_provider=body.tenant_deposit_provider,
         status=status,
     )
+    sync_tenancy_move_out_date(tenancy)
     session.add(tenancy)
     room_row = session.get(Room, body.room_id)
     unit_row = session.get(Unit, body.unit_id)
@@ -548,17 +625,29 @@ def admin_patch_tenancy(
         raise HTTPException(status_code=404, detail="Tenancy not found")
     old_snapshot = model_snapshot(tenancy)
     data = body.model_dump(exclude_unset=True)
-    move_in = data.get("move_in_date") or tenancy.move_in_date
-    move_out = data.get("move_out_date") if "move_out_date" in data else tenancy.move_out_date
-
-    if move_out is not None and move_out < move_in:
-        raise HTTPException(status_code=400, detail="move_out_date must be on/after move_in_date")
-
-    if _overlaps(session, tenancy.room_id, move_in, move_out, org_id, exclude_tenancy_id=tenancy_id):
-        raise HTTPException(status_code=400, detail="Another tenancy overlaps this room for the given dates")
-    for k, v in data.items():
-        if hasattr(tenancy, k):
-            setattr(tenancy, k, v)
+    if data:
+        merged = tenancy.model_dump()
+        merged.update(data)
+        try:
+            t_prop = Tenancy.model_validate(merged)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        sync_tenancy_move_out_date(t_prop)
+        if t_prop.move_out_date is not None and t_prop.move_out_date < t_prop.move_in_date:
+            raise HTTPException(status_code=400, detail="move_out_date must be on/after move_in_date")
+        if _overlaps(
+            session,
+            t_prop.room_id,
+            t_prop.move_in_date,
+            t_prop.move_out_date,
+            org_id,
+            exclude_tenancy_id=tenancy_id,
+        ):
+            raise HTTPException(status_code=400, detail="Another tenancy overlaps this room for the given dates")
+        for k, v in data.items():
+            if hasattr(tenancy, k):
+                setattr(tenancy, k, v)
+        sync_tenancy_move_out_date(tenancy)
     session.add(tenancy)
     new_snapshot = model_snapshot(tenancy)
 

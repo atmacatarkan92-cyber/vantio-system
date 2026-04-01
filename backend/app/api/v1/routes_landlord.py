@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, model_validator
 from sqlmodel import select
 
 from auth.dependencies import get_current_landlord, get_db_session
+from app.services.tenancy_lifecycle import tenancy_derived_display_status, tenancy_display_end_date
 from db.models import User, Landlord, Property, Unit, Tenancy, TenancyRevenue, Tenant, Invoice
 from app.services.invoice_service import _invoice_to_api
 
@@ -78,6 +79,7 @@ def _tenancy_to_dict(
     prop: Optional[Property] = None,
     tenant: Optional[Tenant] = None,
 ) -> dict:
+    de = tenancy_display_end_date(t)
     base = {
         "id": str(t.id),
         "tenant_id": str(t.tenant_id),
@@ -85,6 +87,22 @@ def _tenancy_to_dict(
         "unit_id": str(t.unit_id),
         "move_in_date": t.move_in_date.isoformat() if t.move_in_date else None,
         "move_out_date": t.move_out_date.isoformat() if t.move_out_date else None,
+        "notice_given_at": (
+            t.notice_given_at.isoformat() if getattr(t, "notice_given_at", None) else None
+        ),
+        "termination_effective_date": (
+            t.termination_effective_date.isoformat()
+            if getattr(t, "termination_effective_date", None)
+            else None
+        ),
+        "actual_move_out_date": (
+            t.actual_move_out_date.isoformat()
+            if getattr(t, "actual_move_out_date", None)
+            else None
+        ),
+        "terminated_by": getattr(t, "terminated_by", None),
+        "display_end_date": de.isoformat() if de else None,
+        "display_status": tenancy_derived_display_status(t),
         "monthly_rent": float(t.monthly_rent),
         "deposit_amount": float(t.deposit_amount) if t.deposit_amount is not None else None,
         "status": t.status.value if hasattr(t.status, "value") else str(t.status),

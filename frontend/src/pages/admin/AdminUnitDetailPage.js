@@ -380,8 +380,18 @@ function tenancyMieterTableSortRank(t, todayIso) {
   return 2;
 }
 
-/** Display meta for Mieter table: Aktiv / Reserviert / Geplant / Beendet */
+/** Display meta for Mieter table: Aktiv / Reserviert / Geplant / Gekündigt / Beendet */
 function tenancyMieterTableStatusMeta(t, todayIso = getTodayIsoForOccupancy()) {
+  const ds = String(t?.display_status || "").trim().toLowerCase();
+  if (ds === "notice_given") {
+    return { label: "Gekündigt", tone: "amber" };
+  }
+  if (ds === "ended") {
+    return { label: "Beendet", tone: "slate" };
+  }
+  if (ds === "reserved") {
+    return { label: "Reserviert", tone: "amber" };
+  }
   if (isTenancyActiveByDates(t, todayIso)) {
     return { label: "Aktiv", tone: "green" };
   }
@@ -2897,7 +2907,11 @@ function AdminUnitDetailPage() {
                           {formatTenancyMoveIn(tn.move_in_date)}
                         </td>
                         <td className="py-2 pr-4 text-slate-600">
-                          {formatTenancyMoveOut(tn.move_out_date)}
+                          {formatTenancyMoveOut(
+                            tn.display_end_date != null && tn.display_end_date !== ""
+                              ? tn.display_end_date
+                              : tn.move_out_date
+                          )}
                         </td>
                       </tr>
                     );

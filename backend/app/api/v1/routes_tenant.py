@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends
 from sqlmodel import select
 
 from auth.dependencies import get_current_tenant, get_db_session
+from app.services.tenancy_lifecycle import tenancy_derived_display_status, tenancy_display_end_date
 from db.models import Tenant, Tenancy, TenancyRevenue, Invoice, User, Unit, Room
 from app.services.invoice_service import _invoice_to_api
 
@@ -22,6 +23,7 @@ def _tenancy_to_tenant_dict(
     unit_title: str | None = None,
     room_name: str | None = None,
 ) -> Dict[str, Any]:
+    de = tenancy_display_end_date(t)
     return {
         "id": str(t.id) if t.id is not None else None,
         "unit_id": str(t.unit_id) if t.unit_id is not None else None,
@@ -30,6 +32,22 @@ def _tenancy_to_tenant_dict(
         "room_name": room_name,
         "move_in_date": t.move_in_date.isoformat() if t.move_in_date else None,
         "move_out_date": t.move_out_date.isoformat() if t.move_out_date else None,
+        "notice_given_at": (
+            t.notice_given_at.isoformat() if getattr(t, "notice_given_at", None) else None
+        ),
+        "termination_effective_date": (
+            t.termination_effective_date.isoformat()
+            if getattr(t, "termination_effective_date", None)
+            else None
+        ),
+        "actual_move_out_date": (
+            t.actual_move_out_date.isoformat()
+            if getattr(t, "actual_move_out_date", None)
+            else None
+        ),
+        "terminated_by": getattr(t, "terminated_by", None),
+        "display_end_date": de.isoformat() if de else None,
+        "display_status": tenancy_derived_display_status(t),
         "status": t.status.value if hasattr(t.status, "value") else str(t.status),
         "monthly_revenue_equivalent": getattr(t, "_monthly_revenue_equivalent", 0) or 0,
         "monthly_rent": float(t.monthly_rent) if t.monthly_rent is not None else 0,

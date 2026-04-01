@@ -39,6 +39,37 @@ def test_tenancy_create_rejects_negative_rent():
         )
 
 
+def test_tenancy_create_accepts_lifecycle_fields():
+    b = TenancyCreate(
+        tenant_id="tenant-1",
+        room_id="room-1",
+        unit_id="unit-1",
+        move_in_date=date(2024, 1, 1),
+        notice_given_at=date(2024, 5, 1),
+        termination_effective_date=date(2024, 8, 31),
+        terminated_by="tenant",
+        monthly_rent=0,
+        deposit_amount=None,
+        status="active",
+    )
+    assert b.terminated_by == "tenant"
+    assert b.termination_effective_date == date(2024, 8, 31)
+
+
+def test_tenancy_create_rejects_invalid_terminated_by():
+    with pytest.raises(ValidationError):
+        TenancyCreate(
+            tenant_id="tenant-1",
+            room_id="room-1",
+            unit_id="unit-1",
+            move_in_date=date(2024, 1, 1),
+            monthly_rent=0,
+            deposit_amount=None,
+            terminated_by="invalid",
+            status="active",
+        )
+
+
 def test_room_create_rejects_whitespace_name():
     with pytest.raises(ValidationError):
         RoomCreate(unit_id="unit-1", name="   ", price=10)

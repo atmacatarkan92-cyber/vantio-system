@@ -29,8 +29,20 @@ function normalizeTenancyStatus(t) {
  */
 export function isTenancyActiveByDates(t, todayIso = getTodayIsoForOccupancy()) {
   if (!t) return false;
-  if (normalizeTenancyStatus(t) !== "active") return false;
+  const ds = String(t?.display_status || "").trim().toLowerCase();
+  if (ds === "ended") return false;
   const moveIn = parseIsoDate(t?.move_in_date);
+  const endIso = parseIsoDate(t?.display_end_date ?? t?.move_out_date);
+
+  if (ds === "notice_given" || ds === "active") {
+    if (normalizeTenancyStatus(t) !== "active") return false;
+    if (!moveIn || moveIn > todayIso) return false;
+    if (endIso && endIso < todayIso) return false;
+    return true;
+  }
+  if (ds === "reserved") return false;
+
+  if (normalizeTenancyStatus(t) !== "active") return false;
   if (!moveIn || moveIn > todayIso) return false;
   const moveOut = t?.move_out_date ? parseIsoDate(t.move_out_date) : null;
   if (moveOut && moveOut < todayIso) return false;
