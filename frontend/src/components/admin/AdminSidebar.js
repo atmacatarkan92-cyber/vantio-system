@@ -1,22 +1,40 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTheme } from "../../contexts/ThemeContext";
 
-function navLinkClass({ isActive }) {
-  const base =
-    "block rounded-[8px] px-[9px] py-[7px] text-[11px] no-underline transition-colors";
-  if (isActive) {
-    return `${base} border border-blue-500/[0.15] bg-blue-500/[0.12] font-semibold text-[#8fb3ff]`;
-  }
-  return `${base} font-medium text-[#6b7a9a] hover:bg-white/[0.04]`;
+function createNavLinkClass(theme) {
+  return function navLinkClass({ isActive }) {
+    const base =
+      "block rounded-[8px] px-[9px] py-[7px] text-[11px] no-underline transition-colors";
+    if (theme === "light") {
+      if (isActive) {
+        return `${base} border border-blue-500/25 bg-blue-500/10 font-semibold text-blue-800`;
+      }
+      return `${base} font-medium text-[#64748b] hover:bg-black/[0.05]`;
+    }
+    if (isActive) {
+      return `${base} border border-blue-500/[0.15] bg-blue-500/[0.12] font-semibold text-[#8fb3ff]`;
+    }
+    return `${base} font-medium text-[#6b7a9a] hover:bg-white/[0.04]`;
+  };
 }
 
-function navSubLinkClass({ isActive }) {
-  return `${navLinkClass({ isActive })} ml-2`;
+function createNavSubLinkClass(theme) {
+  const inner = createNavLinkClass(theme);
+  return function navSubLinkClass(args) {
+    return `${inner(args)} ml-2`;
+  };
 }
 
-function Bereich({ title, children, defaultOpen = true }) {
+function Bereich({ title, children, defaultOpen = true, theme }) {
   const [open, setOpen] = useState(defaultOpen);
+  const titleClass =
+    theme === "light"
+      ? "text-[9px] font-bold uppercase tracking-[1.5px] text-[#64748b]"
+      : "text-[9px] font-bold uppercase tracking-[1.5px] text-[#4a5680]";
+  const chevronClass =
+    theme === "light" ? "text-[11px] text-[#64748b]" : "text-[11px] text-[#6b7a9a]";
 
   return (
     <div className="mb-2">
@@ -26,8 +44,8 @@ function Bereich({ title, children, defaultOpen = true }) {
         className="flex w-full items-center justify-between bg-transparent px-2 pb-1 pt-3 text-left"
         style={{ cursor: "pointer" }}
       >
-        <span className="text-[9px] font-bold uppercase tracking-[1.5px] text-[#4a5680]">{title}</span>
-        <span className="text-[11px] text-[#6b7a9a]">{open ? "−" : "+"}</span>
+        <span className={titleClass}>{title}</span>
+        <span className={chevronClass}>{open ? "−" : "+"}</span>
       </button>
 
       {open && <div className="mt-1 grid gap-0.5">{children}</div>}
@@ -52,23 +70,44 @@ function userInitials(user) {
 function AdminSidebar() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+
+  const navLinkClass = createNavLinkClass(theme);
+  const navSubLinkClass = createNavSubLinkClass(theme);
 
   const handleLogout = () => {
     logout().then(() => navigate("/admin/login", { replace: true }));
   };
 
+  const sidebarShell =
+    theme === "light"
+      ? "box-border flex min-h-screen w-[280px] flex-col border-r border-black/[0.08] bg-white px-4 pb-4 pt-6 text-[#0f172a]"
+      : "box-border flex min-h-screen w-[280px] flex-col border-r border-white/[0.07] bg-[#0c1018] px-4 pb-4 pt-6 text-[#eef2ff]";
+
+  const orgPillClass =
+    theme === "light"
+      ? "mt-3 flex max-w-full items-center gap-2 rounded-full border border-blue-500/25 bg-blue-500/10 px-2.5 py-1 text-[10px] font-semibold text-blue-800"
+      : "mt-3 flex max-w-full items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-[10px] font-semibold text-[#8fb3ff]";
+
+  const footerBorder =
+    theme === "light" ? "border-t border-black/[0.08]" : "border-t border-white/[0.07]";
+
+  const secondaryBtn =
+    theme === "light"
+      ? "w-full cursor-pointer rounded-[8px] border border-black/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-black/[0.04]"
+      : "w-full cursor-pointer rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]";
+
+  const logoLight = theme === "light" ? "text-[#0f172a]" : "text-[#eef2ff]";
+
   return (
-    <div className="box-border flex min-h-screen w-[280px] flex-col border-r border-white/[0.07] bg-[#0c1018] px-4 pb-4 pt-6 text-[#eef2ff]">
+    <div className={sidebarShell}>
       <div className="mb-6 shrink-0">
         <h2 className="m-0 text-[20px] font-extrabold tracking-[-0.02em]">
-          <span className="text-[#eef2ff]">Van</span>
+          <span className={logoLight}>Van</span>
           <span className="text-[#7aaeff]">tio</span>
         </h2>
         {user ? (
-          <div
-            className="mt-3 flex max-w-full items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-[10px] font-semibold text-[#8fb3ff]"
-            title={user.organization_id}
-          >
+          <div className={orgPillClass} title={user.organization_id}>
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-400" aria-hidden />
             <span className="min-w-0 truncate font-mono text-[10px]">{user.organization_id}</span>
           </div>
@@ -76,7 +115,7 @@ function AdminSidebar() {
       </div>
 
       <nav className="flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto">
-        <Bereich title="Dashboard" defaultOpen={true}>
+        <Bereich title="Dashboard" defaultOpen={true} theme={theme}>
           <NavLink to="/admin" end className={navLinkClass}>
             📊 Unternehmensübersicht
           </NavLink>
@@ -90,7 +129,7 @@ function AdminSidebar() {
           </NavLink>
         </Bereich>
 
-        <Bereich title="Betrieb" defaultOpen={true}>
+        <Bereich title="Betrieb" defaultOpen={true} theme={theme}>
           <NavLink to="/admin/objekte-dashboard" className={navLinkClass}>
             🗂️ Objekte-Dashboard
           </NavLink>
@@ -116,7 +155,7 @@ function AdminSidebar() {
           </NavLink>
         </Bereich>
 
-        <Bereich title="Finanzen" defaultOpen={true}>
+        <Bereich title="Finanzen" defaultOpen={true} theme={theme}>
           <NavLink to="/admin/invoices" className={navLinkClass}>
             🧾 Rechnungen
           </NavLink>
@@ -130,7 +169,7 @@ function AdminSidebar() {
           </NavLink>
         </Bereich>
 
-        <Bereich title="Analyse" defaultOpen={false}>
+        <Bereich title="Analyse" defaultOpen={false} theme={theme}>
           <NavLink to="/admin/performance" className={navLinkClass}>
             📈 Performance
           </NavLink>
@@ -144,7 +183,7 @@ function AdminSidebar() {
           </NavLink>
         </Bereich>
 
-        <Bereich title="CRM" defaultOpen={false}>
+        <Bereich title="CRM" defaultOpen={false} theme={theme}>
           <NavLink to="/admin/tenants" className={navLinkClass}>
             👥 Mieter
           </NavLink>
@@ -171,27 +210,52 @@ function AdminSidebar() {
         </Bereich>
       </nav>
 
-      <div className="mt-auto shrink-0 border-t border-white/[0.07] pt-4">
+      <div className={`mt-auto shrink-0 pt-4 ${footerBorder}`}>
         {user ? (
           <div className="mb-3 flex items-center gap-3 px-1">
             <div
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.06] text-[11px] font-bold text-[#eef2ff]"
+              className={
+                theme === "light"
+                  ? "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/[0.1] bg-[#f1f5f9] text-[11px] font-bold text-[#0f172a]"
+                  : "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.06] text-[11px] font-bold text-[#eef2ff]"
+              }
               aria-hidden
             >
               {userInitials(user)}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-[12px] font-semibold text-[#eef2ff]">
+              <div
+                className={
+                  theme === "light"
+                    ? "truncate text-[12px] font-semibold text-[#0f172a]"
+                    : "truncate text-[12px] font-semibold text-[#eef2ff]"
+                }
+              >
                 {user.full_name || "—"}
               </div>
-              <div className="truncate text-[10px] text-[#6b7a9a]">{user.email}</div>
+              <div
+                className={
+                  theme === "light"
+                    ? "truncate text-[10px] text-[#64748b]"
+                    : "truncate text-[10px] text-[#6b7a9a]"
+                }
+              >
+                {user.email}
+              </div>
             </div>
           </div>
         ) : null}
         <button
           type="button"
+          onClick={toggleTheme}
+          className={`mb-2 ${secondaryBtn}`}
+        >
+          {theme === "dark" ? "☀️ Hell" : "🌙 Dunkel"}
+        </button>
+        <button
+          type="button"
           onClick={handleLogout}
-          className="w-full cursor-pointer rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+          className={secondaryBtn}
         >
           Abmelden
         </button>

@@ -3,6 +3,33 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+[data-theme="light"] {
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-inner: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-muted: #64748b;
+  --border: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] {
+  --bg-page: #07090f;
+  --bg-card: #141824;
+  --bg-inner: #111520;
+  --text-primary: #eef2ff;
+  --text-muted: #6b7a9a;
+  --border: rgba(255, 255, 255, 0.07);
+}
+
+:root {
+  --bg-page: #07090f;
+  --bg-card: #141824;
+  --bg-inner: #111520;
+  --text-primary: #eef2ff;
+  --text-muted: #6b7a9a;
+  --border: rgba(255, 255, 255, 0.07);
+}
 #emergent-badge,
 [id*="emergent"] {
   display: none !important;
