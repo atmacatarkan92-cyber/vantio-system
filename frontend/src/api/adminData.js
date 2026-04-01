@@ -435,6 +435,61 @@ export async function patchAdminTenancy(tenancyId, body) {
   return res.json();
 }
 
+export function fetchAdminTenancyRevenue(tenancyId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/tenancies/${encodeURIComponent(tenancyId)}/revenue`,
+    { headers: getApiHeaders() }
+  ).then((res) => {
+    if (!res.ok) throw new Error("Einnahmen konnten nicht geladen werden.");
+    return res.json();
+  });
+}
+
+export async function createAdminTenancyRevenue(tenancyId, body) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/tenancies/${encodeURIComponent(tenancyId)}/revenue`,
+    {
+      method: "POST",
+      headers: getApiHeaders(),
+      body: JSON.stringify(body),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
+
+export async function patchAdminTenancyRevenue(revenueId, body) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/tenancy-revenue/${encodeURIComponent(revenueId)}`,
+    {
+      method: "PATCH",
+      headers: getApiHeaders(),
+      body: JSON.stringify(body),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
+
+export async function deleteAdminTenancyRevenue(revenueId) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/tenancy-revenue/${encodeURIComponent(revenueId)}`,
+    { method: "DELETE", headers: getApiHeaders() }
+  );
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  try {
+    return await res.json();
+  } catch {
+    return { status: "ok" };
+  }
+}
+
 /**
  * Fetch invoices (GET /api/invoices).
  * Without args: all org invoices; returns items array (paginated shape normalized).

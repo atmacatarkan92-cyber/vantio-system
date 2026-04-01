@@ -457,6 +457,35 @@ class Tenancy(SQLModel, table=True):
 
 
 # ---------------------------------------------------------------------------
+# Tenancy revenue (V1: tenancy-driven pricing lines)
+# ---------------------------------------------------------------------------
+
+class TenancyRevenue(SQLModel, table=True):
+    """
+    Revenue line item attached to a tenancy.
+    Frequency defines how it contributes to normalized monthly revenue:
+    - monthly: full
+    - yearly: amount_chf / 12
+    - one_time: excluded from monthly profit/KPIs (still stored + auditable)
+    start_date/end_date optionally scope the line within the tenancy lifecycle.
+    """
+
+    __tablename__ = "tenancy_revenue"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
+    tenancy_id: str = Field(foreign_key="tenancies.id", index=True)
+    type: str = Field(max_length=64)  # e.g. rent, service_fee, furniture, setup_fee, discount
+    amount_chf: float = Field(default=0)
+    frequency: str = Field(default="monthly", max_length=32)
+    start_date: Optional[date] = Field(default=None)
+    end_date: Optional[date] = Field(default=None)
+    notes: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = Field(default=None, nullable=True)
+
+
+# ---------------------------------------------------------------------------
 # Invoices (billing from tenancies; payment tracking)
 # ---------------------------------------------------------------------------
 

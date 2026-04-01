@@ -2377,7 +2377,7 @@ function AdminUnitDetailPage() {
                           </Link>
                         </td>
                         <td className="py-2 pr-4 text-right">
-                          {formatChfOrDash(tn.monthly_rent)}
+                          {formatChfOrDash(tn.monthly_revenue_equivalent)}
                         </td>
                         <td className="py-2 pr-4 text-slate-600">
                           {tenantDepositTypeLabel(tn.tenant_deposit_type)}

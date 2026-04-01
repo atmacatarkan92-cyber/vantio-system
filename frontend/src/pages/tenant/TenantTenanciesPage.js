@@ -61,7 +61,7 @@ function TenantTenanciesPage() {
                   <td style={{ padding: "12px 8px" }}>{formatDate(t.move_in_date)}</td>
                   <td style={{ padding: "12px 8px" }}>{formatDate(t.move_out_date)}</td>
                   <td style={{ padding: "12px 8px" }}>
-                    {formatCurrency(t.monthly_rent != null ? t.monthly_rent : t.rent_chf)}
+                    {formatCurrency(t.monthly_revenue_equivalent)}
                   </td>
                   <td style={{ padding: "12px 8px" }}>{t.status || "—"}</td>
                 </tr>

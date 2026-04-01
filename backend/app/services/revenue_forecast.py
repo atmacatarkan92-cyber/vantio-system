@@ -8,7 +8,7 @@ from typing import Optional
 
 from sqlmodel import select
 
-from db.models import Tenancy, TenancyStatus, Room
+from db.models import Tenancy, TenancyRevenue, TenancyStatus, Room
 
 
 def calculate_monthly_revenue(session, unit_id: str, year: int, month: int) -> dict:
@@ -25,6 +25,7 @@ def calculate_monthly_revenue(session, unit_id: str, year: int, month: int) -> d
     expected_revenue = 0.0
     occupied_rooms = 0
     vacant_rooms = 0
+    days_in_month = (last - first).days + 1
 
     # Fetch tenancies once for the unit and compute per-room results in Python.
     # This avoids the failing query shape `Tenancy.room_id == "<uuid>"` when
@@ -40,6 +41,35 @@ def calculate_monthly_revenue(session, unit_id: str, year: int, month: int) -> d
             .where((Tenancy.move_out_date == None) | (Tenancy.move_out_date >= first))
         ).all()
     )
+
+    ten_ids = [str(t.id) for t in overlapping_tenancies]
+    revenue_rows = (
+        list(
+            session.exec(
+                select(TenancyRevenue).where(TenancyRevenue.tenancy_id.in_(ten_ids))
+            ).all()
+        )
+        if ten_ids
+        else []
+    )
+    rev_by_tenancy_id: dict[str, list[TenancyRevenue]] = {}
+    for rr in revenue_rows:
+        rev_by_tenancy_id.setdefault(str(rr.tenancy_id), []).append(rr)
+
+    def _monthly_equiv(freq: str, amount: float) -> float:
+        f = str(freq or "monthly").strip().lower()
+        if f == "monthly":
+            return amount
+        if f == "yearly":
+            return amount / 12.0
+        return 0.0
+
+    def _days_overlap(a_start: date, a_end: date, b_start: date, b_end: date) -> int:
+        start = max(a_start, b_start)
+        end = min(a_end, b_end)
+        if end < start:
+            return 0
+        return (end - start).days + 1
     tenancies_by_room_id: dict[str, list[Tenancy]] = {}
     for t in overlapping_tenancies:
         tenancies_by_room_id.setdefault(str(t.room_id), []).append(t)
@@ -50,11 +80,25 @@ def calculate_monthly_revenue(session, unit_id: str, year: int, month: int) -> d
         for t in tenancies_by_room_id.get(room_id, []):
             move_out = t.move_out_date or date(9999, 12, 31)
             if t.move_in_date <= last and move_out >= first:
-                start = max(first, t.move_in_date)
-                end = min(last, move_out)
-                days = (end - start).days + 1
-                days_in_month = (last - first).days + 1
-                expected_revenue += float(t.monthly_rent) * (days / days_in_month)
+                base_start = max(first, t.move_in_date)
+                base_end = min(last, move_out)
+
+                tid = str(t.id)
+                rows = rev_by_tenancy_id.get(tid, [])
+                added = 0.0
+                for rr in rows:
+                    freq = str(getattr(rr, "frequency", None) or "monthly").strip().lower()
+                    if freq == "one_time":
+                        continue
+                    amt = float(getattr(rr, "amount_chf", 0) or 0)
+                    rs = getattr(rr, "start_date", None) or base_start
+                    re = getattr(rr, "end_date", None) or base_end
+                    ds = _days_overlap(base_start, base_end, rs, re)
+                    if ds <= 0:
+                        continue
+                    added += _monthly_equiv(freq, amt) * (ds / days_in_month)
+
+                expected_revenue += added
                 occupied_rooms += 1
                 found = True
                 break

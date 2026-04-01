@@ -9,6 +9,10 @@ import {
   fetchAdminInvoices,
   fetchAdminTenancies,
   patchAdminTenancy,
+  fetchAdminTenancyRevenue,
+  createAdminTenancyRevenue,
+  patchAdminTenancyRevenue,
+  deleteAdminTenancyRevenue,
   fetchAdminUnits,
   fetchAdminRooms,
   fetchAdminTenantDocuments,
@@ -206,6 +210,45 @@ function parseOptionalTenantDepositFloat(value) {
   if (value === "" || value == null) return null;
   const n = Number(String(value).replace(",", "."));
   return Number.isFinite(n) ? n : null;
+}
+
+function parseRevenueAmount(value) {
+  if (value === "" || value == null) return null;
+  const n = Number(String(value).replace(",", "."));
+  if (!Number.isFinite(n) || n === 0) return null;
+  return n;
+}
+
+function dateOnlyOrNull(value) {
+  const s = String(value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}/.test(s)) return null;
+  return s.slice(0, 10);
+}
+
+function normalizeRevenueFrequency(raw) {
+  const k = String(raw || "monthly").trim().toLowerCase() || "monthly";
+  if (!["monthly", "yearly", "one_time"].includes(k)) return "monthly";
+  return k;
+}
+
+function revenueFrequencyLabel(freq) {
+  const k = String(freq || "monthly").trim().toLowerCase();
+  if (k === "yearly") return "Jährlich";
+  if (k === "one_time") return "Einmalig";
+  return "Monatlich";
+}
+
+function monthlyEquivalentFromRevenueRows(rows) {
+  if (!Array.isArray(rows)) return 0;
+  let sum = 0;
+  for (const r of rows) {
+    const f = normalizeRevenueFrequency(r?.frequency);
+    if (f === "one_time") continue;
+    const amt = Number(r?.amount_chf);
+    if (!Number.isFinite(amt)) continue;
+    sum += f === "yearly" ? amt / 12 : amt;
+  }
+  return sum;
 }
 
 function tenancyDateRangeLabel(tn) {
@@ -569,6 +612,19 @@ export default function AdminTenantDetailPage() {
   const [tenancyEditSaving, setTenancyEditSaving] = useState(false);
   const [tenancyEditErr, setTenancyEditErr] = useState(null);
 
+  const [tenancyRevenueByTenancyId, setTenancyRevenueByTenancyId] = useState({});
+  const [tenancyRevenueLoadingId, setTenancyRevenueLoadingId] = useState(null);
+  const [tenancyRevenueErr, setTenancyRevenueErr] = useState(null);
+  const [revenueEditingId, setRevenueEditingId] = useState(null);
+  const [revenueForm, setRevenueForm] = useState({
+    type: "rent",
+    amount_chf: "",
+    frequency: "monthly",
+    start_date: "",
+    end_date: "",
+    notes: "",
+  });
+
   const assignUnitForRent = useMemo(
     () => assignUnits.find((x) => String(x.id) === String(assignUnitId)),
     [assignUnits, assignUnitId]
@@ -623,6 +679,16 @@ export default function AdminTenantDetailPage() {
     setTenancyEditTenantDepositType("");
     setTenancyEditTenantDepositAmount("");
     setTenancyEditTenantDepositProvider("");
+    setTenancyRevenueErr(null);
+    setRevenueEditingId(null);
+    setRevenueForm({
+      type: "rent",
+      amount_chf: "",
+      frequency: "monthly",
+      start_date: "",
+      end_date: "",
+      notes: "",
+    });
   };
 
   const startTenancyEdit = (tn) => {
@@ -644,6 +710,30 @@ export default function AdminTenantDetailPage() {
     setTenancyEditTenantDepositProvider(
       String(tn.tenant_deposit_provider || "").toLowerCase() || ""
     );
+
+    const tid = tn?.id != null ? String(tn.id) : "";
+    setTenancyRevenueErr(null);
+    setRevenueEditingId(null);
+    setRevenueForm({
+      type: "rent",
+      amount_chf: "",
+      frequency: "monthly",
+      start_date: "",
+      end_date: "",
+      notes: "",
+    });
+    if (tid && tenancyRevenueByTenancyId?.[tid] == null) {
+      setTenancyRevenueLoadingId(tid);
+      fetchAdminTenancyRevenue(tid)
+        .then((rows) => {
+          setTenancyRevenueByTenancyId((prev) => ({
+            ...(prev || {}),
+            [tid]: Array.isArray(rows) ? rows : [],
+          }));
+        })
+        .catch((err) => setTenancyRevenueErr(err?.message || "Einnahmen konnten nicht geladen werden."))
+        .finally(() => setTenancyRevenueLoadingId(null));
+    }
   };
 
   const submitTenancyEdit = () => {
@@ -677,6 +767,114 @@ export default function AdminTenantDetailPage() {
       "/admin/tenants",
       shouldRefreshTenantList ? { state: { refreshTenants: true } } : undefined
     );
+
+  const reloadTenancyRevenue = useCallback(async (tenancyId) => {
+    const tid = tenancyId != null ? String(tenancyId) : "";
+    if (!tid) return;
+    setTenancyRevenueLoadingId(tid);
+    setTenancyRevenueErr(null);
+    try {
+      const rows = await fetchAdminTenancyRevenue(tid);
+      setTenancyRevenueByTenancyId((prev) => ({
+        ...(prev || {}),
+        [tid]: Array.isArray(rows) ? rows : [],
+      }));
+    } catch (err) {
+      setTenancyRevenueErr(err?.message || "Einnahmen konnten nicht geladen werden.");
+    } finally {
+      setTenancyRevenueLoadingId(null);
+    }
+  }, []);
+
+  const startRevenueEdit = (row) => {
+    if (!row?.id) return;
+    setRevenueEditingId(String(row.id));
+    setRevenueForm({
+      type: String(row.type || "").trim() || "rent",
+      amount_chf: row.amount_chf != null ? String(row.amount_chf) : "",
+      frequency: normalizeRevenueFrequency(row.frequency),
+      start_date: row.start_date != null ? String(row.start_date).slice(0, 10) : "",
+      end_date: row.end_date != null ? String(row.end_date).slice(0, 10) : "",
+      notes: row.notes != null ? String(row.notes) : "",
+    });
+    setTenancyRevenueErr(null);
+  };
+
+  const cancelRevenueEdit = () => {
+    setRevenueEditingId(null);
+    setRevenueForm({
+      type: "rent",
+      amount_chf: "",
+      frequency: "monthly",
+      start_date: "",
+      end_date: "",
+      notes: "",
+    });
+    setTenancyRevenueErr(null);
+  };
+
+  const submitRevenueForm = async (tenancyId) => {
+    const tid = tenancyId != null ? String(tenancyId) : "";
+    if (!tid) return;
+    const type = String(revenueForm.type || "").trim();
+    if (!type) {
+      setTenancyRevenueErr("Bitte Typ angeben.");
+      return;
+    }
+    const amt = parseRevenueAmount(revenueForm.amount_chf);
+    if (amt == null) {
+      setTenancyRevenueErr("Bitte einen gültigen Betrag (≠ 0) eingeben.");
+      return;
+    }
+    const freq = normalizeRevenueFrequency(revenueForm.frequency);
+    const start_date = dateOnlyOrNull(revenueForm.start_date);
+    const end_date = dateOnlyOrNull(revenueForm.end_date);
+    if (start_date && end_date && end_date < start_date) {
+      setTenancyRevenueErr("Enddatum muss nach dem Startdatum liegen.");
+      return;
+    }
+    const body = {
+      type,
+      amount_chf: amt,
+      frequency: freq,
+      start_date,
+      end_date,
+      notes: String(revenueForm.notes || "").trim() || null,
+    };
+    setTenancyRevenueErr(null);
+    setTenancyRevenueLoadingId(tid);
+    try {
+      if (revenueEditingId) {
+        await patchAdminTenancyRevenue(revenueEditingId, body);
+      } else {
+        await createAdminTenancyRevenue(tid, body);
+      }
+      await reloadTenancyRevenue(tid);
+      cancelRevenueEdit();
+    } catch (err) {
+      setTenancyRevenueErr(err?.message || "Speichern fehlgeschlagen.");
+    } finally {
+      setTenancyRevenueLoadingId(null);
+    }
+  };
+
+  const deleteRevenueRow = async (tenancyId, row) => {
+    const tid = tenancyId != null ? String(tenancyId) : "";
+    const rid = row?.id != null ? String(row.id) : "";
+    if (!tid || !rid) return;
+    if (!window.confirm("Diesen Einnahmen-Eintrag wirklich löschen?")) return;
+    setTenancyRevenueErr(null);
+    setTenancyRevenueLoadingId(tid);
+    try {
+      await deleteAdminTenancyRevenue(rid);
+      await reloadTenancyRevenue(tid);
+      if (revenueEditingId === rid) cancelRevenueEdit();
+    } catch (err) {
+      setTenancyRevenueErr(err?.message || "Löschen fehlgeschlagen.");
+    } finally {
+      setTenancyRevenueLoadingId(null);
+    }
+  };
 
   function handleTenantDocPick() {
     tenantDocFileInputRef.current?.click();
@@ -911,12 +1109,12 @@ export default function AdminTenantDetailPage() {
       return;
     }
     if (assignMonthlyRent === "" || assignMonthlyRent == null) {
-      setAssignErr("Bitte eine gültige Monatsmiete angeben.");
+      setAssignErr("Bitte einen gültigen Betrag (≠ 0) angeben.");
       return;
     }
     const rent = Number(String(assignMonthlyRent).replace(",", "."));
-    if (Number.isNaN(rent) || rent < 0) {
-      setAssignErr("Bitte eine gültige Monatsmiete angeben.");
+    if (Number.isNaN(rent) || rent === 0) {
+      setAssignErr("Bitte einen gültigen Betrag (≠ 0) angeben.");
       return;
     }
     const assignUnit = assignUnits.find((x) => String(x.id) === String(assignUnitId));
@@ -936,7 +1134,6 @@ export default function AdminTenantDetailPage() {
       room_id: String(assignRoomId),
       move_in_date: assignMoveIn.trim(),
       move_out_date: assignMoveOut.trim() ? assignMoveOut.trim() : null,
-      monthly_rent: rent,
       status: apiStatus,
     };
     if (tdt) body.tenant_deposit_type = tdt;
@@ -952,6 +1149,17 @@ export default function AdminTenantDetailPage() {
       .then(async (res) => {
         if (!res.ok) throw new Error(await parseAdminErrorFromResponse(res));
         return res.json();
+      })
+      .then(async (createdTenancy) => {
+        const tid = createdTenancy?.id != null ? String(createdTenancy.id) : "";
+        if (tid) {
+          await createAdminTenancyRevenue(tid, {
+            type: "rent",
+            amount_chf: rent,
+            frequency: "monthly",
+          });
+        }
+        return createdTenancy;
       })
       .then(() =>
         Promise.all([reloadTenanciesForTenant(), fetchAdminTenantEvents(tenantId)])
@@ -1492,7 +1700,7 @@ export default function AdminTenantDetailPage() {
                         <tr>
                           <th style={thCell}>Zeitraum</th>
                           <th style={thCell}>Status</th>
-                          <th style={{ ...thCell, textAlign: "right" }}>Monatsmiete</th>
+                          <th style={{ ...thCell, textAlign: "right" }}>Monat (Einnahmen)</th>
                           <th style={thCell}>Kautionsart</th>
                           <th style={{ ...thCell, textAlign: "right" }}>Kautionsbetrag</th>
                           <th style={thCell}>Anbieter</th>
@@ -1532,7 +1740,7 @@ export default function AdminTenantDetailPage() {
                                   </span>
                                 </td>
                                 <td style={{ ...tdCell, textAlign: "right", fontWeight: 600, color: "#0F172A" }}>
-                                  {formatChfRent(tn.monthly_rent)}
+                                  {formatChfRent(tn.monthly_revenue_equivalent)}
                                 </td>
                                 <td style={tdCell}>{tenantDepositTypeLabel(tn.tenant_deposit_type)}</td>
                                 <td style={{ ...tdCell, textAlign: "right" }}>
@@ -1713,6 +1921,210 @@ export default function AdminTenantDetailPage() {
                                           Abbrechen
                                         </button>
                                       </div>
+                                    </div>
+
+                                    <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid #E2E8F0" }}>
+                                      <div style={{ fontSize: "12px", fontWeight: 800, color: "#334155", marginBottom: "8px" }}>
+                                        Einnahmen
+                                      </div>
+
+                                      {tenancyRevenueErr ? (
+                                        <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#B91C1C" }}>
+                                          {tenancyRevenueErr}
+                                        </p>
+                                      ) : null}
+
+                                      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}>
+                                        <div>
+                                          <label style={labelStyle}>Typ</label>
+                                          <input
+                                            type="text"
+                                            style={inputStyle}
+                                            value={revenueForm.type}
+                                            onChange={(e) => setRevenueForm((f) => ({ ...f, type: e.target.value }))}
+                                            disabled={tenancyRevenueLoadingId === String(tn.id)}
+                                            placeholder="z. B. rent, service_fee"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label style={labelStyle}>Betrag (CHF)</label>
+                                          <input
+                                            type="text"
+                                            inputMode="decimal"
+                                            style={inputStyle}
+                                            value={revenueForm.amount_chf}
+                                            onChange={(e) => setRevenueForm((f) => ({ ...f, amount_chf: e.target.value }))}
+                                            disabled={tenancyRevenueLoadingId === String(tn.id)}
+                                            placeholder="z. B. 1200"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label style={labelStyle}>Frequenz</label>
+                                          <select
+                                            style={{ ...inputStyle, cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer" }}
+                                            value={revenueForm.frequency}
+                                            onChange={(e) => setRevenueForm((f) => ({ ...f, frequency: e.target.value }))}
+                                            disabled={tenancyRevenueLoadingId === String(tn.id)}
+                                          >
+                                            <option value="monthly">Monatlich</option>
+                                            <option value="yearly">Jährlich</option>
+                                            <option value="one_time">Einmalig</option>
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <label style={labelStyle}>Start (optional)</label>
+                                          <input
+                                            type="date"
+                                            style={inputStyle}
+                                            value={revenueForm.start_date}
+                                            onChange={(e) => setRevenueForm((f) => ({ ...f, start_date: e.target.value }))}
+                                            disabled={tenancyRevenueLoadingId === String(tn.id)}
+                                          />
+                                        </div>
+                                        <div>
+                                          <label style={labelStyle}>Ende (optional)</label>
+                                          <input
+                                            type="date"
+                                            style={inputStyle}
+                                            value={revenueForm.end_date}
+                                            onChange={(e) => setRevenueForm((f) => ({ ...f, end_date: e.target.value }))}
+                                            disabled={tenancyRevenueLoadingId === String(tn.id)}
+                                          />
+                                        </div>
+                                        <div style={{ minWidth: "240px", flex: "1 1 240px" }}>
+                                          <label style={labelStyle}>Notizen (optional)</label>
+                                          <input
+                                            type="text"
+                                            style={inputStyle}
+                                            value={revenueForm.notes}
+                                            onChange={(e) => setRevenueForm((f) => ({ ...f, notes: e.target.value }))}
+                                            disabled={tenancyRevenueLoadingId === String(tn.id)}
+                                            placeholder="z. B. Möbelpauschale"
+                                          />
+                                        </div>
+                                        <div style={{ display: "inline-flex", gap: "8px" }}>
+                                          <button
+                                            type="button"
+                                            onClick={() => submitRevenueForm(tn.id)}
+                                            disabled={tenancyRevenueLoadingId === String(tn.id)}
+                                            style={{
+                                              padding: "7px 12px",
+                                              borderRadius: "10px",
+                                              border: "1px solid #FB923C",
+                                              background: "#FB923C",
+                                              color: "#FFF",
+                                              fontWeight: 800,
+                                              cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer",
+                                            }}
+                                          >
+                                            {revenueEditingId ? "Aktualisieren" : "Hinzufügen"}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={cancelRevenueEdit}
+                                            disabled={tenancyRevenueLoadingId === String(tn.id)}
+                                            style={{
+                                              padding: "7px 12px",
+                                              borderRadius: "10px",
+                                              border: "1px solid #E2E8F0",
+                                              background: "#FFF",
+                                              fontWeight: 700,
+                                              cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer",
+                                            }}
+                                          >
+                                            Abbrechen
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      <div style={{ marginTop: "10px", overflowX: "auto" }}>
+                                        <table style={tableStyle}>
+                                          <thead>
+                                            <tr>
+                                              <th style={thCell}>Typ</th>
+                                              <th style={{ ...thCell, textAlign: "right" }}>Betrag</th>
+                                              <th style={thCell}>Frequenz</th>
+                                              <th style={thCell}>Zeitraum (optional)</th>
+                                              <th style={thCell}>Notizen</th>
+                                              <th style={{ ...thCell, textAlign: "right", whiteSpace: "nowrap" }}>Aktion</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {Array.isArray(tenancyRevenueByTenancyId?.[String(tn.id)]) &&
+                                            tenancyRevenueByTenancyId[String(tn.id)].length > 0 ? (
+                                              tenancyRevenueByTenancyId[String(tn.id)].map((rr) => {
+                                                const rid = String(rr.id);
+                                                const range = rr.start_date || rr.end_date
+                                                  ? `${rr.start_date ? rr.start_date.slice(0, 10) : "—"} – ${rr.end_date ? rr.end_date.slice(0, 10) : "—"}`
+                                                  : "—";
+                                                return (
+                                                  <tr key={rid}>
+                                                    <td style={tdCell}>{rr.type || "—"}</td>
+                                                    <td style={{ ...tdCell, textAlign: "right", fontWeight: 700, color: "#0F172A" }}>
+                                                      {formatChfRent(rr.amount_chf)}
+                                                    </td>
+                                                    <td style={tdCell}>{revenueFrequencyLabel(rr.frequency)}</td>
+                                                    <td style={tdCell}>{range}</td>
+                                                    <td style={tdCell}>{rr.notes || "—"}</td>
+                                                    <td style={{ ...tdCell, textAlign: "right", whiteSpace: "nowrap" }}>
+                                                      <div style={{ display: "inline-flex", gap: "8px", justifyContent: "flex-end", flexWrap: "wrap" }}>
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => startRevenueEdit(rr)}
+                                                          disabled={tenancyRevenueLoadingId === String(tn.id)}
+                                                          style={{
+                                                            padding: "4px 10px",
+                                                            borderRadius: "8px",
+                                                            border: "1px solid #E2E8F0",
+                                                            background: "#FFF",
+                                                            fontSize: "12px",
+                                                            fontWeight: 700,
+                                                            cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer",
+                                                          }}
+                                                        >
+                                                          Bearbeiten
+                                                        </button>
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => deleteRevenueRow(tn.id, rr)}
+                                                          disabled={tenancyRevenueLoadingId === String(tn.id)}
+                                                          style={{
+                                                            padding: "4px 10px",
+                                                            borderRadius: "8px",
+                                                            border: "1px solid #E2E8F0",
+                                                            background: "#FFF",
+                                                            fontSize: "12px",
+                                                            fontWeight: 700,
+                                                            color: "#B91C1C",
+                                                            cursor: tenancyRevenueLoadingId === String(tn.id) ? "default" : "pointer",
+                                                          }}
+                                                        >
+                                                          Löschen
+                                                        </button>
+                                                      </div>
+                                                    </td>
+                                                  </tr>
+                                                );
+                                              })
+                                            ) : (
+                                              <tr>
+                                                <td colSpan={6} style={{ ...tdCell, color: "#64748B" }}>
+                                                  {tenancyRevenueLoadingId === String(tn.id) ? "Lade …" : "Keine Einnahmen erfasst."}
+                                                </td>
+                                              </tr>
+                                            )}
+                                          </tbody>
+                                        </table>
+                                      </div>
+
+                                      <p style={{ margin: "10px 0 0 0", fontSize: "12px", color: "#64748B" }}>
+                                        Normalisiert (pro Monat): CHF{" "}
+                                        {monthlyEquivalentFromRevenueRows(tenancyRevenueByTenancyId?.[String(tn.id)] || []).toLocaleString("de-CH", {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        })}
+                                        {" "}— Einmalig wird nicht in Monats-KPIs berücksichtigt.
+                                      </p>
                                     </div>
                                   </td>
                                 </tr>

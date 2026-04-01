@@ -4,7 +4,7 @@ Protected by require_roles("admin", "manager").
 Validates tenant/room/unit exist, room belongs to unit, no overlapping tenancies.
 """
 
-from datetime import date
+from datetime import date, datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -13,7 +13,7 @@ from sqlalchemy import func
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Tenancy, TenancyStatus, Tenant, Room, Unit, User
+from db.models import Tenancy, TenancyRevenue, TenancyStatus, Tenant, Room, Unit, User
 from db.audit import create_audit_log, model_snapshot
 from app.core.rate_limit import limiter
 from app.services.tenant_crm import record_tenant_event
@@ -25,6 +25,7 @@ ALLOWED_TENANT_DEPOSIT_TYPES = frozenset({"bank", "insurance", "cash", "none"})
 ALLOWED_TENANT_DEPOSIT_PROVIDERS = frozenset(
     {"swisscaution", "smartcaution", "firstcaution", "gocaution", "other"}
 )
+ALLOWED_TENANCY_REVENUE_FREQUENCIES = frozenset({"monthly", "yearly", "one_time"})
 
 
 def _tenancy_to_dict(t: Tenancy) -> dict:
@@ -36,6 +37,8 @@ def _tenancy_to_dict(t: Tenancy) -> dict:
         "move_in_date": t.move_in_date.isoformat() if t.move_in_date else None,
         "move_out_date": t.move_out_date.isoformat() if t.move_out_date else None,
         "monthly_rent": float(t.monthly_rent),
+        # Optional: computed by list endpoints to support tenancy-driven revenue UI/KPIs.
+        "monthly_revenue_equivalent": getattr(t, "_monthly_revenue_equivalent", None),
         "deposit_amount": float(t.deposit_amount) if t.deposit_amount is not None else None,
         "tenant_deposit_type": getattr(t, "tenant_deposit_type", None),
         "tenant_deposit_amount": (
@@ -52,6 +55,173 @@ def _tenancy_to_dict(t: Tenancy) -> dict:
         "status": t.status.value if hasattr(t.status, "value") else str(t.status),
         "created_at": t.created_at.isoformat() if getattr(t, "created_at", None) else None,
     }
+
+
+def _tenancy_revenue_to_dict(r: TenancyRevenue) -> dict:
+    return {
+        "id": str(r.id),
+        "tenancy_id": str(r.tenancy_id),
+        "type": r.type,
+        "amount_chf": float(r.amount_chf or 0),
+        "frequency": (getattr(r, "frequency", None) or "monthly"),
+        "start_date": r.start_date.isoformat() if getattr(r, "start_date", None) else None,
+        "end_date": r.end_date.isoformat() if getattr(r, "end_date", None) else None,
+        "notes": getattr(r, "notes", None),
+        "created_at": r.created_at.isoformat() if getattr(r, "created_at", None) else None,
+        "updated_at": r.updated_at.isoformat() if getattr(r, "updated_at", None) else None,
+    }
+
+
+def _monthly_equivalent_amount(freq: str, amount_chf: float) -> float:
+    f = str(freq or "monthly").strip().lower()
+    if f == "monthly":
+        return amount_chf
+    if f == "yearly":
+        return amount_chf / 12.0
+    return 0.0
+
+
+def _overlap_days(a_start: date, a_end: date, b_start: date, b_end: date) -> int:
+    start = max(a_start, b_start)
+    end = min(a_end, b_end)
+    if end < start:
+        return 0
+    return (end - start).days + 1
+
+
+def _monthly_revenue_equivalent_for_tenancy_on_date(
+    tenancy: Tenancy, revenue_rows: list[TenancyRevenue], on_date: date
+) -> float:
+    """
+    Simple monthly-equivalent (not prorated): sum revenue rows active on on_date.
+    Used for UI display; profit/KPI uses revenue_forecast for proration by month overlap.
+    """
+    if tenancy is None:
+        return 0.0
+    if tenancy.status not in (TenancyStatus.active, TenancyStatus.reserved):
+        return 0.0
+    if tenancy.move_in_date and on_date < tenancy.move_in_date:
+        return 0.0
+    if tenancy.move_out_date and on_date > tenancy.move_out_date:
+        return 0.0
+    total = 0.0
+    for r in revenue_rows or []:
+        f = str(getattr(r, "frequency", None) or "monthly").strip().lower()
+        if f == "one_time":
+            continue
+        sd = getattr(r, "start_date", None) or tenancy.move_in_date
+        ed = getattr(r, "end_date", None) or tenancy.move_out_date or date(9999, 12, 31)
+        if on_date < sd or on_date > ed:
+            continue
+        total += _monthly_equivalent_amount(f, float(getattr(r, "amount_chf", 0) or 0))
+    return round(total, 2)
+
+
+class TenancyRevenueCreateBody(BaseModel):
+    type: str
+    amount_chf: float
+    frequency: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    notes: Optional[str] = None
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def _normalize_type(cls, v):
+        if v is None:
+            raise ValueError("type is required")
+        s = str(v).strip()
+        if not s:
+            raise ValueError("type must not be empty")
+        return s
+
+    @field_validator("frequency", mode="before")
+    @classmethod
+    def _normalize_frequency(cls, v):
+        if v is None or v == "":
+            return None
+        s = str(v).strip().lower()
+        if s not in ALLOWED_TENANCY_REVENUE_FREQUENCIES:
+            raise ValueError("frequency must be one of: monthly, yearly, one_time")
+        return s
+
+    @field_validator("amount_chf")
+    @classmethod
+    def _amount_non_zero(cls, v):
+        if v is None:
+            raise ValueError("amount_chf is required")
+        n = float(v)
+        if n == 0:
+            raise ValueError("amount_chf must not be 0")
+        return n
+
+    @model_validator(mode="after")
+    def _validate_dates(self):
+        if self.start_date is not None and self.end_date is not None:
+            if self.end_date < self.start_date:
+                raise ValueError("end_date must be on/after start_date")
+        return self
+
+
+class TenancyRevenuePatchBody(BaseModel):
+    type: Optional[str] = None
+    amount_chf: Optional[float] = None
+    frequency: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    notes: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _at_least_one_field(self) -> "TenancyRevenuePatchBody":
+        if (
+            self.type is None
+            and self.amount_chf is None
+            and self.frequency is None
+            and self.start_date is None
+            and self.end_date is None
+            and self.notes is None
+        ):
+            raise ValueError("At least one field is required")
+        return self
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def _normalize_type_patch(cls, v):
+        if v is None:
+            return None
+        s = str(v).strip()
+        if not s:
+            raise ValueError("type must not be empty")
+        return s
+
+    @field_validator("frequency", mode="before")
+    @classmethod
+    def _normalize_frequency_patch(cls, v):
+        if v is None:
+            return None
+        s = str(v).strip().lower()
+        if not s:
+            return None
+        if s not in ALLOWED_TENANCY_REVENUE_FREQUENCIES:
+            raise ValueError("frequency must be one of: monthly, yearly, one_time")
+        return s
+
+    @field_validator("amount_chf")
+    @classmethod
+    def _amount_non_zero_if_set(cls, v):
+        if v is None:
+            return None
+        n = float(v)
+        if n == 0:
+            raise ValueError("amount_chf must not be 0")
+        return n
+
+    @model_validator(mode="after")
+    def _validate_dates_patch(self):
+        if self.start_date is not None and self.end_date is not None:
+            if self.end_date < self.start_date:
+                raise ValueError("end_date must be on/after start_date")
+        return self
 
 
 class TenancyCreate(BaseModel):
@@ -278,6 +448,23 @@ def admin_list_tenancies_for_room(
         .order_by(Tenancy.move_in_date.desc())
     )
     tenancies = list(session.exec(q).all())
+
+    # Attach monthly_revenue_equivalent for UI/KPI displays (tenancy-driven revenue).
+    # Query all revenue rows for the returned tenancies in one go.
+    ids = [str(t.id) for t in tenancies]
+    rev_rows: list[TenancyRevenue] = (
+        list(session.exec(select(TenancyRevenue).where(TenancyRevenue.tenancy_id.in_(ids))).all())
+        if ids
+        else []
+    )
+    by_tid: dict[str, list[TenancyRevenue]] = {}
+    for r in rev_rows:
+        by_tid.setdefault(str(r.tenancy_id), []).append(r)
+    today = date.today()
+    for t in tenancies:
+        rows = by_tid.get(str(t.id), [])
+        t._monthly_revenue_equivalent = _monthly_revenue_equivalent_for_tenancy_on_date(t, rows, today)
+
     return [_tenancy_to_dict(t) for t in tenancies]
 
 
@@ -449,3 +636,168 @@ def admin_delete_tenancy(
     )
     session.commit()
     return {"status": "ok", "message": "Tenancy deleted"}
+
+
+@router.get("/tenancies/{tenancy_id}/revenue", response_model=List[dict])
+def admin_list_tenancy_revenue(
+    tenancy_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    tenancy = session.get(Tenancy, tenancy_id)
+    if not tenancy or str(getattr(tenancy, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Tenancy not found")
+    rows = list(
+        session.exec(
+            select(TenancyRevenue)
+            .where(TenancyRevenue.tenancy_id == tenancy_id)
+            .where(TenancyRevenue.organization_id == org_id)
+            .order_by(TenancyRevenue.created_at)
+        ).all()
+    )
+    return [_tenancy_revenue_to_dict(r) for r in rows]
+
+
+@router.post("/tenancies/{tenancy_id}/revenue", response_model=dict)
+@limiter.limit("30/minute")
+def admin_create_tenancy_revenue(
+    request: Request,
+    tenancy_id: str,
+    body: TenancyRevenueCreateBody,
+    org_id: str = Depends(get_current_organization),
+    current_user: User = Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    tenancy = session.get(Tenancy, tenancy_id)
+    if not tenancy or str(getattr(tenancy, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Tenancy not found")
+    row = TenancyRevenue(
+        organization_id=org_id,
+        tenancy_id=tenancy_id,
+        type=body.type,
+        amount_chf=float(body.amount_chf),
+        frequency=(body.frequency or "monthly"),
+        start_date=body.start_date,
+        end_date=body.end_date,
+        notes=(body.notes.strip() if isinstance(body.notes, str) and body.notes.strip() else None),
+        created_at=datetime.utcnow(),
+        updated_at=None,
+    )
+    session.add(row)
+    create_audit_log(
+        session,
+        str(current_user.id),
+        "update",
+        "tenancy",
+        str(tenancy_id),
+        old_values=None,
+        new_values={"tenancy_revenue_create": model_snapshot(row)},
+    )
+    record_tenant_event(
+        session,
+        tenant_id=str(tenancy.tenant_id),
+        organization_id=org_id,
+        action_type="tenancy_revenue_created",
+        created_by_user_id=str(current_user.id),
+        summary=f"Einnahme hinzugefügt: {row.type} · {row.amount_chf:g} CHF · {(row.frequency or 'monthly')}",
+    )
+    session.commit()
+    session.refresh(row)
+    return _tenancy_revenue_to_dict(row)
+
+
+@router.patch("/tenancy-revenue/{revenue_id}", response_model=dict)
+@limiter.limit("30/minute")
+def admin_patch_tenancy_revenue(
+    request: Request,
+    revenue_id: str,
+    body: TenancyRevenuePatchBody,
+    org_id: str = Depends(get_current_organization),
+    current_user: User = Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    row = session.get(TenancyRevenue, revenue_id)
+    if not row or str(getattr(row, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Revenue row not found")
+    tenancy = session.get(Tenancy, str(row.tenancy_id))
+    if not tenancy or str(getattr(tenancy, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Tenancy not found")
+    old_snapshot = model_snapshot(row)
+    data = body.model_dump(exclude_unset=True)
+    if "type" in data:
+        row.type = data["type"]
+    if "amount_chf" in data:
+        row.amount_chf = float(data["amount_chf"])
+    if "frequency" in data:
+        row.frequency = data["frequency"] or "monthly"
+    if "start_date" in data:
+        row.start_date = data["start_date"]
+    if "end_date" in data:
+        row.end_date = data["end_date"]
+    if "notes" in data:
+        n = data["notes"]
+        row.notes = n.strip() if isinstance(n, str) and n.strip() else None
+    if row.start_date is not None and row.end_date is not None and row.end_date < row.start_date:
+        raise HTTPException(status_code=400, detail="end_date must be on/after start_date")
+    row.updated_at = datetime.utcnow()
+    session.add(row)
+    new_snapshot = model_snapshot(row)
+    create_audit_log(
+        session,
+        str(current_user.id),
+        "update",
+        "tenancy",
+        str(tenancy.id),
+        old_values={"tenancy_revenue_update": old_snapshot},
+        new_values={"tenancy_revenue_update": new_snapshot},
+    )
+    record_tenant_event(
+        session,
+        tenant_id=str(tenancy.tenant_id),
+        organization_id=org_id,
+        action_type="tenancy_revenue_updated",
+        created_by_user_id=str(current_user.id),
+        summary=f"Einnahme aktualisiert: {row.type} · {row.amount_chf:g} CHF · {(row.frequency or 'monthly')}",
+    )
+    session.commit()
+    session.refresh(row)
+    return _tenancy_revenue_to_dict(row)
+
+
+@router.delete("/tenancy-revenue/{revenue_id}")
+@limiter.limit("30/minute")
+def admin_delete_tenancy_revenue(
+    request: Request,
+    revenue_id: str,
+    org_id: str = Depends(get_current_organization),
+    current_user: User = Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    row = session.get(TenancyRevenue, revenue_id)
+    if not row or str(getattr(row, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Revenue row not found")
+    tenancy = session.get(Tenancy, str(row.tenancy_id))
+    if not tenancy or str(getattr(tenancy, "organization_id", "")) != org_id:
+        raise HTTPException(status_code=404, detail="Tenancy not found")
+    old_snapshot = model_snapshot(row)
+    session.delete(row)
+    create_audit_log(
+        session,
+        str(current_user.id),
+        "update",
+        "tenancy",
+        str(tenancy.id),
+        old_values={"tenancy_revenue_delete": old_snapshot},
+        new_values=None,
+    )
+    record_tenant_event(
+        session,
+        tenant_id=str(tenancy.tenant_id),
+        organization_id=org_id,
+        action_type="tenancy_revenue_deleted",
+        created_by_user_id=str(current_user.id),
+        summary=f"Einnahme entfernt: {old_snapshot.get('type')} · {old_snapshot.get('amount_chf')} CHF",
+    )
+    session.commit()
+    return {"status": "ok"}

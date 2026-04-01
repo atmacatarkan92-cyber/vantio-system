@@ -201,10 +201,7 @@ function buildTenantRows(tenants, tenancies, rooms, units, invoices) {
       monthlyRent:
         currentTenancy != null
           ? Number(
-              currentTenancy.rent_chf ??
-                currentTenancy.monthly_rent ??
-                tenant.monthly_rent ??
-                0
+              currentTenancy.monthly_revenue_equivalent ?? 0
             )
           : null,
       depositAmount:

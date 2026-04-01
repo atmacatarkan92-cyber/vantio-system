@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 from sqlmodel import select
 
 from auth.dependencies import get_current_tenant, get_db_session
-from db.models import Tenant, Tenancy, Invoice, User, Unit, Room
+from db.models import Tenant, Tenancy, TenancyRevenue, Invoice, User, Unit, Room
 from app.services.invoice_service import _invoice_to_api
 
 
@@ -31,6 +31,7 @@ def _tenancy_to_tenant_dict(
         "move_in_date": t.move_in_date.isoformat() if t.move_in_date else None,
         "move_out_date": t.move_out_date.isoformat() if t.move_out_date else None,
         "status": t.status.value if hasattr(t.status, "value") else str(t.status),
+        "monthly_revenue_equivalent": getattr(t, "_monthly_revenue_equivalent", 0) or 0,
         "monthly_rent": float(t.monthly_rent) if t.monthly_rent is not None else 0,
     }
 
@@ -63,6 +64,37 @@ def tenant_tenancies(
         .order_by(Tenancy.move_in_date.desc())
     )
     tenancies = list(session.exec(q).all())
+    ids = [str(t.id) for t in tenancies]
+    rev_rows = (
+        list(
+            session.exec(
+                select(TenancyRevenue).where(TenancyRevenue.tenancy_id.in_(ids))
+            ).all()
+        )
+        if ids
+        else []
+    )
+    by_tid: dict[str, list[TenancyRevenue]] = {}
+    for rr in rev_rows:
+        by_tid.setdefault(str(rr.tenancy_id), []).append(rr)
+
+    def _monthly_equiv(freq: str, amount: float) -> float:
+        f = str(freq or "monthly").strip().lower()
+        if f == "monthly":
+            return amount
+        if f == "yearly":
+            return amount / 12.0
+        return 0.0
+
+    for t in tenancies:
+        total = 0.0
+        for rr in by_tid.get(str(t.id), []):
+            f = str(getattr(rr, "frequency", None) or "monthly").strip().lower()
+            if f == "one_time":
+                continue
+            amt = float(getattr(rr, "amount_chf", 0) or 0)
+            total += _monthly_equiv(f, amt)
+        t._monthly_revenue_equivalent = round(total, 2)
     result = []
     for t in tenancies:
         unit = session.get(Unit, t.unit_id) if t.unit_id else None

@@ -943,7 +943,7 @@ export default function TenantDetailDrawer({
                             </span>
                           </div>
                           <div style={{ fontSize: "14px", color: "#0F172A", marginTop: "6px" }}>
-                            {formatChfRent(tn.monthly_rent)}
+                            {formatChfRent(tn.monthly_revenue_equivalent)}
                           </div>
                         </li>
                       );

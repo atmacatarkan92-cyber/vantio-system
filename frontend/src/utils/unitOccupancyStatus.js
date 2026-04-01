@@ -87,7 +87,7 @@ export function deriveTenantOperationalStatus(
 
 /** Monthly rent from tenancy row (frontend field variants). */
 export function getTenancyMonthlyRentValue(t) {
-  const v = t?.monthly_rent ?? t?.rent_chf ?? t?.monthlyRent;
+  const v = t?.monthly_revenue_equivalent;
   if (v == null || v === "") return 0;
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;

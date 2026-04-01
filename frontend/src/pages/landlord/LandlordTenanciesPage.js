@@ -33,7 +33,7 @@ function LandlordTenanciesPage() {
   if (loading) return <p style={{ color: "#64748B" }}>Lade …</p>;
   if (error) return <p style={{ color: "#B91C1C" }}>{error}</p>;
 
-  const rent = (t) => t.monthly_rent != null ? t.monthly_rent : t.rent_chf;
+  const rent = (t) => t.monthly_revenue_equivalent;
   const tenantDisplay = (t) => (t.tenant_name && t.tenant_name.trim()) ? t.tenant_name : (t.tenant_email || "—");
   const unitDisplay = (t) => (t.unit_title || t.unit_name || t.unit_id || "—");
   const propertyDisplay = (t) => (t.property_title || t.property_id || "—");

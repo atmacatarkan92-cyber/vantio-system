@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, model_validator
 from sqlmodel import select
 
 from auth.dependencies import get_current_landlord, get_db_session
-from db.models import User, Landlord, Property, Unit, Tenancy, Tenant, Invoice
+from db.models import User, Landlord, Property, Unit, Tenancy, TenancyRevenue, Tenant, Invoice
 from app.services.invoice_service import _invoice_to_api
 
 
@@ -255,7 +255,37 @@ def landlord_list_tenancies(
         .order_by(Tenancy.move_in_date.desc())
     )
     rows = list(session.exec(q).all())
-    return [_tenancy_to_dict(t, unit, prop, tenant) for t, unit, prop, tenant in rows]
+    ten_ids = [str(t.id) for t, _, _, _ in rows]
+    rev_rows = (
+        list(session.exec(select(TenancyRevenue).where(TenancyRevenue.tenancy_id.in_(ten_ids))).all())
+        if ten_ids
+        else []
+    )
+    by_tid: dict[str, list[TenancyRevenue]] = {}
+    for rr in rev_rows:
+        by_tid.setdefault(str(rr.tenancy_id), []).append(rr)
+
+    def _monthly_equiv(freq: str, amount: float) -> float:
+        f = str(freq or "monthly").strip().lower()
+        if f == "monthly":
+            return amount
+        if f == "yearly":
+            return amount / 12.0
+        return 0.0
+
+    out = []
+    for t, unit, prop, tenant in rows:
+        total = 0.0
+        for rr in by_tid.get(str(t.id), []):
+            f = str(getattr(rr, "frequency", None) or "monthly").strip().lower()
+            if f == "one_time":
+                continue
+            amt = float(getattr(rr, "amount_chf", 0) or 0)
+            total += _monthly_equiv(f, amt)
+        rec = _tenancy_to_dict(t, unit, prop, tenant)
+        rec["monthly_revenue_equivalent"] = round(total, 2)
+        out.append(rec)
+    return out
 
 
 def _enrich_invoice_for_landlord(inv: Invoice, unit: Optional[Unit], prop: Optional[Property], tenant: Optional[Tenant]) -> dict:
