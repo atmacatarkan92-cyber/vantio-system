@@ -103,6 +103,12 @@ function numFieldStr(v) {
   return String(v);
 }
 
+function formatCurrencyChf2(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "CHF —";
+  return `CHF ${n.toLocaleString("de-CH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 /** Stable room count from number input (avoids `|| 0` turning "" into 0 incorrectly for parsing). */
 function parseRoomsTotal(raw) {
   if (raw === "" || raw === null || raw === undefined) return 0;
@@ -678,13 +684,30 @@ function AdminApartmentsPage() {
     if (rows.length > 0 && rows.length === parsedRoomsTotal && parsedRoomsTotal > 0) {
       return sumCoLivingRoomPricesChf(rows);
     }
-    return Number(formData.tenantPriceMonthly || 0);
+    return 0;
   }, [
     isCoLivingType,
     coLivingRowsForDisplay,
     parsedRoomsTotal,
-    formData.tenantPriceMonthly,
   ]);
+
+  const derivedMonthlyTotalCosts = useMemo(() => {
+    const unitLike = {
+      landlordDepositType: formData.landlordDepositType,
+      landlordDepositAnnualPremium: formData.landlordDepositAnnualPremium,
+    };
+    return getUnitMonthlyRunningCosts(unitLike, modalCostRows);
+  }, [formData.landlordDepositType, formData.landlordDepositAnnualPremium, modalCostRows]);
+
+  const derivedOneTimeCostsTotal = useMemo(() => {
+    if (!Array.isArray(modalCostRows)) return 0;
+    return modalCostRows.reduce((sum, r) => {
+      const freq = String(r?.frequency || "monthly").trim().toLowerCase();
+      if (freq !== "one_time") return sum;
+      const amt = Number(r?.amount_chf);
+      return sum + (Number.isFinite(amt) && amt > 0 ? amt : 0);
+    }, 0);
+  }, [modalCostRows]);
 
   const nextUnitId = useMemo(() => {
     const maxNumber = units.reduce((max, item) => {
@@ -1080,7 +1103,7 @@ function AdminApartmentsPage() {
     setSaving(true);
 
     const persistedUnitFields = {
-      tenant_price_monthly_chf: parseMoneyChf(formData.tenantPriceMonthly),
+      tenant_price_monthly_chf: 0,
       available_from: dateOnlyOrNull(formData.availableFrom),
       occupied_rooms: Math.max(0, Math.floor(Number(formData.occupiedRooms) || 0)),
       postal_code: String(formData.zip || "").trim() || null,
@@ -1805,9 +1828,7 @@ function AdminApartmentsPage() {
 
                 <div>
                   <label className="block text-sm text-slate-600 mb-2">
-                    {isCoLivingType
-                      ? "Vollbelegung Umsatz / Monat"
-                      : "Mieterpreis pro Monat"}
+                    Monatliche Gesamtkosten
                   </label>
                   {isCoLivingType ? (
                     <div
@@ -1820,15 +1841,20 @@ function AdminApartmentsPage() {
                       </span>
                     </div>
                   ) : (
-                    <input
-                      type="number"
-                      name="tenantPriceMonthly"
-                      value={formData.tenantPriceMonthly}
-                      onChange={handleChange}
-                      required
-                      placeholder="z. B. 2450"
-                      className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-                    />
+                    <div
+                      className="w-full border border-slate-200 bg-slate-50 rounded-lg px-4 py-3 text-slate-800"
+                      aria-readonly="true"
+                    >
+                      {formatCurrencyChf2(derivedMonthlyTotalCosts)}
+                      <span className="block text-xs text-slate-500 mt-1 font-normal">
+                        Monatlich (voll) + jährlich (/12) + Kautionsversicherung (/12), einmalig ausgeschlossen.
+                      </span>
+                      {derivedOneTimeCostsTotal > 0 ? (
+                        <span className="block text-xs text-slate-500 mt-1 font-normal">
+                          Einmalige Kosten gesamt: {formatCurrencyChf2(derivedOneTimeCostsTotal)}
+                        </span>
+                      ) : null}
+                    </div>
                   )}
                 </div>
 
