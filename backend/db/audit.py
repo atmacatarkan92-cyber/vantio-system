@@ -1,6 +1,11 @@
 """
 V1 audit logging: reusable helper to record create/update/delete actions.
 Only backend; no frontend UI. Call after successful write within the same transaction.
+
+Parent-stream convention (admin timelines): log child changes under the same
+entity_type/entity_id as the detail page (unit / tenant / owner) with namespaced
+payloads (e.g. tenancy, tenancy_revenue, room, unit_cost). Extend the same
+pattern for assignments, invoices, communications, and other sub-resources later.
 """
 from datetime import date, datetime
 from typing import Any, Optional

@@ -138,15 +138,41 @@ function formatTenantDocumentCategoryLabel(category) {
   return TENANT_DOCUMENT_CATEGORY_LABELS[k] || k;
 }
 
+const TENANCY_REV_FREQ_HISTORY_LABELS = {
+  monthly: "monatlich",
+  yearly: "jährlich",
+  one_time: "einmalig",
+};
+
+function formatTenantAuditDateDe(iso) {
+  if (!iso) return "—";
+  const s = String(iso).slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, d] = s.split("-");
+    return `${d}.${m}.${y}`;
+  }
+  return String(iso);
+}
+
+function formatTenantAuditChf(n) {
+  if (n == null || n === "") return "—";
+  const x = Number(n);
+  if (Number.isNaN(x)) return String(n);
+  return `${x.toLocaleString("de-CH")} CHF`;
+}
+
 function auditLogToTenantHistoryEvent(log) {
+  const action = String(log.action || "").toLowerCase();
   const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
   const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
+  const author = log.actor_name || log.actor_email || "—";
+
   if (nv.document_uploaded != null && String(nv.document_uploaded).trim() !== "") {
     return {
       id: `audit-${log.id}`,
       summary: `Dokument hochgeladen: ${String(nv.document_uploaded)}`,
       created_at: log.created_at,
-      author_name: log.actor_name || log.actor_email || "—",
+      author_name: author,
       action_type: "audit_document",
     };
   }
@@ -155,10 +181,95 @@ function auditLogToTenantHistoryEvent(log) {
       id: `audit-${log.id}`,
       summary: `Dokument gelöscht: ${String(ov.document_deleted)}`,
       created_at: log.created_at,
-      author_name: log.actor_name || log.actor_email || "—",
+      author_name: author,
       action_type: "audit_document",
     };
   }
+
+  if (nv.tenancy || ov.tenancy) {
+    if (action === "create" && nv.tenancy && typeof nv.tenancy === "object") {
+      const t = nv.tenancy;
+      const end = t.display_end_date || t.move_out_date;
+      return {
+        id: `audit-${log.id}`,
+        summary: `Mietverhältnis erstellt · Einzug ${formatTenantAuditDateDe(t.move_in_date)} · Ende ${formatTenantAuditDateDe(end)} · ${formatTenantAuditChf(t.monthly_rent)}/Monat`,
+        created_at: log.created_at,
+        author_name: author,
+        action_type: "audit_tenancy",
+      };
+    }
+    if (action === "delete" && ov.tenancy && typeof ov.tenancy === "object") {
+      const t = ov.tenancy;
+      return {
+        id: `audit-${log.id}`,
+        summary: `Mietverhältnis gelöscht · Einzug ${formatTenantAuditDateDe(t.move_in_date)}`,
+        created_at: log.created_at,
+        author_name: author,
+        action_type: "audit_tenancy",
+      };
+    }
+    if (action === "update" && ov.tenancy && nv.tenancy) {
+      const o = ov.tenancy;
+      const n = nv.tenancy;
+      const parts = [];
+      if (String(o.termination_effective_date || "") !== String(n.termination_effective_date || "") && n.termination_effective_date) {
+        parts.push(`Kündigung wirksam per ${formatTenantAuditDateDe(n.termination_effective_date)}`);
+      }
+      if (String(o.notice_given_at || "") !== String(n.notice_given_at || "") && n.notice_given_at) {
+        parts.push(`Kündigung eingereicht: ${formatTenantAuditDateDe(n.notice_given_at)}`);
+      }
+      if (String(o.actual_move_out_date || "") !== String(n.actual_move_out_date || "") && n.actual_move_out_date) {
+        parts.push(`Auszug: ${formatTenantAuditDateDe(n.actual_move_out_date)}`);
+      }
+      if (String(o.display_status || "") !== String(n.display_status || "")) {
+        parts.push(`Status: ${o.display_status || "—"} → ${n.display_status || "—"}`);
+      }
+      return {
+        id: `audit-${log.id}`,
+        summary:
+          parts.length > 0
+            ? `Mietverhältnis bearbeitet: ${parts.join(", ")}`
+            : "Mietverhältnis bearbeitet",
+        created_at: log.created_at,
+        author_name: author,
+        action_type: "audit_tenancy",
+      };
+    }
+  }
+
+  const fq = (f) => TENANCY_REV_FREQ_HISTORY_LABELS[String(f || "").toLowerCase()] || f || "—";
+  const rN = nv.tenancy_revenue;
+  const rO = ov.tenancy_revenue;
+  if (rN || rO) {
+    if (action === "create" && rN) {
+      return {
+        id: `audit-${log.id}`,
+        summary: `Einnahme hinzugefügt: ${String(rN.type || "").trim() || "—"}, ${formatTenantAuditChf(rN.amount_chf)}, ${fq(rN.frequency)}`,
+        created_at: log.created_at,
+        author_name: author,
+        action_type: "audit_revenue",
+      };
+    }
+    if (action === "delete" && rO) {
+      return {
+        id: `audit-${log.id}`,
+        summary: `Einnahme gelöscht: ${String(rO.type || "").trim() || "—"}, ${formatTenantAuditChf(rO.amount_chf)}, ${fq(rO.frequency)}`,
+        created_at: log.created_at,
+        author_name: author,
+        action_type: "audit_revenue",
+      };
+    }
+    if (action === "update" && rO && rN) {
+      return {
+        id: `audit-${log.id}`,
+        summary: `Einnahme bearbeitet: ${String(rN.type || "").trim() || "—"}, ${formatTenantAuditChf(rN.amount_chf)}, ${fq(rN.frequency)}`,
+        created_at: log.created_at,
+        author_name: author,
+        action_type: "audit_revenue",
+      };
+    }
+  }
+
   return null;
 }
 
@@ -807,6 +918,19 @@ export default function AdminTenantDetailPage() {
     }
   }, [tenantId, prefetchTenancyRevenueForTenancyList]);
 
+  const reloadTenantAuditLogs = useCallback(async () => {
+    if (!tenantId) return;
+    try {
+      const auditData = await fetchAdminAuditLogs({
+        entity_type: "tenant",
+        entity_id: tenantId,
+      });
+      setAuditLogs(Array.isArray(auditData?.items) ? auditData.items : []);
+    } catch {
+      setAuditLogs([]);
+    }
+  }, [tenantId]);
+
   const cancelTenancyEdit = () => {
     setTenancyEditingId(null);
     setTenancyEditErr(null);
@@ -893,7 +1017,13 @@ export default function AdminTenantDetailPage() {
         tdt === "insurance" && tprov ? tprov : null,
     };
     patchAdminTenancy(tenancyEditingId, body)
-      .then(() => Promise.all([reloadTenanciesForTenant(), fetchAdminTenantEvents(tenantId)]))
+      .then(() =>
+        Promise.all([
+          reloadTenanciesForTenant(),
+          fetchAdminTenantEvents(tenantId),
+          reloadTenantAuditLogs(),
+        ])
+      )
       .then(([, eData]) => {
         if (eData?.items) setEvents(eData.items);
         cancelTenancyEdit();
@@ -1000,6 +1130,7 @@ export default function AdminTenantDetailPage() {
         await createAdminTenancyRevenue(tid, body);
       }
       const list = await reloadTenanciesForTenant();
+      await reloadTenantAuditLogs();
       const fresh = Array.isArray(list) ? list.find((x) => String(x.id) === tid) : null;
       cancelRevenueEdit(fresh || tnForDefaults || null);
     } catch (err) {
@@ -1019,6 +1150,7 @@ export default function AdminTenantDetailPage() {
     try {
       await deleteAdminTenancyRevenue(rid);
       const list = await reloadTenanciesForTenant();
+      await reloadTenantAuditLogs();
       if (revenueEditingId === rid) {
         const fresh = Array.isArray(list) ? list.find((x) => String(x.id) === tid) : null;
         cancelRevenueEdit(fresh || tnForDefaults || null);
@@ -1045,12 +1177,9 @@ export default function AdminTenantDetailPage() {
         category: tenantDocCategory.trim() || undefined,
       });
       setTenantDocCategory("");
-      const [items, auditData] = await Promise.all([
-        fetchAdminTenantDocuments(tenantId),
-        fetchAdminAuditLogs({ entity_type: "tenant", entity_id: tenantId }),
-      ]);
+      const items = await fetchAdminTenantDocuments(tenantId);
       setTenantDocuments(Array.isArray(items) ? items : []);
-      setAuditLogs(Array.isArray(auditData?.items) ? auditData.items : []);
+      await reloadTenantAuditLogs();
     } catch (err) {
       setTenantDocUploadError(err.message || "Upload fehlgeschlagen.");
     } finally {
@@ -1071,12 +1200,9 @@ export default function AdminTenantDetailPage() {
     if (!window.confirm("Dokument wirklich löschen?")) return;
     try {
       await deleteAdminTenantDocument(docId);
-      const [items, auditData] = await Promise.all([
-        fetchAdminTenantDocuments(tenantId),
-        fetchAdminAuditLogs({ entity_type: "tenant", entity_id: tenantId }),
-      ]);
+      const items = await fetchAdminTenantDocuments(tenantId);
       setTenantDocuments(Array.isArray(items) ? items : []);
-      setAuditLogs(Array.isArray(auditData?.items) ? auditData.items : []);
+      await reloadTenantAuditLogs();
     } catch (err) {
       window.alert(err.message || "Löschen fehlgeschlagen.");
     }
@@ -1356,7 +1482,11 @@ export default function AdminTenantDetailPage() {
         return createdTenancy;
       })
       .then(() =>
-        Promise.all([reloadTenanciesForTenant(), fetchAdminTenantEvents(tenantId)])
+        Promise.all([
+          reloadTenanciesForTenant(),
+          fetchAdminTenantEvents(tenantId),
+          reloadTenantAuditLogs(),
+        ])
       )
       .then(([, eData]) => {
         if (eData?.items) setEvents(eData.items);
@@ -1401,9 +1531,12 @@ export default function AdminTenantDetailPage() {
         applyUpdate(updated);
         setEditing(false);
         setShouldRefreshTenantList(true);
-        return fetchAdminTenantEvents(tenantId).catch(() => null);
+        return Promise.all([
+          fetchAdminTenantEvents(tenantId).catch(() => null),
+          reloadTenantAuditLogs(),
+        ]);
       })
-      .then((eData) => {
+      .then(([eData]) => {
         if (eData?.items) setEvents(eData.items);
       })
       .catch((err) => setSaveError(err?.message || "Speichern fehlgeschlagen."))

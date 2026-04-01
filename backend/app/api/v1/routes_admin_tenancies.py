@@ -4,6 +4,7 @@ Protected by require_roles("admin", "manager").
 Validates tenant/room/unit exist, room belongs to unit, no overlapping tenancies.
 """
 
+import json
 from datetime import date, datetime
 from typing import List, Optional
 
@@ -14,9 +15,8 @@ from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
 from db.models import Tenancy, TenancyRevenue, TenancyStatus, Tenant, Room, Unit, User
-from db.audit import create_audit_log, model_snapshot
+from db.audit import create_audit_log
 from app.core.rate_limit import limiter
-from app.services.tenant_crm import record_tenant_event
 from app.services.tenancy_lifecycle import (
     scheduling_end_date_from_parts,
     sync_tenancy_move_out_date,
@@ -441,6 +441,55 @@ def _validate_relations(session, tenant_id: str, room_id: str, unit_id: str, org
     return room
 
 
+def _tenancy_audit_payload(t: Tenancy) -> dict:
+    """Snapshot for parent-stream audit (tenant + unit timelines)."""
+    return _tenancy_to_dict(t)
+
+
+def _tenancy_revenue_audit_payload(r: TenancyRevenue) -> dict:
+    return _tenancy_revenue_to_dict(r)
+
+
+def _parent_audit_payloads_equal(a: dict, b: dict) -> bool:
+    return json.dumps(a, sort_keys=True, default=str) == json.dumps(b, sort_keys=True, default=str)
+
+
+def _log_parent_stream_same_change(
+    session,
+    actor_user_id: str,
+    action: str,
+    tenant_id: str,
+    unit_id: str,
+    old_values: Optional[dict],
+    new_values: Optional[dict],
+    organization_id: str,
+) -> None:
+    """
+    Same logical change on tenant and unit parent streams (namespaced payloads).
+    Reuse for tenancy/revenue; assignments/invoices/communications can follow later.
+    """
+    create_audit_log(
+        session,
+        actor_user_id,
+        action,
+        "tenant",
+        tenant_id,
+        old_values=old_values,
+        new_values=new_values,
+        organization_id=organization_id,
+    )
+    create_audit_log(
+        session,
+        actor_user_id,
+        action,
+        "unit",
+        unit_id,
+        old_values=old_values,
+        new_values=new_values,
+        organization_id=organization_id,
+    )
+
+
 def _overlaps(
     session,
     room_id: str,
@@ -584,25 +633,18 @@ def admin_create_tenancy(
     )
     sync_tenancy_move_out_date(tenancy)
     session.add(tenancy)
-    room_row = session.get(Room, body.room_id)
-    unit_row = session.get(Unit, body.unit_id)
-    room_nm = (getattr(room_row, "name", None) or "").strip() or str(body.room_id)
-    unit_nm = (getattr(unit_row, "title", None) or "").strip() or str(body.unit_id)
-    summary = (
-        f"Mietverhältnis zugewiesen: {unit_nm} · {room_nm} · "
-        f"{body.move_in_date.isoformat()} · {body.monthly_rent:g} CHF/Monat"
-    )
-    record_tenant_event(
+    session.flush()
+    _batch_attach_monthly_revenue_equivalent(session, [tenancy])
+    pay = {"tenancy": _tenancy_audit_payload(tenancy)}
+    _log_parent_stream_same_change(
         session,
-        tenant_id=str(body.tenant_id),
-        organization_id=org_id,
-        action_type="tenancy_assigned",
-        created_by_user_id=str(current_user.id),
-        summary=summary,
-    )
-    create_audit_log(
-        session, str(current_user.id), "create", "tenancy", str(tenancy.id),
-        old_values=None, new_values=model_snapshot(tenancy),
+        str(current_user.id),
+        "create",
+        str(body.tenant_id),
+        str(body.unit_id),
+        None,
+        pay,
+        org_id,
     )
     session.commit()
     session.refresh(tenancy)
@@ -623,7 +665,7 @@ def admin_patch_tenancy(
     tenancy = session.get(Tenancy, tenancy_id)
     if not tenancy or str(getattr(tenancy, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Tenancy not found")
-    old_snapshot = model_snapshot(tenancy)
+    old_tenancy_payload = _tenancy_audit_payload(tenancy)
     data = body.model_dump(exclude_unset=True)
     if data:
         merged = tenancy.model_dump()
@@ -649,65 +691,22 @@ def admin_patch_tenancy(
                 setattr(tenancy, k, v)
         sync_tenancy_move_out_date(tenancy)
     session.add(tenancy)
-    new_snapshot = model_snapshot(tenancy)
+    _batch_attach_monthly_revenue_equivalent(session, [tenancy])
+    new_tenancy_payload = _tenancy_audit_payload(tenancy)
 
-    def _de_date_display(val) -> str:
-        if val is None or val == "":
-            return "—"
-        s = str(val)[:10]
-        if len(s) == 10 and s[4] == "-" and s[7] == "-":
-            y, m, d = s.split("-")
-            return f"{d}.{m}.{y}"
-        return str(val)
-
-    def _status_de(val) -> str:
-        if val is None or val == "":
-            return "—"
-        key = str(val).lower()
-        return {"active": "Aktiv", "reserved": "Reserviert", "ended": "Beendet"}.get(key, str(val))
-
-    if data:
-        parts: List[str] = []
-        if "move_in_date" in data:
-            parts.append(
-                f"Einzug {_de_date_display(old_snapshot.get('move_in_date'))} → "
-                f"{_de_date_display(new_snapshot.get('move_in_date'))}"
-            )
-        if "move_out_date" in data:
-            parts.append(
-                f"Auszug {_de_date_display(old_snapshot.get('move_out_date'))} → "
-                f"{_de_date_display(new_snapshot.get('move_out_date'))}"
-            )
-        if "status" in data:
-            parts.append(
-                f"Status {_status_de(old_snapshot.get('status'))} → {_status_de(new_snapshot.get('status'))}"
-            )
-        if "monthly_rent" in data:
-            parts.append(
-                f"Miete {old_snapshot.get('monthly_rent')} → {new_snapshot.get('monthly_rent')} CHF/Monat"
-            )
-        if "deposit_amount" in data:
-            parts.append(
-                f"Kaution {old_snapshot.get('deposit_amount')} → {new_snapshot.get('deposit_amount')} CHF"
-            )
-        summary = (
-            "Mietverhältnis aktualisiert: " + ", ".join(parts)
-            if parts
-            else "Mietverhältnis aktualisiert"
-        )
-        record_tenant_event(
+    if data and not _parent_audit_payloads_equal(
+        {"tenancy": old_tenancy_payload}, {"tenancy": new_tenancy_payload}
+    ):
+        _log_parent_stream_same_change(
             session,
-            tenant_id=str(tenancy.tenant_id),
-            organization_id=org_id,
-            action_type="tenancy_updated",
-            created_by_user_id=str(current_user.id),
-            summary=summary,
+            str(current_user.id),
+            "update",
+            str(tenancy.tenant_id),
+            str(tenancy.unit_id),
+            {"tenancy": old_tenancy_payload},
+            {"tenancy": new_tenancy_payload},
+            org_id,
         )
-
-    create_audit_log(
-        session, str(current_user.id), "update", "tenancy", str(tenancy_id),
-        old_values=old_snapshot, new_values=new_snapshot,
-    )
     session.commit()
     session.refresh(tenancy)
     return _tenancy_to_dict(tenancy)
@@ -726,11 +725,19 @@ def admin_delete_tenancy(
     tenancy = session.get(Tenancy, tenancy_id)
     if not tenancy or str(getattr(tenancy, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Tenancy not found")
-    old_snapshot = model_snapshot(tenancy)
+    tid = str(tenancy.tenant_id)
+    uid = str(tenancy.unit_id)
+    old_pay = {"tenancy": _tenancy_audit_payload(tenancy)}
     session.delete(tenancy)
-    create_audit_log(
-        session, str(current_user.id), "delete", "tenancy", str(tenancy_id),
-        old_values=old_snapshot, new_values=None,
+    _log_parent_stream_same_change(
+        session,
+        str(current_user.id),
+        "delete",
+        tid,
+        uid,
+        old_pay,
+        None,
+        org_id,
     )
     session.commit()
     return {"status": "ok", "message": "Tenancy deleted"}
@@ -783,22 +790,17 @@ def admin_create_tenancy_revenue(
         updated_at=None,
     )
     session.add(row)
-    create_audit_log(
+    session.flush()
+    rev_pay = {"tenancy_revenue": _tenancy_revenue_audit_payload(row)}
+    _log_parent_stream_same_change(
         session,
         str(current_user.id),
-        "update",
-        "tenancy",
-        str(tenancy_id),
-        old_values=None,
-        new_values={"tenancy_revenue_create": model_snapshot(row)},
-    )
-    record_tenant_event(
-        session,
-        tenant_id=str(tenancy.tenant_id),
-        organization_id=org_id,
-        action_type="tenancy_revenue_created",
-        created_by_user_id=str(current_user.id),
-        summary=f"Einnahme hinzugefügt: {row.type} · {row.amount_chf:g} CHF · {(row.frequency or 'monthly')}",
+        "create",
+        str(tenancy.tenant_id),
+        str(tenancy.unit_id),
+        None,
+        rev_pay,
+        org_id,
     )
     session.commit()
     session.refresh(row)
@@ -821,7 +823,7 @@ def admin_patch_tenancy_revenue(
     tenancy = session.get(Tenancy, str(row.tenancy_id))
     if not tenancy or str(getattr(tenancy, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Tenancy not found")
-    old_snapshot = model_snapshot(row)
+    old_pay = {"tenancy_revenue": _tenancy_revenue_audit_payload(row)}
     data = body.model_dump(exclude_unset=True)
     if "type" in data:
         row.type = data["type"]
@@ -840,24 +842,18 @@ def admin_patch_tenancy_revenue(
         raise HTTPException(status_code=400, detail="end_date must be on/after start_date")
     row.updated_at = datetime.utcnow()
     session.add(row)
-    new_snapshot = model_snapshot(row)
-    create_audit_log(
-        session,
-        str(current_user.id),
-        "update",
-        "tenancy",
-        str(tenancy.id),
-        old_values={"tenancy_revenue_update": old_snapshot},
-        new_values={"tenancy_revenue_update": new_snapshot},
-    )
-    record_tenant_event(
-        session,
-        tenant_id=str(tenancy.tenant_id),
-        organization_id=org_id,
-        action_type="tenancy_revenue_updated",
-        created_by_user_id=str(current_user.id),
-        summary=f"Einnahme aktualisiert: {row.type} · {row.amount_chf:g} CHF · {(row.frequency or 'monthly')}",
-    )
+    new_pay = {"tenancy_revenue": _tenancy_revenue_audit_payload(row)}
+    if not _parent_audit_payloads_equal(old_pay, new_pay):
+        _log_parent_stream_same_change(
+            session,
+            str(current_user.id),
+            "update",
+            str(tenancy.tenant_id),
+            str(tenancy.unit_id),
+            old_pay,
+            new_pay,
+            org_id,
+        )
     session.commit()
     session.refresh(row)
     return _tenancy_revenue_to_dict(row)
@@ -878,24 +874,17 @@ def admin_delete_tenancy_revenue(
     tenancy = session.get(Tenancy, str(row.tenancy_id))
     if not tenancy or str(getattr(tenancy, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Tenancy not found")
-    old_snapshot = model_snapshot(row)
+    old_pay = {"tenancy_revenue": _tenancy_revenue_audit_payload(row)}
     session.delete(row)
-    create_audit_log(
+    _log_parent_stream_same_change(
         session,
         str(current_user.id),
-        "update",
-        "tenancy",
-        str(tenancy.id),
-        old_values={"tenancy_revenue_delete": old_snapshot},
-        new_values=None,
-    )
-    record_tenant_event(
-        session,
-        tenant_id=str(tenancy.tenant_id),
-        organization_id=org_id,
-        action_type="tenancy_revenue_deleted",
-        created_by_user_id=str(current_user.id),
-        summary=f"Einnahme entfernt: {old_snapshot.get('type')} · {old_snapshot.get('amount_chf')} CHF",
+        "delete",
+        str(tenancy.tenant_id),
+        str(tenancy.unit_id),
+        old_pay,
+        None,
+        org_id,
     )
     session.commit()
     return {"status": "ok"}

@@ -446,8 +446,14 @@ def admin_create_tenant(
         summary="Mieter angelegt",
     )
     create_audit_log(
-        session, str(current_user.id), "create", "tenant", str(tenant.id),
-        old_values=None, new_values=model_snapshot(tenant),
+        session,
+        str(current_user.id),
+        "create",
+        "tenant",
+        str(tenant.id),
+        old_values=None,
+        new_values=model_snapshot(tenant),
+        organization_id=org_id,
     )
     session.commit()
     session.refresh(tenant)
@@ -504,8 +510,14 @@ def admin_patch_tenant(
         new_snapshot=new_snapshot or {},
     )
     create_audit_log(
-        session, str(current_user.id), "update", "tenant", str(tenant_id),
-        old_values=old_snapshot, new_values=new_snapshot,
+        session,
+        str(current_user.id),
+        "update",
+        "tenant",
+        str(tenant_id),
+        old_values=old_snapshot,
+        new_values=new_snapshot,
+        organization_id=org_id,
     )
     session.commit()
     session.refresh(tenant)
@@ -609,8 +621,14 @@ def admin_delete_tenant(
     try:
         session.delete(tenant)
         create_audit_log(
-            session, str(current_user.id), "delete", "tenant", str(tenant_id),
-            old_values=old_snapshot, new_values=None,
+            session,
+            str(current_user.id),
+            "delete",
+            "tenant",
+            str(tenant_id),
+            old_values=old_snapshot,
+            new_values=None,
+            organization_id=org_id,
         )
         session.commit()
     except IntegrityError:

@@ -354,10 +354,14 @@ function buildAuditUpdateLines(entry, resolvers) {
     rawNew != null && typeof rawNew === "object" && !Array.isArray(rawNew) ? rawNew : {};
 
   const docExtraLines = [];
-  if (newV.document_uploaded != null && String(newV.document_uploaded).trim() !== "") {
+  if (newV.unit_document?.action === "uploaded" && String(newV.unit_document?.file_name || "").trim() !== "") {
+    docExtraLines.push(`Dokument hochgeladen: ${String(newV.unit_document.file_name)}`);
+  } else if (newV.document_uploaded != null && String(newV.document_uploaded).trim() !== "") {
     docExtraLines.push(`Dokument hochgeladen: ${String(newV.document_uploaded)}`);
   }
-  if (oldV.document_deleted != null && String(oldV.document_deleted).trim() !== "") {
+  if (oldV.unit_document?.action === "deleted" && String(oldV.unit_document?.file_name || "").trim() !== "") {
+    docExtraLines.push(`Dokument gelöscht: ${String(oldV.unit_document.file_name)}`);
+  } else if (oldV.document_deleted != null && String(oldV.document_deleted).trim() !== "") {
     docExtraLines.push(`Dokument gelöscht: ${String(oldV.document_deleted)}`);
   }
 
@@ -370,7 +374,17 @@ function buildAuditUpdateLines(entry, resolvers) {
   const keys = new Set([...Object.keys(oldV), ...Object.keys(newV)]);
   const changedKeys = [];
   for (const k of keys) {
-    if (k === "document_uploaded" || k === "document_deleted") continue;
+    if (
+      k === "document_uploaded" ||
+      k === "document_deleted" ||
+      k === "unit_document" ||
+      k === "room" ||
+      k === "tenancy" ||
+      k === "tenancy_revenue" ||
+      k === "unit_cost"
+    ) {
+      continue;
+    }
     if (auditValuesEqual(oldV[k], newV[k])) continue;
     if (!UNIT_AUDIT_FIELD_LABELS[k]) continue;
     changedKeys.push(k);
@@ -392,10 +406,126 @@ function buildAuditUpdateLines(entry, resolvers) {
   return ["Unit bearbeitet", ...docExtraLines, ...limited];
 }
 
+const TENANCY_REV_FREQ_AUDIT_LABELS = {
+  monthly: "monatlich",
+  yearly: "jährlich",
+  one_time: "einmalig",
+};
+
+function formatAuditIsoDateDe(iso) {
+  if (!iso) return "—";
+  const s = String(iso).slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, d] = s.split("-");
+    return `${d}.${m}.${y}`;
+  }
+  return String(iso);
+}
+
+function formatChfPlain(n) {
+  if (n == null || n === "") return "—";
+  const x = Number(n);
+  if (Number.isNaN(x)) return String(n);
+  return `${x.toLocaleString("de-CH")} CHF`;
+}
+
 function getAuditEntryDisplayLines(entry, resolvers) {
   const action = String(entry.action || "").toLowerCase();
   const nv = entry.new_values;
   const ov = entry.old_values;
+  const objNv = nv && typeof nv === "object" && !Array.isArray(nv) ? nv : {};
+  const objOv = ov && typeof ov === "object" && !Array.isArray(ov) ? ov : {};
+
+  const roomNew = objNv.room;
+  const roomOld = objOv.room;
+  if (roomNew || roomOld) {
+    if (action === "create" && roomNew) {
+      const nm = String(roomNew.name || "").trim() || "—";
+      const st = String(roomNew.status || "").trim() || "—";
+      return [`Zimmer hinzugefügt: ${nm} (${st})`];
+    }
+    if (action === "delete" && roomOld) {
+      return [`Zimmer gelöscht: ${String(roomOld.name || "").trim() || "—"}`];
+    }
+    if (action === "update" && roomOld && roomNew) {
+      const lines = [];
+      if (String(roomOld.name || "") !== String(roomNew.name || "")) {
+        lines.push(`Name: ${roomOld.name || "—"} → ${roomNew.name || "—"}`);
+      }
+      if (String(roomOld.status || "") !== String(roomNew.status || "")) {
+        lines.push(`Status: ${roomOld.status || "—"} → ${roomNew.status || "—"}`);
+      }
+      const op = Number(roomOld.price);
+      const np = Number(roomNew.price);
+      if (!Number.isNaN(op) && !Number.isNaN(np) && op !== np) {
+        lines.push(`Preis: ${formatChfPlain(op)} → ${formatChfPlain(np)}`);
+      }
+      return lines.length ? ["Zimmer bearbeitet", ...lines] : ["Zimmer bearbeitet"];
+    }
+  }
+
+  const tenNew = objNv.tenancy;
+  const tenOld = objOv.tenancy;
+  if (tenNew || tenOld) {
+    if (action === "create" && tenNew) {
+      const end = tenNew.display_end_date || tenNew.move_out_date;
+      return [
+        `Mietverhältnis erstellt · Einzug ${formatAuditIsoDateDe(tenNew.move_in_date)} · Ende ${formatAuditIsoDateDe(end)} · ${formatChfPlain(tenNew.monthly_rent)}/Monat`,
+      ];
+    }
+    if (action === "delete" && tenOld) {
+      return [`Mietverhältnis gelöscht · Einzug ${formatAuditIsoDateDe(tenOld.move_in_date)}`];
+    }
+    if (action === "update" && tenOld && tenNew) {
+      const lines = [];
+      if (String(tenOld.termination_effective_date || "") !== String(tenNew.termination_effective_date || "")) {
+        if (tenNew.termination_effective_date) {
+          lines.push(`Kündigung wirksam per ${formatAuditIsoDateDe(tenNew.termination_effective_date)}`);
+        }
+      }
+      if (String(tenOld.notice_given_at || "") !== String(tenNew.notice_given_at || "") && tenNew.notice_given_at) {
+        lines.push(`Kündigung eingereicht: ${formatAuditIsoDateDe(tenNew.notice_given_at)}`);
+      }
+      if (String(tenOld.actual_move_out_date || "") !== String(tenNew.actual_move_out_date || "") && tenNew.actual_move_out_date) {
+        lines.push(`Auszug: ${formatAuditIsoDateDe(tenNew.actual_move_out_date)}`);
+      }
+      if (String(tenOld.display_status || "") !== String(tenNew.display_status || "")) {
+        lines.push(`Status: ${tenOld.display_status || "—"} → ${tenNew.display_status || "—"}`);
+      }
+      return lines.length ? ["Mietverhältnis bearbeitet", ...lines] : ["Mietverhältnis bearbeitet"];
+    }
+  }
+
+  const revN = objNv.tenancy_revenue;
+  const revO = objOv.tenancy_revenue;
+  const fqLab = (f) => TENANCY_REV_FREQ_AUDIT_LABELS[String(f || "").toLowerCase()] || f || "—";
+  if (revN || revO) {
+    if (action === "create" && revN) {
+      return [
+        `Einnahme hinzugefügt: ${String(revN.type || "").trim() || "—"}, ${formatChfPlain(revN.amount_chf)}, ${fqLab(revN.frequency)}`,
+      ];
+    }
+    if (action === "delete" && revO) {
+      return [
+        `Einnahme gelöscht: ${String(revO.type || "").trim() || "—"}, ${formatChfPlain(revO.amount_chf)}, ${fqLab(revO.frequency)}`,
+      ];
+    }
+    if (action === "update" && revO && revN) {
+      return [
+        `Einnahme bearbeitet: ${String(revN.type || "").trim() || "—"}, ${formatChfPlain(revN.amount_chf)}, ${fqLab(revN.frequency)}`,
+      ];
+    }
+  }
+
+  const udNew = objNv.unit_document;
+  const udOld = objOv.unit_document;
+  if (action === "update" && udOld && udOld.action === "deleted" && udOld.file_name) {
+    return [`Dokument gelöscht: ${String(udOld.file_name)}`];
+  }
+  if (action === "update" && udNew && udNew.action === "uploaded" && udNew.file_name) {
+    return [`Dokument hochgeladen: ${String(udNew.file_name)}`];
+  }
+
   const ucNew = nv && typeof nv === "object" && !Array.isArray(nv) ? nv.unit_cost : null;
   const ucOld = ov && typeof ov === "object" && !Array.isArray(ov) ? ov.unit_cost : null;
 
@@ -1860,6 +1990,7 @@ function AdminUnitDetailPage() {
       await deleteAdminRoom(id);
       const data = await fetchAdminRooms(unitId);
       setRooms(Array.isArray(data) ? data.map(normalizeRoom) : []);
+      await reloadAuditLogs();
     } catch (err) {
       window.alert(
         String(err?.message ?? err) || "Room konnte nicht gelöscht werden."
@@ -1883,6 +2014,7 @@ function AdminUnitDetailPage() {
       });
       setUnitDocuments((prev) => [rec, ...prev]);
       setUnitDocCategory("");
+      await reloadAuditLogs();
     } catch (err) {
       setUnitDocUploadError(err.message || "Upload fehlgeschlagen.");
     } finally {
@@ -1908,6 +2040,7 @@ function AdminUnitDetailPage() {
       await deleteAdminUnitDocument(docId);
       const items = await fetchAdminUnitDocuments(unitId);
       setUnitDocuments(items);
+      await reloadAuditLogs();
     } catch (err) {
       window.alert(err.message || "Löschen fehlgeschlagen.");
     }

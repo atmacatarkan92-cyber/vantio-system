@@ -13,11 +13,26 @@ ALLOWED_ROOM_STATUS = frozenset({"Frei", "Belegt", "Reserviert"})
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Unit, Room, Tenancy
+from db.audit import create_audit_log
+from db.models import Unit, Room, Tenancy, User
 from app.core.rate_limit import limiter
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-rooms"])
+
+
+def _room_audit_payload(r: Room) -> dict:
+    """Namespaced child snapshot for unit parent-stream audit (rooms)."""
+    return {
+        "id": str(r.id),
+        "unit_id": str(r.unit_id),
+        "name": r.name,
+        "price": int(getattr(r, "price", 0) or 0),
+        "floor": getattr(r, "floor", None),
+        "is_active": bool(getattr(r, "is_active", True)),
+        "size_m2": getattr(r, "size_m2", None),
+        "status": getattr(r, "status", None) or "Frei",
+    }
 
 
 def _room_to_dict(r: Room) -> dict:
@@ -107,7 +122,7 @@ def admin_create_room(
     request: Request,
     body: RoomCreate,
     org_id: str = Depends(get_current_organization),
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     """Create a new room."""
@@ -124,6 +139,17 @@ def admin_create_room(
         status=body.status,
     )
     session.add(room)
+    session.flush()
+    create_audit_log(
+        session,
+        str(current_user.id),
+        "create",
+        "unit",
+        str(body.unit_id),
+        old_values=None,
+        new_values={"room": _room_audit_payload(room)},
+        organization_id=org_id,
+    )
     session.commit()
     session.refresh(room)
     return _room_to_dict(room)
@@ -136,7 +162,7 @@ def admin_patch_room(
     room_id: str,
     body: RoomPatch,
     org_id: str = Depends(get_current_organization),
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     """Update a room (partial)."""
@@ -146,6 +172,7 @@ def admin_patch_room(
     cur_unit = session.get(Unit, room.unit_id)
     if not cur_unit or str(getattr(cur_unit, "organization_id", "")) != org_id:
         raise HTTPException(status_code=404, detail="Room not found")
+    old_payload = _room_audit_payload(room)
     data = body.model_dump(exclude_unset=True)
     if "unit_id" in data:
         u = session.get(Unit, data["unit_id"])
@@ -155,6 +182,18 @@ def admin_patch_room(
         if hasattr(room, k):
             setattr(room, k, v)
     session.add(room)
+    new_payload = _room_audit_payload(room)
+    if old_payload != new_payload:
+        create_audit_log(
+            session,
+            str(current_user.id),
+            "update",
+            "unit",
+            str(room.unit_id),
+            old_values={"room": old_payload},
+            new_values={"room": new_payload},
+            organization_id=org_id,
+        )
     session.commit()
     session.refresh(room)
     return _room_to_dict(room)
@@ -166,7 +205,7 @@ def admin_delete_room(
     request: Request,
     room_id: str,
     org_id: str = Depends(get_current_organization),
-    _=Depends(require_roles("admin", "manager")),
+    current_user: User = Depends(require_roles("admin", "manager")),
     session=Depends(get_db_session),
 ):
     """Delete a room."""
@@ -191,6 +230,18 @@ def admin_delete_room(
                 "diesem Zimmer verknüpft sind."
             ),
         )
+    uid = str(room.unit_id)
+    old_payload = _room_audit_payload(room)
     session.delete(room)
+    create_audit_log(
+        session,
+        str(current_user.id),
+        "delete",
+        "unit",
+        uid,
+        old_values={"room": old_payload},
+        new_values=None,
+        organization_id=org_id,
+    )
     session.commit()
     return {"status": "ok", "message": "Room deleted"}

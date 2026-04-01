@@ -167,8 +167,12 @@ def admin_delete_unit_document(
         "update",
         "unit",
         unit_id,
-        old_values={"document_deleted": deleted_name},
+        old_values={
+            "unit_document": {"action": "deleted", "file_name": deleted_name},
+            "document_deleted": deleted_name,
+        },
         new_values=None,
+        organization_id=org_id,
     )
     session.delete(doc)
     session.commit()
@@ -223,7 +227,11 @@ def admin_create_unit_document(
         "unit",
         str(unit_id),
         old_values=None,
-        new_values={"document_uploaded": raw_name},
+        new_values={
+            "unit_document": {"action": "uploaded", "file_name": raw_name},
+            "document_uploaded": raw_name,
+        },
+        organization_id=org_id,
     )
     session.commit()
     session.refresh(doc)
