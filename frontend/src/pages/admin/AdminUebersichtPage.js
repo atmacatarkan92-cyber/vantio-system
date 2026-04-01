@@ -93,16 +93,16 @@ function KpiKarte({
     <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] bg-[#141824] p-5">
       <div className="absolute left-0 right-0 top-0 h-1" style={{ background: akzent }} />
       <div className="mb-3 flex items-start justify-between gap-3">
-        <div className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">{titel}</div>
-        <span className="inline-flex items-center whitespace-nowrap rounded-full border border-white/[0.1] bg-white/[0.06] px-2.5 py-0.5 text-[10px] font-bold text-[#6b7a9a]">
+        <div className="text-xs font-semibold uppercase tracking-wide text-[#6b7a9a]">{titel}</div>
+        <span className="inline-flex items-center whitespace-nowrap rounded-full border border-white/[0.1] bg-white/[0.06] px-2.5 py-0.5 text-xs font-semibold text-[#6b7a9a]">
           {badge}
         </span>
       </div>
-      <div className="text-[24px] font-bold leading-tight tracking-tight" style={{ color: farbe }}>
+      <div className="text-2xl font-bold leading-tight tracking-tight" style={{ color: farbe }}>
         {wert}
       </div>
       {hinweis ? (
-        <div className="mt-3 text-[11px] leading-relaxed text-[#6b7a9a]">{hinweis}</div>
+        <div className="mt-3 text-sm leading-relaxed text-[#6b7a9a]">{hinweis}</div>
       ) : null}
     </div>
   );
@@ -126,8 +126,8 @@ function SchnellzugriffKarte({
         {icon}
       </div>
       <div>
-        <h3 className="mb-2 text-[18px] font-bold tracking-tight text-[#eef2ff]">{titel}</h3>
-        <p className="m-0 text-[13px] leading-relaxed text-[#6b7a9a]">{text}</p>
+        <h3 className="mb-2 text-lg font-semibold tracking-tight text-[#eef2ff]">{titel}</h3>
+        <p className="m-0 text-sm leading-relaxed text-[#6b7a9a]">{text}</p>
       </div>
       <div className="mt-auto">
         <Link
@@ -467,7 +467,7 @@ export default function AdminUebersichtPage() {
 
   return (
     <div data-testid="admin-dashboard-page" className="min-h-screen bg-[#07090f] text-[#eef2ff]">
-      <div className="mx-auto grid max-w-[min(1400px,100%)] gap-6 p-6">
+      <div className="mx-auto grid max-w-[min(1400px,100%)] gap-4 p-6">
       <div className="flex items-center justify-end gap-3">
         <span className="text-[13px] text-[#6b7a9a]">KPI-Zeitraum:</span>
         <select
@@ -476,7 +476,7 @@ export default function AdminUebersichtPage() {
             const [y, m] = e.target.value.split("-").map(Number);
             setKpisPeriod({ year: y, month: m });
           }}
-          className="rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-[13px] text-[#eef2ff]"
+          className="rounded-lg border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff]"
         >
           {(() => {
             const d = new Date();
@@ -521,7 +521,7 @@ export default function AdminUebersichtPage() {
       </div>
 
       {portfolio && (
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           <KpiKarte
             titel="Gesamt Umsatz"
             wert={formatCurrency(portfolio.totalRevenue)}
@@ -614,7 +614,7 @@ export default function AdminUebersichtPage() {
       )}
       {kpis && !kpisLoading && (
         <>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
             <KpiKarte
               titel="Durchschn. Umsatz pro Room"
               wert={kpis.summary_cards.average_revenue_per_room?.value != null ? formatCurrency(kpis.summary_cards.average_revenue_per_room.value) : "—"}
@@ -674,15 +674,15 @@ export default function AdminUebersichtPage() {
 
           {Array.isArray(kpis.assumptions) && kpis.assumptions.length > 0 && (
             <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
-              <h3 className="m-0 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Annahmen & Limitationen</h3>
-              <p className="mb-3 mt-2 text-[13px] text-[#6b7a9a]">So wurden die KPIs berechnet. Geschätzte oder nicht verfügbare Werte sind gekennzeichnet.</p>
-              <ul className="m-0 list-disc space-y-1.5 pl-5 text-[13px] text-[#6b7a9a]">
+              <h3 className="m-0 text-xs font-semibold uppercase tracking-wide text-[#6b7a9a]">Annahmen & Limitationen</h3>
+              <p className="mb-3 mt-2 text-sm text-[#6b7a9a]">So wurden die KPIs berechnet. Geschätzte oder nicht verfügbare Werte sind gekennzeichnet.</p>
+              <ul className="m-0 list-disc space-y-1.5 pl-5 text-sm text-[#6b7a9a]">
                 {kpis.assumptions.map((a, i) => (
                   <li key={i}>{a}</li>
                 ))}
               </ul>
               {kpis.availability && (
-                <p className="mt-3 text-[12px] text-[#6b7a9a]">
+                <p className="mt-3 text-sm text-[#6b7a9a]">
                   Verfügbarkeit: Umsatz/Gewinn = {kpis.availability.revenue}; Leerstandstage = {kpis.availability.vacant_days}; Prognose = {kpis.availability.forecast}; Break-even = {kpis.availability.break_even}.
                 </p>
               )}
@@ -698,13 +698,13 @@ export default function AdminUebersichtPage() {
       )}
 
       <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
-        <h3 className="mb-4 text-[16px] font-bold text-[#eef2ff]">Finanzentwicklung letzte 6 Monate</h3>
+        <h3 className="mb-4 text-lg font-semibold text-[#eef2ff]">Finanzentwicklung letzte 6 Monate</h3>
         {monthlyChartsLoading ? (
-          <p className="text-[13px] text-[#6b7a9a]">Lade Monatsdaten…</p>
+          <p className="text-sm text-[#6b7a9a]">Lade Monatsdaten…</p>
         ) : monthlyChartsError ? (
-          <p className="text-[13px] text-[#f87171]">{monthlyChartsError}</p>
+          <p className="text-sm text-[#f87171]">{monthlyChartsError}</p>
         ) : financeChartData.length === 0 ? (
-          <p className="text-[13px] text-[#6b7a9a]">Keine Daten vorhanden</p>
+          <p className="text-sm text-[#6b7a9a]">Keine Daten vorhanden</p>
         ) : (
           <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -723,13 +723,13 @@ export default function AdminUebersichtPage() {
       </div>
 
       <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
-        <h3 className="mb-4 text-[16px] font-bold text-[#eef2ff]">Belegung Rooms letzte 6 Monate</h3>
+        <h3 className="mb-4 text-lg font-semibold text-[#eef2ff]">Belegung Rooms letzte 6 Monate</h3>
         {monthlyChartsLoading ? (
-          <p className="text-[13px] text-[#6b7a9a]">Lade Monatsdaten…</p>
+          <p className="text-sm text-[#6b7a9a]">Lade Monatsdaten…</p>
         ) : monthlyChartsError ? (
-          <p className="text-[13px] text-[#f87171]">{monthlyChartsError}</p>
+          <p className="text-sm text-[#f87171]">{monthlyChartsError}</p>
         ) : belegungChartData.length === 0 ? (
-          <p className="text-[13px] text-[#6b7a9a]">Keine Daten vorhanden</p>
+          <p className="text-sm text-[#6b7a9a]">Keine Daten vorhanden</p>
         ) : (
           <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -747,7 +747,7 @@ export default function AdminUebersichtPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
         <KpiKarte
           titel="Offene Rechnungen"
           wert={invoiceStats.openCount}
@@ -784,10 +784,10 @@ export default function AdminUebersichtPage() {
 
       <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
         <div className="mb-4">
-          <h3 className="m-0 text-[16px] font-bold text-[#eef2ff]">
+          <h3 className="m-0 text-lg font-semibold text-[#eef2ff]">
             Kritische Hinweise
           </h3>
-          <p className="mt-2 text-[12px] text-[#6b7a9a]">
+          <p className="mt-2 text-sm text-[#6b7a9a]">
             Die wichtigsten Auffälligkeiten auf einen Blick.
           </p>
         </div>
@@ -829,7 +829,7 @@ export default function AdminUebersichtPage() {
       </div>
 
       <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
-        <h3 className="m-0 text-[16px] font-bold text-[#eef2ff]">
+        <h3 className="m-0 text-lg font-semibold text-[#eef2ff]">
           Schnellzugriff
         </h3>
         <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4">
@@ -866,10 +866,10 @@ export default function AdminUebersichtPage() {
       <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="m-0 text-[16px] font-bold text-[#eef2ff]">
+            <h3 className="m-0 text-lg font-semibold text-[#eef2ff]">
               Letzte Rechnungen
             </h3>
-            <p className="mt-2 text-[12px] text-[#6b7a9a]">
+            <p className="mt-2 text-sm text-[#6b7a9a]">
               Die zuletzt erfassten Rechnungen aus deinem Billing-Modul.
             </p>
           </div>
@@ -887,23 +887,23 @@ export default function AdminUebersichtPage() {
         ) : latestInvoices.length === 0 ? (
           <p className="text-[13px] text-[#6b7a9a]">Noch keine Rechnungen vorhanden.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[13px] text-[#eef2ff]">
+          <div className="overflow-x-auto rounded-[14px] border border-white/[0.07] bg-[#141824]">
+            <table className="w-full border-collapse text-sm text-[#eef2ff]">
               <thead className="bg-[#111520]">
                 <tr className="text-left">
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
                     Rechnungsnummer
                   </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
                     Betrag
                   </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
                     Status
                   </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
                     Rechnungsdatum
                   </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                  <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[#6b7a9a]">
                     Fälligkeitsdatum
                   </th>
                 </tr>
