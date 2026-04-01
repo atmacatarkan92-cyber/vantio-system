@@ -68,33 +68,33 @@ function HeroCard({
 }) {
   const styles = {
     orange: {
-      card: "bg-gradient-to-br from-orange-50 to-white border-orange-100",
-      value: "text-orange-600",
+      card: "border-t-orange-500",
+      value: "text-[#fb923c]",
       dot: "bg-orange-500",
     },
     green: {
-      card: "bg-gradient-to-br from-emerald-50 to-white border-emerald-100",
-      value: "text-emerald-600",
-      dot: "bg-emerald-500",
+      card: "border-t-green-500",
+      value: "text-[#4ade80]",
+      dot: "bg-green-500",
     },
     slate: {
-      card: "bg-gradient-to-br from-slate-50 to-white border-slate-200",
-      value: "text-slate-800",
+      card: "border-t-slate-500",
+      value: "text-[#eef2ff]",
       dot: "bg-slate-500",
     },
     rose: {
-      card: "bg-gradient-to-br from-rose-50 to-white border-rose-100",
-      value: "text-rose-600",
+      card: "border-t-rose-500",
+      value: "text-[#f87171]",
       dot: "bg-rose-500",
     },
     blue: {
-      card: "bg-gradient-to-br from-sky-50 to-white border-sky-100",
-      value: "text-sky-600",
-      dot: "bg-sky-500",
+      card: "border-t-blue-500",
+      value: "text-[#7aaeff]",
+      dot: "bg-blue-500",
     },
     amber: {
-      card: "bg-gradient-to-br from-amber-50 to-white border-amber-100",
-      value: "text-amber-600",
+      card: "border-t-amber-500",
+      value: "text-[#fbbf24]",
       dot: "bg-amber-500",
     },
   };
@@ -102,29 +102,31 @@ function HeroCard({
   const style = styles[accent] || styles.orange;
 
   return (
-    <div className={`rounded-3xl border p-6 shadow-sm ${style.card}`}>
+    <div
+      className={`relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 bg-[#141824] p-6 ${style.card}`}
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full ${style.dot}`} />
-            <p className="text-sm font-medium text-slate-500">{title}</p>
+            <span className={`h-2.5 w-2.5 rounded-full ${style.dot}`} />
+            <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">{title}</p>
           </div>
-          <p className={`text-5xl font-bold mt-4 tracking-tight ${style.value}`}>
+          <p className={`mt-3 text-[24px] font-bold tracking-tight ${style.value}`}>
             {value}
           </p>
-          <p className="text-sm text-slate-500 mt-3">{subtitle}</p>
+          <p className="mt-2 text-[11px] text-[#6b7a9a]">{subtitle}</p>
         </div>
 
         <div className="flex flex-col items-end gap-2">
-          <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white border border-slate-200 text-slate-600">
+          <span className="rounded-full border border-white/[0.1] bg-white/[0.06] px-2.5 py-1 text-[10px] font-bold text-[#6b7a9a]">
             Live
           </span>
           {trend ? (
             <span
-              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+              className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${
                 trend.positive
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-rose-100 text-rose-700"
+                  ? "border-green-500/20 bg-green-500/10 text-green-400"
+                  : "border-red-500/20 bg-red-500/10 text-red-400"
               }`}
             >
               {trend.label}
@@ -138,12 +140,12 @@ function HeroCard({
 
 function SectionCard({ title, subtitle, children, rightSlot = null }) {
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
-      <div className="flex items-start justify-between gap-4 mb-5">
+    <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+      <div className="mb-5 flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+          <h3 className="text-[16px] font-bold text-[#eef2ff]">{title}</h3>
           {subtitle ? (
-            <p className="text-sm text-slate-500 mt-1">{subtitle}</p>
+            <p className="mt-1 text-[12px] text-[#6b7a9a]">{subtitle}</p>
           ) : null}
         </div>
         {rightSlot}
@@ -155,26 +157,26 @@ function SectionCard({ title, subtitle, children, rightSlot = null }) {
 
 function SmallStatCard({ label, value, hint }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="text-2xl font-bold text-slate-900 mt-2">{value}</p>
-      {hint ? <p className="text-xs text-slate-400 mt-2">{hint}</p> : null}
+    <div className="rounded-[10px] border border-white/[0.08] bg-[#111520] p-4">
+      <p className="text-[10px] text-[#6b7a9a]">{label}</p>
+      <p className="mt-2 text-[24px] font-bold text-[#eef2ff]">{value}</p>
+      {hint ? <p className="mt-2 text-[11px] text-[#6b7a9a]">{hint}</p> : null}
     </div>
   );
 }
 
 function RankingBadge({ value, type }) {
   const styles = {
-    success: "bg-emerald-100 text-emerald-700",
-    warning: "bg-amber-100 text-amber-700",
-    danger: "bg-rose-100 text-rose-700",
-    neutral: "bg-slate-100 text-slate-700",
-    blue: "bg-sky-100 text-sky-700",
+    success: "border-green-500/20 bg-green-500/10 text-green-400",
+    warning: "border-amber-500/20 bg-amber-500/10 text-amber-400",
+    danger: "border-red-500/20 bg-red-500/10 text-red-400",
+    neutral: "border-white/[0.1] bg-white/[0.06] text-[#6b7a9a]",
+    blue: "border-blue-500/20 bg-blue-500/10 text-[#7aaeff]",
   };
 
   return (
     <span
-      className={`px-2.5 py-1 rounded-full text-xs font-semibold ${styles[type]}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${styles[type]}`}
     >
       {value}
     </span>
@@ -184,13 +186,11 @@ function RankingBadge({ value, type }) {
 function FilterSelect({ label, value, onChange, children }) {
   return (
     <div className="min-w-[180px]">
-      <label className="block text-xs font-semibold text-slate-500 mb-2">
-        {label}
-      </label>
+      <label className="mb-2 block text-[10px] text-[#6b7a9a]">{label}</label>
       <select
         value={value}
         onChange={onChange}
-        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-orange-500"
+        className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-4 py-3 text-sm text-[#eef2ff] outline-none"
       >
         {children}
       </select>
@@ -574,27 +574,27 @@ function AdminBusinessApartmentsDashboardPage() {
   }, [selectedPeriod]);
 
   return (
-    <div className="min-h-screen bg-slate-50 -m-6 p-6 md:p-8">
-      <div className="max-w-[1800px] mx-auto space-y-8">
-        <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
+    <div className="-m-6 min-h-screen bg-[#07090f] p-6 text-[#eef2ff] md:p-8">
+      <div className="mx-auto max-w-[1800px] space-y-8">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="text-sm font-semibold text-orange-600">
+            <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
               Vantio
             </p>
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900 mt-2">
+            <h2 className="mt-2 text-[22px] font-bold tracking-tight text-[#eef2ff] md:text-[24px]">
               Business-Apartment Dashboard
             </h2>
-            <p className="text-slate-500 mt-3 max-w-3xl">
+            <p className="mt-3 max-w-3xl text-[12px] text-[#6b7a9a]">
               Übersicht über Belegung, Umsatz, Gewinn und Performance deiner
               Business Apartments.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-sm font-medium text-slate-600">
+            <span className="rounded-full border border-white/[0.1] bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#6b7a9a]">
               Live KPI
             </span>
-            <span className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-sm font-medium text-slate-600">
+            <span className="rounded-full border border-white/[0.1] bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#6b7a9a]">
               Business Apartments only
             </span>
           </div>
@@ -701,18 +701,18 @@ function AdminBusinessApartmentsDashboardPage() {
             subtitle={financeChartSubtitle}
           >
             {chartsLoading ? (
-              <p className="text-slate-500 py-8">Lade Monatsdaten…</p>
+              <p className="py-8 text-[13px] text-[#6b7a9a]">Lade Monatsdaten…</p>
             ) : chartsError ? (
-              <p className="text-rose-700 py-8">{chartsError}</p>
+              <p className="py-8 text-[13px] text-[#f87171]">{chartsError}</p>
             ) : financeChartData.length === 0 ? (
-              <p className="text-slate-500 py-8">Keine Daten vorhanden</p>
+              <p className="py-8 text-[13px] text-[#6b7a9a]">Keine Daten vorhanden</p>
             ) : (
               <div className="h-[420px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={financeChartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="month" />
-                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
+                    <XAxis dataKey="month" tick={{ fill: "#6b7a9a", fontSize: 11 }} />
+                    <YAxis tick={{ fill: "#6b7a9a", fontSize: 11 }} />
                     <Tooltip formatter={(value) => `CHF ${value.toLocaleString()}`} />
                     <Legend />
                     <Bar name="Umsatz" dataKey="revenue" fill="#f97316" radius={[8, 8, 0, 0]} />
@@ -729,18 +729,18 @@ function AdminBusinessApartmentsDashboardPage() {
             subtitle={occupancyChartSubtitle}
           >
             {chartsLoading ? (
-              <p className="text-slate-500 py-8">Lade Monatsdaten…</p>
+              <p className="py-8 text-[13px] text-[#6b7a9a]">Lade Monatsdaten…</p>
             ) : chartsError ? (
-              <p className="text-rose-700 py-8">{chartsError}</p>
+              <p className="py-8 text-[13px] text-[#f87171]">{chartsError}</p>
             ) : occupancyChartData.length === 0 ? (
-              <p className="text-slate-500 py-8">Keine Daten vorhanden</p>
+              <p className="py-8 text-[13px] text-[#6b7a9a]">Keine Daten vorhanden</p>
             ) : (
               <div className="h-[420px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={occupancyChartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="month" />
-                    <YAxis allowDecimals={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
+                    <XAxis dataKey="month" tick={{ fill: "#6b7a9a", fontSize: 11 }} />
+                    <YAxis allowDecimals={false} tick={{ fill: "#6b7a9a", fontSize: 11 }} />
                     <Tooltip />
                     <Legend />
                     <Bar name="Belegt" dataKey="occupied" fill="#16a34a" radius={[8, 8, 0, 0]} />
@@ -824,31 +824,45 @@ function AdminBusinessApartmentsDashboardPage() {
           }
         >
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-500 text-sm">
-                  <th className="py-3 pr-4">Apartment</th>
-                  <th className="py-3 pr-4">Ort</th>
-                  <th className="py-3 pr-4">Status</th>
-                  <th className="py-3 pr-4">Umsatz</th>
-                  <th className="py-3 pr-4">Ausgaben</th>
-                  <th className="py-3 pr-4">Gewinn</th>
-                  <th className="py-3 pr-4">Aktion</th>
+            <table className="w-full border-collapse text-left">
+              <thead className="bg-[#111520]">
+                <tr>
+                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Apartment
+                  </th>
+                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Ort
+                  </th>
+                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Status
+                  </th>
+                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Umsatz
+                  </th>
+                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Ausgaben
+                  </th>
+                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Gewinn
+                  </th>
+                  <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Aktion
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {dashboard.performance.map((unit) => (
                   <tr
                     key={unit.unitId}
-                    className="border-b border-slate-100 text-slate-700 hover:bg-slate-50"
+                    className="border-b border-white/[0.05] text-[13px] text-[#eef2ff]"
                   >
-                    <td className="py-4 pr-4 font-semibold text-slate-900">
-                      <span className="block">{unit.displayLabel}</span>
-                      <span className="block text-[10px] text-slate-400 font-normal font-mono break-all mt-0.5">
+                    <td className="py-4 pr-4 font-semibold">
+                      <span className="block text-[#7aaeff]">{unit.displayLabel}</span>
+                      <span className="mt-0.5 block break-all font-mono text-[10px] font-normal text-[#6b7a9a]">
                         {unit.unitId}
                       </span>
                     </td>
-                    <td className="py-4 pr-4">{unit.place}</td>
+                    <td className="py-4 pr-4 font-medium">{unit.place}</td>
                     <td className="py-4 pr-4">
                       {unit.occupied ? (
                         <RankingBadge value="Belegt" type="success" />
@@ -856,7 +870,7 @@ function AdminBusinessApartmentsDashboardPage() {
                         <RankingBadge value="Frei" type="danger" />
                       )}
                     </td>
-                    <td className="py-4 pr-4 font-medium">
+                    <td className="py-4 pr-4 font-medium text-[#4ade80]">
                       {formatChfOrDash(unit.revenue)}
                     </td>
                     <td className="py-4 pr-4 font-medium">
@@ -868,7 +882,7 @@ function AdminBusinessApartmentsDashboardPage() {
                     <td className="py-4 pr-4">
                       <Link
                         to={`/admin/units/${encodeURIComponent(unit.unitId)}`}
-                        className="px-3 py-2 rounded-lg border border-slate-300 text-sm hover:bg-slate-50 inline-block text-slate-700"
+                        className="inline-block rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] no-underline hover:bg-white/[0.04]"
                       >
                         Öffnen
                       </Link>
@@ -878,7 +892,7 @@ function AdminBusinessApartmentsDashboardPage() {
 
                 {dashboard.performance.length === 0 && (
                   <tr>
-                    <td colSpan="7" className="py-8 text-center text-slate-500">
+                    <td colSpan="7" className="py-8 text-center text-[13px] text-[#6b7a9a]">
                       Keine Business Apartments gefunden.
                     </td>
                   </tr>

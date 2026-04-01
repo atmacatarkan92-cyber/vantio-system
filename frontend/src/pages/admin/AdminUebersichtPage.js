@@ -85,83 +85,24 @@ function KpiKarte({
   titel,
   wert,
   hinweis,
-  farbe = "#0F172A",
-  akzent = "#E2E8F0",
+  farbe = "#eef2ff",
+  akzent = "#64748b",
   badge = "Live",
 }) {
   return (
-    <div
-      style={{
-        background: "#FFFFFF",
-        border: "1px solid #E5E7EB",
-        borderRadius: "22px",
-        padding: "22px",
-        boxShadow: "0 8px 24px rgba(15, 23, 42, 0.04)",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: "4px",
-          background: akzent,
-        }}
-      />
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: "12px",
-          marginBottom: "12px",
-        }}
-      >
-        <div style={{ fontSize: "13px", color: "#64748B", fontWeight: 600 }}>
-          {titel}
-        </div>
-        <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            padding: "6px 10px",
-            borderRadius: "999px",
-            background: "#F8FAFC",
-            border: "1px solid #E2E8F0",
-            color: "#475569",
-            fontSize: "11px",
-            fontWeight: 700,
-            whiteSpace: "nowrap",
-          }}
-        >
+    <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] bg-[#141824] p-5">
+      <div className="absolute left-0 right-0 top-0 h-1" style={{ background: akzent }} />
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">{titel}</div>
+        <span className="inline-flex items-center whitespace-nowrap rounded-full border border-white/[0.1] bg-white/[0.06] px-2.5 py-0.5 text-[10px] font-bold text-[#6b7a9a]">
           {badge}
         </span>
       </div>
-      <div
-        style={{
-          fontSize: "38px",
-          fontWeight: 800,
-          color: farbe,
-          letterSpacing: "-0.03em",
-          lineHeight: 1.05,
-        }}
-      >
+      <div className="text-[24px] font-bold leading-tight tracking-tight" style={{ color: farbe }}>
         {wert}
       </div>
       {hinweis ? (
-        <div
-          style={{
-            marginTop: "12px",
-            color: "#64748B",
-            fontSize: "14px",
-            lineHeight: 1.5,
-          }}
-        >
-          {hinweis}
-        </div>
+        <div className="mt-3 text-[11px] leading-relaxed text-[#6b7a9a]">{hinweis}</div>
       ) : null}
     </div>
   );
@@ -173,75 +114,25 @@ function SchnellzugriffKarte({
   linkText,
   to,
   icon = "→",
-  iconBg = "#EFF6FF",
-  iconColor = "#2563EB",
+  iconBg = "#111520",
+  iconColor = "#7aaeff",
 }) {
   return (
-    <div
-      style={{
-        background: "#FFFFFF",
-        border: "1px solid #E5E7EB",
-        borderRadius: "22px",
-        padding: "22px",
-        boxShadow: "0 8px 24px rgba(15, 23, 42, 0.04)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "14px",
-        minHeight: "210px",
-      }}
-    >
+    <div className="flex min-h-[210px] flex-col gap-3.5 rounded-[14px] border border-white/[0.07] bg-[#141824] p-5">
       <div
-        style={{
-          width: "48px",
-          height: "48px",
-          borderRadius: "16px",
-          background: iconBg,
-          color: iconColor,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "22px",
-          fontWeight: 800,
-        }}
+        className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/[0.08] text-[22px] font-extrabold"
+        style={{ background: iconBg, color: iconColor }}
       >
         {icon}
       </div>
       <div>
-        <h3
-          style={{
-            fontSize: "21px",
-            fontWeight: 800,
-            margin: "0 0 8px 0",
-            color: "#0F172A",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          {titel}
-        </h3>
-        <p
-          style={{
-            color: "#64748B",
-            margin: 0,
-            lineHeight: 1.6,
-            fontSize: "14px",
-          }}
-        >
-          {text}
-        </p>
+        <h3 className="mb-2 text-[18px] font-bold tracking-tight text-[#eef2ff]">{titel}</h3>
+        <p className="m-0 text-[13px] leading-relaxed text-[#6b7a9a]">{text}</p>
       </div>
-      <div style={{ marginTop: "auto" }}>
+      <div className="mt-auto">
         <Link
           to={to}
-          style={{
-            display: "inline-block",
-            background: "#0F172A",
-            color: "#FFFFFF",
-            padding: "11px 16px",
-            borderRadius: "12px",
-            textDecoration: "none",
-            fontWeight: 700,
-            fontSize: "14px",
-          }}
+          className="inline-block rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-4 py-2.5 text-[14px] font-semibold text-white no-underline"
         >
           {linkText}
         </Link>
@@ -252,45 +143,23 @@ function SchnellzugriffKarte({
 
 function StatusBadge({ status }) {
   const normalized = (status || "").toLowerCase();
-  let bg = "#FEF3C7";
-  let color = "#92400E";
   let label = "Offen";
-  let border = "#FCD34D";
+  const base =
+    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold ";
+  let cls = base;
   if (normalized === "paid") {
-    bg = "#DCFCE7";
-    color = "#166534";
     label = "Bezahlt";
-    border = "#86EFAC";
-  }
-  if (normalized === "overdue") {
-    bg = "#FEE2E2";
-    color = "#991B1B";
+    cls += "border-green-500/20 bg-green-500/10 text-green-400";
+  } else if (normalized === "overdue") {
     label = "Überfällig";
-    border = "#FCA5A5";
-  }
-  if (normalized === "cancelled") {
-    bg = "#E5E7EB";
-    color = "#374151";
+    cls += "border-red-500/20 bg-red-500/10 text-red-400";
+  } else if (normalized === "cancelled") {
     label = "Storniert";
-    border = "#CBD5E1";
+    cls += "border-white/[0.1] bg-white/[0.06] text-[#6b7a9a]";
+  } else {
+    cls += "border-amber-500/20 bg-amber-500/10 text-amber-400";
   }
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        padding: "6px 10px",
-        borderRadius: "999px",
-        background: bg,
-        color,
-        fontSize: "12px",
-        fontWeight: 700,
-        border: `1px solid ${border}`,
-      }}
-    >
-      {label}
-    </span>
-  );
+  return <span className={cls}>{label}</span>;
 }
 
 export default function AdminUebersichtPage() {
@@ -597,22 +466,17 @@ export default function AdminUebersichtPage() {
   }, [operationsStats, invoiceStats, weakestUnitDisplayLabel]);
 
   return (
-    <div data-testid="admin-dashboard-page" style={{ display: "grid", gap: "24px" }}>
-      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "12px" }}>
-        <span style={{ fontSize: "14px", color: "#64748B" }}>KPI-Zeitraum:</span>
+    <div data-testid="admin-dashboard-page" className="min-h-screen bg-[#07090f] text-[#eef2ff]">
+      <div className="mx-auto grid max-w-[min(1400px,100%)] gap-6 p-6">
+      <div className="flex items-center justify-end gap-3">
+        <span className="text-[13px] text-[#6b7a9a]">KPI-Zeitraum:</span>
         <select
           value={`${kpisPeriod.year}-${kpisPeriod.month}`}
           onChange={(e) => {
             const [y, m] = e.target.value.split("-").map(Number);
             setKpisPeriod({ year: y, month: m });
           }}
-          style={{
-            padding: "8px 12px",
-            borderRadius: "8px",
-            border: "1px solid #d1d5db",
-            background: "#ffffff",
-            fontSize: "14px",
-          }}
+          className="rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-[13px] text-[#eef2ff]"
         >
           {(() => {
             const d = new Date();
@@ -631,90 +495,25 @@ export default function AdminUebersichtPage() {
           })()}
         </select>
       </div>
-      <div
-        style={{
-          background: "linear-gradient(135deg, #FFF7ED 0%, #FFFFFF 60%)",
-          border: "1px solid #FED7AA",
-          borderRadius: "24px",
-          padding: "26px",
-          boxShadow: "0 10px 30px rgba(15, 23, 42, 0.04)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: "16px",
-            flexWrap: "wrap",
-          }}
-        >
+      <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div
-              style={{
-                fontSize: "12px",
-                color: "#f97316",
-                fontWeight: 700,
-                marginBottom: "8px",
-                textTransform: "uppercase",
-                letterSpacing: "0.04em",
-              }}
-            >
+            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
               Vantio
             </div>
-            <h2
-              style={{
-                fontSize: "44px",
-                fontWeight: 900,
-                margin: 0,
-                letterSpacing: "-0.04em",
-                color: "#0F172A",
-              }}
-            >
+            <h2 className="m-0 text-[22px] font-bold text-[#eef2ff]">
               Unternehmensübersicht
             </h2>
-            <p
-              style={{
-                color: "#64748B",
-                marginTop: "12px",
-                maxWidth: "950px",
-                lineHeight: 1.6,
-                fontSize: "15px",
-              }}
-            >
+            <p className="mt-3 max-w-[950px] text-[12px] leading-relaxed text-[#6b7a9a]">
               Zentrale Live-Übersicht über Umsatz, Ausgaben, Gewinn, Belegung,
               Rechnungen und kritische Bereiche des Unternehmens.
             </p>
           </div>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                padding: "8px 12px",
-                borderRadius: "999px",
-                background: "#FFFFFF",
-                border: "1px solid #E5E7EB",
-                color: "#475569",
-                fontSize: "12px",
-                fontWeight: 700,
-              }}
-            >
+          <div className="flex flex-wrap gap-2.5">
+            <span className="inline-flex items-center rounded-full border border-white/[0.1] bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#6b7a9a]">
               Live KPI
             </span>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                padding: "8px 12px",
-                borderRadius: "999px",
-                background: "#FFFFFF",
-                border: "1px solid #E5E7EB",
-                color: "#475569",
-                fontSize: "12px",
-                fontWeight: 700,
-              }}
-            >
+            <span className="inline-flex items-center rounded-full border border-white/[0.1] bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#6b7a9a]">
               Management Ansicht
             </span>
           </div>
@@ -722,35 +521,29 @@ export default function AdminUebersichtPage() {
       </div>
 
       {portfolio && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "16px",
-          }}
-        >
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
           <KpiKarte
             titel="Gesamt Umsatz"
             wert={formatCurrency(portfolio.totalRevenue)}
             hinweis="Summe aktiver Mietverhältnisse (alle Units)"
-            farbe="#0F172A"
-            akzent="#94A3B8"
+            farbe="#eef2ff"
+            akzent="#64748b"
             badge="Tenancy"
           />
           <KpiKarte
             titel="Vollbelegung Potenzial"
             wert={formatCurrency(portfolio.totalFullPotential)}
             hinweis="Co-Living: Zimmerpreise · Apartment: Mieterpreis"
-            farbe="#EA580C"
-            akzent="#FDBA74"
+            farbe="#fb923c"
+            akzent="#ea580c"
             badge="Tenancy"
           />
           <KpiKarte
             titel="Leerstand"
             wert={formatCurrency(portfolio.totalVacancy)}
             hinweis="Potenzial minus aktueller Umsatz"
-            farbe="#E11D48"
-            akzent="#FDA4AF"
+            farbe="#f87171"
+            akzent="#e11d48"
             badge="Tenancy"
           />
           <KpiKarte
@@ -761,8 +554,8 @@ export default function AdminUebersichtPage() {
                 : "—"
             }
             hinweis="Belegte Slots / Kapazität (Co-Living: Zimmer, Apartment: 1)"
-            farbe="#2563EB"
-            akzent="#93C5FD"
+            farbe="#7aaeff"
+            akzent="#2563eb"
             badge="Tenancy"
           />
           <KpiKarte
@@ -780,8 +573,8 @@ export default function AdminUebersichtPage() {
                 ? `${formatCurrency(portfolio.bestUnit.profit)} Gewinn`
                 : ""
             }
-            farbe="#16A34A"
-            akzent="#86EFAC"
+            farbe="#4ade80"
+            akzent="#16a34a"
             badge="Tenancy"
           />
           <KpiKarte
@@ -799,86 +592,80 @@ export default function AdminUebersichtPage() {
                 ? `${formatCurrency(portfolio.worstUnit.profit)} Gewinn`
                 : ""
             }
-            farbe="#7C3AED"
-            akzent="#C4B5FD"
+            farbe="#a78bfa"
+            akzent="#7c3aed"
             badge="Tenancy"
           />
         </div>
       )}
       {tenancies === null && !operationsLoadError && (
-        <p style={{ color: "#64748B", padding: "8px 0" }}>
+        <p className="py-2 text-[13px] text-[#6b7a9a]">
           Portfolio-KPIs (Tenancies) werden geladen…
         </p>
       )}
 
       {kpisLoading && (
-        <p style={{ color: "#64748B", padding: "16px 0" }}>Lade KPI-Daten…</p>
+        <p className="py-4 text-[13px] text-[#6b7a9a]">Lade KPI-Daten…</p>
       )}
       {kpisError && (
-        <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "12px", padding: "16px", color: "#B91C1C" }}>
+        <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[14px] text-[#f87171]">
           {kpisError}
         </div>
       )}
       {kpis && !kpisLoading && (
         <>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "16px",
-            }}
-          >
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
             <KpiKarte
               titel="Durchschn. Umsatz pro Room"
               wert={kpis.summary_cards.average_revenue_per_room?.value != null ? formatCurrency(kpis.summary_cards.average_revenue_per_room.value) : "—"}
               hinweis={kpis.summary_cards.average_revenue_per_room?.note === "exact" ? `Periode ${kpis.period?.label || ""}` : kpis.summary_cards.average_revenue_per_room?.note}
-              farbe="#EA580C"
-              akzent="#FDBA74"
+              farbe="#fb923c"
+              akzent="#ea580c"
               badge={kpis.availability?.revenue === "exact" ? "Exakt" : "Geschätzt"}
             />
             <KpiKarte
               titel="Durchschn. Gewinn pro Unit"
               wert={kpis.summary_cards.average_profit_per_unit?.value != null ? formatCurrency(kpis.summary_cards.average_profit_per_unit.value) : "—"}
               hinweis={kpis.summary_cards.average_profit_per_unit?.note || ""}
-              farbe="#16A34A"
-              akzent="#86EFAC"
+              farbe="#4ade80"
+              akzent="#16a34a"
               badge={kpis.availability?.profit === "exact" ? "Exakt" : "Geschätzt"}
             />
             <KpiKarte
               titel="Leerstand (Room-Tage)"
               wert={kpis.summary_cards.vacant_days_this_month?.value ?? "—"}
               hinweis={kpis.summary_cards.vacant_days_this_month?.note === "estimated" ? "Geschätzt (free_rooms × Tage)" : kpis.summary_cards.vacant_days_this_month?.note}
-              farbe="#E11D48"
-              akzent="#FDA4AF"
+              farbe="#f87171"
+              akzent="#e11d48"
               badge="Geschätzt"
             />
             <KpiKarte
               titel="Prognose nächster Monat"
               wert={kpis.summary_cards.forecast_next_month?.revenue != null ? formatCurrency(kpis.summary_cards.forecast_next_month.revenue) : "—"}
               hinweis={kpis.summary_cards.forecast_next_month?.methodology || ""}
-              farbe="#0D9488"
-              akzent="#5EEAD4"
+              farbe="#2dd4bf"
+              akzent="#0d9488"
               badge="Geschätzt"
             />
             <KpiKarte
               titel="Trend vs. Vormonat"
               wert={kpis.summary_cards.trend_vs_previous_month?.revenue_diff_pct != null ? `${kpis.summary_cards.trend_vs_previous_month.revenue_diff_pct >= 0 ? "+" : ""}${kpis.summary_cards.trend_vs_previous_month.revenue_diff_pct}%` : "—"}
               hinweis={kpis.summary_cards.trend_vs_previous_month ? `Umsatz: ${formatCurrency(kpis.summary_cards.trend_vs_previous_month.revenue_diff)} vs. Vormonat` : ""}
-              farbe="#4F46E5"
-              akzent="#A5B4FC"
+              farbe="#a78bfa"
+              akzent="#6366f1"
               badge="Live"
             />
           </div>
 
           {Array.isArray(kpis.warnings) && kpis.warnings.length > 0 && (
-            <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: "22px", padding: "24px", boxShadow: "0 8px 24px rgba(15, 23, 42, 0.04)" }}>
-              <h3 style={{ fontSize: "22px", fontWeight: 800, margin: "0 0 12px 0", color: "#0F172A" }}>Warnungen (Units / Liegenschaften)</h3>
-              <p style={{ color: "#64748B", margin: "0 0 16px 0", fontSize: "14px" }}>Units mit Leerstand, Kosten ohne Umsatz oder negativem Gewinn.</p>
-              <ul style={{ margin: 0, paddingLeft: "20px", color: "#475569" }}>
+            <div className="rounded-[14px] border border-amber-500/[0.15] bg-amber-500/[0.06] p-6">
+              <h3 className="m-0 text-[16px] font-bold text-[#fbbf24]">Warnungen (Units / Liegenschaften)</h3>
+              <p className="mb-4 mt-2 text-[13px] text-[#6b7a9a]">Units mit Leerstand, Kosten ohne Umsatz oder negativem Gewinn.</p>
+              <ul className="m-0 list-disc space-y-2 pl-5 text-[13px] text-[#eef2ff]">
                 {kpis.warnings.map((w, i) => (
-                  <li key={`${w.unit_id}-${i}`} style={{ marginBottom: "8px" }}>
-                    <strong>{w.unit_title || w.unit_id}</strong>: {w.message}
-                    {w.severity === "high" && <span style={{ marginLeft: "8px", color: "#B91C1C", fontWeight: 700 }}>• Hoch</span>}
+                  <li key={`${w.unit_id}-${i}`}>
+                    <strong className="font-semibold text-[#eef2ff]">{w.unit_title || w.unit_id}</strong>: {w.message}
+                    {w.severity === "high" && <span className="ml-2 font-bold text-[#f87171]">• Hoch</span>}
                   </li>
                 ))}
               </ul>
@@ -886,16 +673,16 @@ export default function AdminUebersichtPage() {
           )}
 
           {Array.isArray(kpis.assumptions) && kpis.assumptions.length > 0 && (
-            <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "22px", padding: "24px" }}>
-              <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 12px 0", color: "#475569" }}>Annahmen & Limitationen</h3>
-              <p style={{ color: "#64748B", margin: "0 0 12px 0", fontSize: "14px" }}>So wurden die KPIs berechnet. Geschätzte oder nicht verfügbare Werte sind gekennzeichnet.</p>
-              <ul style={{ margin: 0, paddingLeft: "20px", color: "#64748B", fontSize: "14px" }}>
+            <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+              <h3 className="m-0 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Annahmen & Limitationen</h3>
+              <p className="mb-3 mt-2 text-[13px] text-[#6b7a9a]">So wurden die KPIs berechnet. Geschätzte oder nicht verfügbare Werte sind gekennzeichnet.</p>
+              <ul className="m-0 list-disc space-y-1.5 pl-5 text-[13px] text-[#6b7a9a]">
                 {kpis.assumptions.map((a, i) => (
-                  <li key={i} style={{ marginBottom: "6px" }}>{a}</li>
+                  <li key={i}>{a}</li>
                 ))}
               </ul>
               {kpis.availability && (
-                <p style={{ marginTop: "12px", fontSize: "13px", color: "#94A3B8" }}>
+                <p className="mt-3 text-[12px] text-[#6b7a9a]">
                   Verfügbarkeit: Umsatz/Gewinn = {kpis.availability.revenue}; Leerstandstage = {kpis.availability.vacant_days}; Prognose = {kpis.availability.forecast}; Break-even = {kpis.availability.break_even}.
                 </p>
               )}
@@ -905,41 +692,26 @@ export default function AdminUebersichtPage() {
       )}
 
       {operationsLoadError && (
-        <div
-          style={{
-            background: "#FEF2F2",
-            border: "1px solid #FECACA",
-            borderRadius: "12px",
-            padding: "16px",
-            color: "#B91C1C",
-          }}
-        >
-          <strong>Fehler beim Laden der Betriebsdaten:</strong> {operationsLoadError}
+        <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[14px] text-[#f87171]">
+          <strong className="font-semibold">Fehler beim Laden der Betriebsdaten:</strong> {operationsLoadError}
         </div>
       )}
 
-      <div
-        style={{
-          background: "#ffffff",
-          border: "1px solid #e5e7eb",
-          borderRadius: "20px",
-          padding: "24px",
-        }}
-      >
-        <h3 style={{ marginBottom: "20px" }}>Finanzentwicklung letzte 6 Monate</h3>
+      <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+        <h3 className="mb-4 text-[16px] font-bold text-[#eef2ff]">Finanzentwicklung letzte 6 Monate</h3>
         {monthlyChartsLoading ? (
-          <p style={{ color: "#64748B" }}>Lade Monatsdaten…</p>
+          <p className="text-[13px] text-[#6b7a9a]">Lade Monatsdaten…</p>
         ) : monthlyChartsError ? (
-          <p style={{ color: "#B91C1C" }}>{monthlyChartsError}</p>
+          <p className="text-[13px] text-[#f87171]">{monthlyChartsError}</p>
         ) : financeChartData.length === 0 ? (
-          <p style={{ color: "#64748B" }}>Keine Daten vorhanden</p>
+          <p className="text-[13px] text-[#6b7a9a]">Keine Daten vorhanden</p>
         ) : (
-          <div style={{ width: "100%", height: "320px" }}>
+          <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={financeChartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" />
-                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: "#6b7a9a", fontSize: 11 }} />
+                <YAxis tick={{ fill: "#6b7a9a", fontSize: 11 }} />
                 <Tooltip formatter={(value) => `CHF ${value.toLocaleString()}`} />
                 <Bar dataKey="revenue" fill="#f97316" radius={[8, 8, 0, 0]} />
                 <Bar dataKey="costs" fill="#334155" radius={[8, 8, 0, 0]} />
@@ -950,28 +722,21 @@ export default function AdminUebersichtPage() {
         )}
       </div>
 
-      <div
-        style={{
-          background: "#ffffff",
-          border: "1px solid #e5e7eb",
-          borderRadius: "20px",
-          padding: "24px",
-        }}
-      >
-        <h3 style={{ marginBottom: "20px" }}>Belegung Rooms letzte 6 Monate</h3>
+      <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+        <h3 className="mb-4 text-[16px] font-bold text-[#eef2ff]">Belegung Rooms letzte 6 Monate</h3>
         {monthlyChartsLoading ? (
-          <p style={{ color: "#64748B" }}>Lade Monatsdaten…</p>
+          <p className="text-[13px] text-[#6b7a9a]">Lade Monatsdaten…</p>
         ) : monthlyChartsError ? (
-          <p style={{ color: "#B91C1C" }}>{monthlyChartsError}</p>
+          <p className="text-[13px] text-[#f87171]">{monthlyChartsError}</p>
         ) : belegungChartData.length === 0 ? (
-          <p style={{ color: "#64748B" }}>Keine Daten vorhanden</p>
+          <p className="text-[13px] text-[#6b7a9a]">Keine Daten vorhanden</p>
         ) : (
-          <div style={{ width: "100%", height: "320px" }}>
+          <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={belegungChartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" />
-                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: "#6b7a9a", fontSize: 11 }} />
+                <YAxis tick={{ fill: "#6b7a9a", fontSize: 11 }} />
                 <Tooltip />
                 <Legend />
                 <Bar name="Belegt" dataKey="occupied" fill="#16a34a" radius={[8, 8, 0, 0]} />
@@ -982,33 +747,27 @@ export default function AdminUebersichtPage() {
         )}
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "16px",
-        }}
-      >
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
         <KpiKarte
           titel="Offene Rechnungen"
           wert={invoiceStats.openCount}
           hinweis={formatCurrency(invoiceStats.openAmount)}
-          farbe="#D97706"
-          akzent="#FCD34D"
+          farbe="#fb923c"
+          akzent="#d97706"
         />
         <KpiKarte
           titel="Bezahlte Rechnungen"
           wert={invoiceStats.paidCount}
           hinweis={formatCurrency(invoiceStats.paidAmount)}
-          farbe="#15803D"
-          akzent="#86EFAC"
+          farbe="#4ade80"
+          akzent="#15803d"
         />
         <KpiKarte
           titel="Überfällige Rechnungen"
           wert={invoiceStats.overdueCount}
           hinweis={formatCurrency(invoiceStats.overdueAmount)}
-          farbe="#B91C1C"
-          akzent="#FCA5A5"
+          farbe="#f87171"
+          akzent="#b91c1c"
         />
         <KpiKarte
           titel="Kritische Units"
@@ -1018,86 +777,49 @@ export default function AdminUebersichtPage() {
               ? `Schwächste Unit: ${weakestUnitDisplayLabel || operationsStats.weakestUnit.unitId}`
               : "Keine kritischen Units erkannt"
           }
-          farbe="#7C3AED"
-          akzent="#C4B5FD"
+          farbe="#a78bfa"
+          akzent="#7c3aed"
         />
       </div>
 
-      <div
-        style={{
-          background: "#FFFFFF",
-          border: "1px solid #E5E7EB",
-          borderRadius: "22px",
-          padding: "24px",
-          boxShadow: "0 8px 24px rgba(15, 23, 42, 0.04)",
-        }}
-      >
-        <div style={{ marginBottom: "18px" }}>
-          <h3
-            style={{
-              fontSize: "22px",
-              fontWeight: 800,
-              margin: 0,
-              color: "#0F172A",
-              letterSpacing: "-0.02em",
-            }}
-          >
+      <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+        <div className="mb-4">
+          <h3 className="m-0 text-[16px] font-bold text-[#eef2ff]">
             Kritische Hinweise
           </h3>
-          <p style={{ color: "#64748B", margin: "8px 0 0 0" }}>
+          <p className="mt-2 text-[12px] text-[#6b7a9a]">
             Die wichtigsten Auffälligkeiten auf einen Blick.
           </p>
         </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-            gap: "14px",
-          }}
-        >
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3.5">
           {systemWarnings.map((warning, index) => {
             const styles = {
               success: {
-                bg: "#ECFDF5",
-                border: "#A7F3D0",
-                title: "#047857",
-                text: "#065F46",
+                box: "border border-green-500/20 bg-green-500/10",
+                title: "text-green-400",
+                text: "text-[#6b7a9a]",
               },
               warning: {
-                bg: "#FFF7ED",
-                border: "#FED7AA",
-                title: "#C2410C",
-                text: "#9A3412",
+                box: "border border-amber-500/[0.15] bg-amber-500/[0.06]",
+                title: "text-[#fbbf24]",
+                text: "text-[#6b7a9a]",
               },
               danger: {
-                bg: "#FEF2F2",
-                border: "#FECACA",
-                title: "#B91C1C",
-                text: "#991B1B",
+                box: "border border-red-500/20 bg-red-500/10",
+                title: "text-red-400",
+                text: "text-[#6b7a9a]",
               },
             };
             const style = styles[warning.level];
             return (
               <div
                 key={`${warning.title}-${index}`}
-                style={{
-                  background: style.bg,
-                  border: `1px solid ${style.border}`,
-                  borderRadius: "18px",
-                  padding: "16px",
-                }}
+                className={`rounded-[10px] p-4 ${style.box}`}
               >
-                <div
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 800,
-                    color: style.title,
-                    marginBottom: "8px",
-                  }}
-                >
+                <div className={`mb-2 text-[13px] font-bold ${style.title}`}>
                   {warning.title}
                 </div>
-                <div style={{ fontSize: "14px", color: style.text, lineHeight: 1.5 }}>
+                <div className={`text-[13px] leading-relaxed ${style.text}`}>
                   {warning.text}
                 </div>
               </div>
@@ -1106,42 +828,19 @@ export default function AdminUebersichtPage() {
         </div>
       </div>
 
-      <div
-        style={{
-          background: "#FFFFFF",
-          border: "1px solid #E5E7EB",
-          borderRadius: "22px",
-          padding: "24px",
-          boxShadow: "0 8px 24px rgba(15, 23, 42, 0.04)",
-        }}
-      >
-        <h3
-          style={{
-            fontSize: "22px",
-            fontWeight: 800,
-            margin: "0 0 10px 0",
-            color: "#0F172A",
-            letterSpacing: "-0.02em",
-          }}
-        >
+      <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+        <h3 className="m-0 text-[16px] font-bold text-[#eef2ff]">
           Schnellzugriff
         </h3>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: "16px",
-            marginTop: "16px",
-          }}
-        >
+        <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4">
           <SchnellzugriffKarte
             titel="Co-Living-Dashboard"
             text="Operative Steuerung für Belegung, Forecast, Leerstand, Gewinn pro Unit und Room-Status."
             linkText="Zum Co-Living-Dashboard"
             to="/admin/operations"
             icon="🏠"
-            iconBg="#FFF7ED"
-            iconColor="#EA580C"
+            iconBg="#111520"
+            iconColor="#fb923c"
           />
           <SchnellzugriffKarte
             titel="Objekte-Dashboard"
@@ -1149,8 +848,8 @@ export default function AdminUebersichtPage() {
             linkText="Zu den Objekten"
             to="/admin/apartments"
             icon="🏢"
-            iconBg="#EFF6FF"
-            iconColor="#2563EB"
+            iconBg="#111520"
+            iconColor="#7aaeff"
           />
           <SchnellzugriffKarte
             titel="Rechnungs-Dashboard"
@@ -1158,119 +857,83 @@ export default function AdminUebersichtPage() {
             linkText="Zu den Rechnungen"
             to="/admin/invoices"
             icon="💳"
-            iconBg="#F0FDF4"
-            iconColor="#16A34A"
+            iconBg="#111520"
+            iconColor="#4ade80"
           />
         </div>
       </div>
 
-      <div
-        style={{
-          background: "#FFFFFF",
-          border: "1px solid #E5E7EB",
-          borderRadius: "22px",
-          padding: "24px",
-          boxShadow: "0 8px 24px rgba(15, 23, 42, 0.04)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "12px",
-            marginBottom: "16px",
-            flexWrap: "wrap",
-          }}
-        >
+      <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3
-              style={{
-                fontSize: "22px",
-                fontWeight: 800,
-                margin: 0,
-                color: "#0F172A",
-                letterSpacing: "-0.02em",
-              }}
-            >
+            <h3 className="m-0 text-[16px] font-bold text-[#eef2ff]">
               Letzte Rechnungen
             </h3>
-            <p style={{ color: "#64748B", margin: "8px 0 0 0" }}>
+            <p className="mt-2 text-[12px] text-[#6b7a9a]">
               Die zuletzt erfassten Rechnungen aus deinem Billing-Modul.
             </p>
           </div>
           <Link
             to="/admin/invoices"
-            style={{
-              display: "inline-block",
-              background: "#0F172A",
-              color: "#FFFFFF",
-              padding: "10px 14px",
-              borderRadius: "12px",
-              textDecoration: "none",
-              fontWeight: 700,
-              fontSize: "14px",
-              whiteSpace: "nowrap",
-            }}
+            className="inline-block whitespace-nowrap rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-3.5 py-2.5 text-[14px] font-semibold text-white no-underline"
           >
             Alle Rechnungen
           </Link>
         </div>
         {invoiceLoading ? (
-          <p style={{ color: "#64748B" }}>Rechnungen werden geladen...</p>
+          <p className="text-[13px] text-[#6b7a9a]">Rechnungen werden geladen...</p>
         ) : invoiceError ? (
-          <p style={{ color: "#B91C1C" }}>{invoiceError}</p>
+          <p className="text-[13px] text-[#f87171]">{invoiceError}</p>
         ) : latestInvoices.length === 0 ? (
-          <p style={{ color: "#64748B" }}>Noch keine Rechnungen vorhanden.</p>
+          <p className="text-[13px] text-[#6b7a9a]">Noch keine Rechnungen vorhanden.</p>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: "14px",
-              }}
-            >
-              <thead>
-                <tr
-                  style={{
-                    textAlign: "left",
-                    borderBottom: "1px solid #E5E7EB",
-                    background: "#F8FAFC",
-                  }}
-                >
-                  <th style={{ padding: "14px 12px" }}>Rechnungsnummer</th>
-                  <th style={{ padding: "14px 12px" }}>Betrag</th>
-                  <th style={{ padding: "14px 12px" }}>Status</th>
-                  <th style={{ padding: "14px 12px" }}>Rechnungsdatum</th>
-                  <th style={{ padding: "14px 12px" }}>Fälligkeitsdatum</th>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[13px] text-[#eef2ff]">
+              <thead className="bg-[#111520]">
+                <tr className="text-left">
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Rechnungsnummer
+                  </th>
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Betrag
+                  </th>
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Status
+                  </th>
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Rechnungsdatum
+                  </th>
+                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                    Fälligkeitsdatum
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {latestInvoices.map((invoice) => (
-                  <tr key={invoice.id} style={{ borderBottom: "1px solid #F1F5F9" }}>
-                    <td style={{ padding: "14px 12px", fontWeight: 700 }}>
+                  <tr key={invoice.id} className="border-b border-white/[0.05]">
+                    <td className="px-3 py-3 font-semibold">
                       <Link
                         to={`/admin/invoices/${invoice.id}`}
-                        style={{ color: "#2563EB", textDecoration: "none" }}
+                        className="text-[#7aaeff] no-underline hover:underline"
                       >
                         {invoice.invoice_number}
                       </Link>
                     </td>
-                    <td style={{ padding: "14px 12px", fontWeight: 600 }}>
+                    <td className="px-3 py-3 font-medium text-[#eef2ff]">
                       {formatCurrency(invoice.amount)}
                     </td>
-                    <td style={{ padding: "14px 12px" }}>
+                    <td className="px-3 py-3">
                       <StatusBadge status={invoice.status} />
                     </td>
-                    <td style={{ padding: "14px 12px" }}>{formatDate(invoice.issue_date)}</td>
-                    <td style={{ padding: "14px 12px" }}>{formatDate(invoice.due_date)}</td>
+                    <td className="px-3 py-3 font-medium">{formatDate(invoice.issue_date)}</td>
+                    <td className="px-3 py-3 font-medium">{formatDate(invoice.due_date)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
