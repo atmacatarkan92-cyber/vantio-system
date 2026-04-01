@@ -480,13 +480,20 @@ function getAuditEntryDisplayLines(entry, resolvers) {
         }
       }
       if (String(tenOld.notice_given_at || "") !== String(tenNew.notice_given_at || "") && tenNew.notice_given_at) {
-        lines.push(`Kündigung eingereicht: ${formatAuditIsoDateDe(tenNew.notice_given_at)}`);
+        lines.push(`Kündigung erfasst · eingegangen am ${formatAuditIsoDateDe(tenNew.notice_given_at)}`);
       }
       if (String(tenOld.actual_move_out_date || "") !== String(tenNew.actual_move_out_date || "") && tenNew.actual_move_out_date) {
-        lines.push(`Auszug: ${formatAuditIsoDateDe(tenNew.actual_move_out_date)}`);
+        lines.push(`Rückgabe erfolgt am ${formatAuditIsoDateDe(tenNew.actual_move_out_date)}`);
+      }
+      if (String(tenOld.display_end_date || "") !== String(tenNew.display_end_date || "")) {
+        lines.push(
+          `Mietende geändert: ${formatAuditIsoDateDe(tenOld.display_end_date) || "—"} → ${formatAuditIsoDateDe(tenNew.display_end_date) || "—"}`
+        );
       }
       if (String(tenOld.display_status || "") !== String(tenNew.display_status || "")) {
-        lines.push(`Status: ${tenOld.display_status || "—"} → ${tenNew.display_status || "—"}`);
+        lines.push(
+          `Status: ${tenancyDisplayStatusLabelDeUnit(tenOld.display_status)} → ${tenancyDisplayStatusLabelDeUnit(tenNew.display_status)}`
+        );
       }
       return lines.length ? ["Mietverhältnis bearbeitet", ...lines] : ["Mietverhältnis bearbeitet"];
     }
@@ -553,6 +560,16 @@ function formatTenancyMoveOut(iso) {
   return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : s;
 }
 
+/** Align with AdminTenantDetailPage / backend tenancy_derived_display_status. */
+function tenancyDisplayStatusLabelDeUnit(ds) {
+  const k = String(ds || "").toLowerCase();
+  if (k === "active") return "Aktiv";
+  if (k === "reserved") return "Reserviert";
+  if (k === "notice_given") return "Gekündigt";
+  if (k === "ended") return "Beendet";
+  return "—";
+}
+
 function tenancyMieterTableSortRank(t, todayIso) {
   if (isTenancyActiveByDates(t, todayIso)) return 0;
   if (isTenancyReservedSlot(t, todayIso) || isTenancyFuture(t, todayIso)) return 1;
@@ -562,6 +579,9 @@ function tenancyMieterTableSortRank(t, todayIso) {
 /** Display meta for Mieter table: Aktiv / Reserviert / Geplant / Gekündigt / Beendet */
 function tenancyMieterTableStatusMeta(t, todayIso = getTodayIsoForOccupancy()) {
   const ds = String(t?.display_status || "").trim().toLowerCase();
+  if (ds === "active") {
+    return { label: "Aktiv", tone: "green" };
+  }
   if (ds === "notice_given") {
     return { label: "Gekündigt", tone: "amber" };
   }
@@ -3090,9 +3110,9 @@ function AdminUnitDetailPage() {
                         <td className="py-2 pr-4 text-slate-600">
                           {formatTenancyMoveIn(tn.move_in_date)}
                         </td>
-                        <td className="py-2 pr-4 text-slate-600">
+                        <td className="py-2 pr-4 text-slate-600 font-medium">
                           {formatTenancyMoveOut(
-                            tn.display_end_date != null && tn.display_end_date !== ""
+                            tn.display_end_date != null && String(tn.display_end_date).trim() !== ""
                               ? tn.display_end_date
                               : tn.move_out_date
                           )}

@@ -206,17 +206,26 @@ function auditLogToTenantHistoryEvent(log) {
       const o = ov.tenancy;
       const n = nv.tenancy;
       const parts = [];
-      if (String(o.termination_effective_date || "") !== String(n.termination_effective_date || "") && n.termination_effective_date) {
-        parts.push(`Kündigung wirksam per ${formatTenantAuditDateDe(n.termination_effective_date)}`);
+      if (String(o.termination_effective_date || "") !== String(n.termination_effective_date || "")) {
+        if (n.termination_effective_date) {
+          parts.push(`Kündigung wirksam per ${formatTenantAuditDateDe(n.termination_effective_date)}`);
+        }
       }
       if (String(o.notice_given_at || "") !== String(n.notice_given_at || "") && n.notice_given_at) {
-        parts.push(`Kündigung eingereicht: ${formatTenantAuditDateDe(n.notice_given_at)}`);
+        parts.push(`Kündigung erfasst · eingegangen am ${formatTenantAuditDateDe(n.notice_given_at)}`);
       }
       if (String(o.actual_move_out_date || "") !== String(n.actual_move_out_date || "") && n.actual_move_out_date) {
-        parts.push(`Auszug: ${formatTenantAuditDateDe(n.actual_move_out_date)}`);
+        parts.push(`Rückgabe erfolgt am ${formatTenantAuditDateDe(n.actual_move_out_date)}`);
+      }
+      if (String(o.display_end_date || "") !== String(n.display_end_date || "")) {
+        parts.push(
+          `Mietende geändert: ${formatTenantAuditDateDe(o.display_end_date) || "—"} → ${formatTenantAuditDateDe(n.display_end_date) || "—"}`
+        );
       }
       if (String(o.display_status || "") !== String(n.display_status || "")) {
-        parts.push(`Status: ${o.display_status || "—"} → ${n.display_status || "—"}`);
+        parts.push(
+          `Status: ${tenancyDisplayStatusLabelDe(o.display_status)} → ${tenancyDisplayStatusLabelDe(n.display_status)}`
+        );
       }
       return {
         id: `audit-${log.id}`,
@@ -295,9 +304,12 @@ const TENANCY_DISPLAY_STATUS_BADGE = {
   ended: TENANCY_STATUS_BADGE.ended,
 };
 
+/** Canonical Mietende for UI: API display_end_date (matches tenancy_lifecycle.tenancy_display_end_date), then synced move_out. */
 function tenancyDisplayEndIso(tn) {
   if (!tn) return null;
-  return dateOnlyOrNull(tn.display_end_date) || dateOnlyOrNull(tn.move_out_date);
+  const de = dateOnlyOrNull(tn.display_end_date);
+  if (de) return de;
+  return dateOnlyOrNull(tn.move_out_date);
 }
 
 function tenancyDisplayStatusLabelDe(ds) {
@@ -2031,7 +2043,14 @@ export default function AdminTenantDetailPage() {
                         {tenancies.map((tn) => {
                           const st = (tn.status || "").toLowerCase();
                           const tenantDepType = String(tn.tenant_deposit_type || "").toLowerCase();
-                          const dStat = String(tn.display_status || "").toLowerCase();
+                          const derivedStatusKey =
+                            String(tn.display_status || "").trim() ||
+                            deriveTenancyLifecyclePreviewForAssign(
+                              tn.move_in_date,
+                              tn.termination_effective_date,
+                              tn.actual_move_out_date
+                            );
+                          const dStat = String(derivedStatusKey || "").toLowerCase();
                           const badge =
                             TENANCY_DISPLAY_STATUS_BADGE[dStat] ||
                             TENANCY_STATUS_BADGE[st] ||
@@ -2089,12 +2108,27 @@ export default function AdminTenantDetailPage() {
                                           border: `1px solid ${badge.border}`,
                                         }}
                                       >
-                                        {dStat
-                                          ? tenancyDisplayStatusLabelDe(tn.display_status)
-                                          : tn.status || "—"}
+                                        {tenancyDisplayStatusLabelDe(derivedStatusKey)}
                                       </span>
                                     </div>
                                     <div style={{ color: "#475569" }}>
+                                      <div
+                                        style={{
+                                          marginBottom: "8px",
+                                          paddingBottom: "8px",
+                                          borderBottom: "1px solid #E2E8F0",
+                                        }}
+                                      >
+                                        <div style={{ fontSize: "10px", fontWeight: 700, color: "#64748B", letterSpacing: "0.02em" }}>
+                                          Mietende / Vertragsende
+                                        </div>
+                                        <div style={{ fontSize: "14px", fontWeight: 800, color: "#0F172A", marginTop: "2px" }}>
+                                          {formatDateOnly(tenancyDisplayEndIso(tn) || "") || "—"}
+                                        </div>
+                                      </div>
+                                      <div style={{ fontSize: "10px", fontWeight: 700, color: "#94A3B8", marginBottom: "4px" }}>
+                                        Kündigung &amp; Rückgabe
+                                      </div>
                                       <div>
                                         <span style={{ color: "#64748B", fontWeight: 600 }}>
                                           Kündigung eingegangen am{" "}
@@ -2112,12 +2146,6 @@ export default function AdminTenantDetailPage() {
                                           Rückgabe erfolgt am{" "}
                                         </span>
                                         {formatDateOnly(dateOnlyOrNull(tn.actual_move_out_date) || "")}
-                                      </div>
-                                      <div>
-                                        <span style={{ color: "#64748B", fontWeight: 600 }}>
-                                          Mietende / Vertragsende{" "}
-                                        </span>
-                                        {formatDateOnly(tenancyDisplayEndIso(tn) || "")}
                                       </div>
                                     </div>
                                     {urgencyNote ? (
@@ -2147,9 +2175,7 @@ export default function AdminTenantDetailPage() {
                                       border: `1px solid ${badge.border}`,
                                     }}
                                   >
-                                    {dStat
-                                      ? tenancyDisplayStatusLabelDe(tn.display_status)
-                                      : tn.status || "—"}
+                                    {tenancyDisplayStatusLabelDe(derivedStatusKey)}
                                   </span>
                                 </td>
                                 <td style={{ ...tdCell, textAlign: "right", fontWeight: 600, color: "#0F172A", verticalAlign: "top" }}>
@@ -2336,9 +2362,9 @@ export default function AdminTenantDetailPage() {
                                         width: "100%",
                                       }}
                                     >
-                                      <strong style={{ color: "#334155" }}>Kündigung / Mietende</strong>
+                                      <strong style={{ color: "#334155" }}>Vorschau Mietende / Vertragsende</strong>
                                       {" · "}
-                                      Mietende / Vertragsende (angezeigt):{" "}
+                                      ergibt sich aus Kündigung &amp; Rückgabe:{" "}
                                       <strong style={{ color: "#0F172A" }}>
                                         {formatDateOnly(
                                           tenancyDraftDisplayEndIso(
@@ -2717,7 +2743,7 @@ export default function AdminTenantDetailPage() {
                                                     tenancyEditActualMoveOut,
                                                     tenancyEditTerminationEffective
                                                   ) || tenancyDisplayEndIso(tn) ||
-                                                    tn.move_out_date
+                                                    ""
                                                 )
                                               )
                                             }
@@ -2777,8 +2803,7 @@ export default function AdminTenantDetailPage() {
                                                 maxWidth: "220px",
                                               }}
                                             >
-                                              Ende wird automatisch aus Mietende übernommen (gespeichert ohne festes
-                                              Enddatum).
+                                              Ende wird automatisch aus Mietende übernommen.
                                             </div>
                                           </div>
                                         )}
