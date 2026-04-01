@@ -117,6 +117,30 @@ def _monthly_revenue_equivalent_for_tenancy_on_date(
     return round(total, 2)
 
 
+def _batch_attach_monthly_revenue_equivalent(session, tenancies: list[Tenancy]) -> None:
+    """
+    Batch-load TenancyRevenue for the given tenancies and set t._monthly_revenue_equivalent
+    using _monthly_revenue_equivalent_for_tenancy_on_date (same semantics as room tenancy list).
+    """
+    if not tenancies:
+        return
+    ids = [str(t.id) for t in tenancies]
+    rev_rows: list[TenancyRevenue] = (
+        list(session.exec(select(TenancyRevenue).where(TenancyRevenue.tenancy_id.in_(ids))).all())
+        if ids
+        else []
+    )
+    by_tid: dict[str, list[TenancyRevenue]] = {}
+    for r in rev_rows:
+        by_tid.setdefault(str(r.tenancy_id), []).append(r)
+    today = date.today()
+    for t in tenancies:
+        rows = by_tid.get(str(t.id), [])
+        t._monthly_revenue_equivalent = _monthly_revenue_equivalent_for_tenancy_on_date(
+            t, rows, today
+        )
+
+
 class TenancyRevenueCreateBody(BaseModel):
     type: str
     amount_chf: float
@@ -423,7 +447,8 @@ def admin_list_tenancies(
         count_query = count_query.where(Tenancy.status == status)
     _total_rows = session.exec(count_query).all()
     total = int(_total_rows[0]) if _total_rows else 0
-    paged_rows = session.exec(base_query.offset(skip).limit(limit)).all()
+    paged_rows = list(session.exec(base_query.offset(skip).limit(limit)).all())
+    _batch_attach_monthly_revenue_equivalent(session, paged_rows)
     items = [_tenancy_to_dict(t) for t in paged_rows]
     return TenancyListResponse(items=items, total=total, skip=skip, limit=limit)
 
@@ -448,23 +473,7 @@ def admin_list_tenancies_for_room(
         .order_by(Tenancy.move_in_date.desc())
     )
     tenancies = list(session.exec(q).all())
-
-    # Attach monthly_revenue_equivalent for UI/KPI displays (tenancy-driven revenue).
-    # Query all revenue rows for the returned tenancies in one go.
-    ids = [str(t.id) for t in tenancies]
-    rev_rows: list[TenancyRevenue] = (
-        list(session.exec(select(TenancyRevenue).where(TenancyRevenue.tenancy_id.in_(ids))).all())
-        if ids
-        else []
-    )
-    by_tid: dict[str, list[TenancyRevenue]] = {}
-    for r in rev_rows:
-        by_tid.setdefault(str(r.tenancy_id), []).append(r)
-    today = date.today()
-    for t in tenancies:
-        rows = by_tid.get(str(t.id), [])
-        t._monthly_revenue_equivalent = _monthly_revenue_equivalent_for_tenancy_on_date(t, rows, today)
-
+    _batch_attach_monthly_revenue_equivalent(session, tenancies)
     return [_tenancy_to_dict(t) for t in tenancies]
 
 
