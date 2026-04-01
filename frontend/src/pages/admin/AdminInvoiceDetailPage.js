@@ -33,35 +33,35 @@ function getStatusMeta(status) {
   if (normalized === "paid") {
     return {
       label: "Bezahlt",
-      bg: "#DCFCE7",
-      color: "#166534",
-      border: "#86EFAC",
+      bg: "rgba(34, 197, 94, 0.1)",
+      color: "#4ade80",
+      border: "rgba(34, 197, 94, 0.2)",
     };
   }
 
   if (normalized === "overdue") {
     return {
       label: "Überfällig",
-      bg: "#FEE2E2",
-      color: "#991B1B",
-      border: "#FCA5A5",
+      bg: "rgba(248, 113, 113, 0.1)",
+      color: "#f87171",
+      border: "rgba(248, 113, 113, 0.2)",
     };
   }
 
   if (normalized === "cancelled") {
     return {
       label: "Storniert",
-      bg: "#E5E7EB",
-      color: "#374151",
-      border: "#D1D5DB",
+      bg: "rgba(255, 255, 255, 0.05)",
+      color: "#6b7a9a",
+      border: "rgba(255, 255, 255, 0.08)",
     };
   }
 
   return {
     label: "Offen",
-    bg: "#FEF3C7",
-    color: "#92400E",
-    border: "#FCD34D",
+    bg: "rgba(245, 158, 11, 0.1)",
+    color: "#fbbf24",
+    border: "rgba(245, 158, 11, 0.2)",
   };
 }
 
@@ -73,7 +73,7 @@ function getStatusButtonStyle(status, currentStatus, updatingStatus) {
   const baseStyle = {
     color: "#fff",
     border: "none",
-    borderRadius: "12px",
+    borderRadius: "8px",
     padding: "12px 16px",
     fontWeight: 700,
     cursor: updatingStatus ? "not-allowed" : "pointer",
@@ -84,54 +84,62 @@ function getStatusButtonStyle(status, currentStatus, updatingStatus) {
   if (status === "open") {
     return {
       ...baseStyle,
-      background: isActive ? "#B45309" : "#F59E0B",
-      boxShadow: isActive ? "0 0 0 3px rgba(245, 158, 11, 0.15)" : "none",
+      background: isActive ? "#c2410c" : "#9a3412",
+      boxShadow: isActive ? "0 0 0 3px rgba(251, 146, 60, 0.25)" : "none",
     };
   }
 
   if (status === "paid") {
     return {
       ...baseStyle,
-      background: isActive ? "#166534" : "#16A34A",
-      boxShadow: isActive ? "0 0 0 3px rgba(34, 197, 94, 0.15)" : "none",
+      background: isActive ? "#15803d" : "#166534",
+      boxShadow: isActive ? "0 0 0 3px rgba(74, 222, 128, 0.2)" : "none",
     };
   }
 
   if (status === "overdue") {
     return {
       ...baseStyle,
-      background: isActive ? "#991B1B" : "#DC2626",
-      boxShadow: isActive ? "0 0 0 3px rgba(239, 68, 68, 0.15)" : "none",
+      background: isActive ? "#b91c1c" : "#991b1b",
+      boxShadow: isActive ? "0 0 0 3px rgba(248, 113, 113, 0.25)" : "none",
     };
   }
 
   return {
     ...baseStyle,
-    background: isActive ? "#475569" : "#64748B",
-    boxShadow: isActive ? "0 0 0 3px rgba(100, 116, 139, 0.15)" : "none",
+    background: isActive ? "#475569" : "#334155",
+    boxShadow: isActive ? "0 0 0 3px rgba(148, 163, 184, 0.2)" : "none",
   };
 }
 
-function InfoCard({ label, value, accent = "#E5E7EB" }) {
+function InfoCard({ label, value, accent = "#7aaeff" }) {
   return (
     <div
       style={{
-        background: "#FFFFFF",
-        border: "1px solid #E5E7EB",
+        background: "#141824",
+        border: "1px solid rgba(255, 255, 255, 0.07)",
         borderTop: `4px solid ${accent}`,
-        borderRadius: "18px",
+        borderRadius: "14px",
         padding: "20px",
-        boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
       }}
     >
-      <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
+      <div
+        style={{
+          fontSize: "11px",
+          color: "#6b7a9a",
+          marginBottom: "8px",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "1px",
+        }}
+      >
         {label}
       </div>
       <div
         style={{
-          fontSize: "28px",
-          fontWeight: 800,
-          color: "#0F172A",
+          fontSize: "24px",
+          fontWeight: 700,
+          color: "#eef2ff",
           lineHeight: 1.15,
         }}
       >
@@ -144,8 +152,8 @@ function InfoCard({ label, value, accent = "#E5E7EB" }) {
 function DetailRow({ label, value }) {
   return (
     <>
-      <div style={{ color: "#64748B", fontWeight: 600 }}>{label}</div>
-      <div style={{ color: "#0F172A", fontWeight: 500 }}>{value}</div>
+      <div style={{ color: "#6b7a9a", fontWeight: 600, fontSize: "10px" }}>{label}</div>
+      <div style={{ color: "#eef2ff", fontWeight: 500, fontSize: "13px" }}>{value}</div>
     </>
   );
 }
@@ -269,18 +277,25 @@ function AdminInvoiceDetailPage() {
   };
 
   if (loading) {
-    return <p>Rechnung wird geladen...</p>;
+    return (
+      <div className="bg-[#07090f] text-[#eef2ff] min-h-full" style={{ padding: "8px 0" }}>
+        <p style={{ margin: 0, color: "#6b7a9a" }}>Rechnung wird geladen...</p>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div style={{ display: "grid", gap: "16px" }}>
-        <p style={{ color: "#DC2626", fontWeight: 600 }}>{error}</p>
+      <div
+        className="bg-[#07090f] text-[#eef2ff] min-h-full"
+        style={{ display: "grid", gap: "16px" }}
+      >
+        <p style={{ color: "#f87171", fontWeight: 600 }}>{error}</p>
 
         <Link
           to="/admin/invoices"
           style={{
-            color: "#2563EB",
+            color: "#7aaeff",
             textDecoration: "none",
             fontWeight: 600,
           }}
@@ -292,12 +307,15 @@ function AdminInvoiceDetailPage() {
   }
 
   return (
-    <div style={{ display: "grid", gap: "24px" }}>
+    <div
+      className="bg-[#07090f] text-[#eef2ff] min-h-full"
+      style={{ display: "grid", gap: "24px" }}
+    >
       <div>
         <Link
           to="/admin/invoices"
           style={{
-            color: "#2563EB",
+            color: "#7aaeff",
             textDecoration: "none",
             fontSize: "14px",
             fontWeight: 600,
@@ -311,7 +329,7 @@ function AdminInvoiceDetailPage() {
         <div
           style={{
             fontSize: "12px",
-            color: "#f97316",
+            color: "#fb923c",
             fontWeight: 700,
             marginBottom: "8px",
           }}
@@ -319,11 +337,11 @@ function AdminInvoiceDetailPage() {
           Vantio
         </div>
 
-        <h2 style={{ fontSize: "36px", fontWeight: 800, margin: 0 }}>
+        <h2 style={{ fontSize: "22px", fontWeight: 700, margin: 0 }}>
           {invoice.invoice_number}
         </h2>
 
-        <p style={{ color: "#64748B", marginTop: "10px" }}>
+        <p style={{ color: "#6b7a9a", marginTop: "10px", fontSize: "12px" }}>
           Detailansicht der Rechnung mit Statusverwaltung und PDF-Download.
         </p>
       </div>
@@ -338,20 +356,28 @@ function AdminInvoiceDetailPage() {
         <InfoCard
           label="Betrag"
           value={formatCurrency(invoice.amount, invoice.currency)}
-          accent="#CBD5E1"
+          accent="#7aaeff"
         />
 
         <div
           style={{
-            background: "#FFFFFF",
-            border: "1px solid #E5E7EB",
+            background: "#141824",
+            border: "1px solid rgba(255, 255, 255, 0.07)",
             borderTop: `4px solid ${statusMeta.border}`,
-            borderRadius: "18px",
+            borderRadius: "14px",
             padding: "20px",
-            boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
           }}
         >
-          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
+          <div
+            style={{
+              fontSize: "11px",
+              color: "#6b7a9a",
+              marginBottom: "8px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+            }}
+          >
             Status
           </div>
 
@@ -364,7 +390,7 @@ function AdminInvoiceDetailPage() {
               background: statusMeta.bg,
               color: statusMeta.color,
               border: `1px solid ${statusMeta.border}`,
-              fontSize: "13px",
+              fontSize: "10px",
               fontWeight: 700,
             }}
           >
@@ -375,28 +401,36 @@ function AdminInvoiceDetailPage() {
         <InfoCard
           label="Rechnungsdatum"
           value={formatDate(invoice.issue_date)}
-          accent="#CBD5E1"
+          accent="#7aaeff"
         />
 
         <InfoCard
           label="Fälligkeitsdatum"
           value={formatDate(invoice.due_date)}
-          accent="#CBD5E1"
+          accent="#7aaeff"
         />
       </div>
 
       <div
         style={{
-          background: "#FFFFFF",
-          border: "1px solid #E5E7EB",
-          borderRadius: "18px",
+          background: "#141824",
+          border: "1px solid rgba(255, 255, 255, 0.07)",
+          borderRadius: "14px",
           padding: "24px",
           display: "grid",
           gap: "18px",
-          boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
         }}
       >
-        <h3 style={{ fontSize: "22px", fontWeight: 700, margin: 0 }}>
+        <h3
+          style={{
+            fontSize: "9px",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+            color: "#6b7a9a",
+            margin: 0,
+          }}
+        >
           Rechnungsdetails
         </h3>
 
@@ -433,14 +467,22 @@ function AdminInvoiceDetailPage() {
 
       <div
         style={{
-          background: "#FFFFFF",
-          border: "1px solid #E5E7EB",
-          borderRadius: "18px",
+          background: "#141824",
+          border: "1px solid rgba(255, 255, 255, 0.07)",
+          borderRadius: "14px",
           padding: "24px",
-          boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
         }}
       >
-        <h3 style={{ fontSize: "22px", fontWeight: 700, marginTop: 0 }}>
+        <h3
+          style={{
+            fontSize: "9px",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+            color: "#6b7a9a",
+            marginTop: 0,
+          }}
+        >
           Aktionen
         </h3>
 
@@ -454,13 +496,9 @@ function AdminInvoiceDetailPage() {
         >
           <button
             onClick={handleDownloadPdf}
+            className="bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] text-white font-semibold rounded-[8px] border-none"
             style={{
-              background: "#2563EB",
-              color: "#fff",
-              border: "none",
-              borderRadius: "12px",
               padding: "12px 16px",
-              fontWeight: 700,
               cursor: "pointer",
             }}
           >

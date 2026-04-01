@@ -28,23 +28,31 @@ function SummaryCard({ title, value, accent }) {
   return (
     <div
       style={{
-        background: "#fff",
-        border: "1px solid #E5E7EB",
+        background: "#141824",
+        border: "1px solid rgba(255, 255, 255, 0.07)",
         borderTop: `4px solid ${accent}`,
-        borderRadius: "18px",
+        borderRadius: "14px",
         padding: "20px",
-        boxShadow: "0 4px 14px rgba(15,23,42,0.04)",
       }}
     >
-      <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
+      <div
+        style={{
+          fontSize: "11px",
+          color: "#6b7a9a",
+          marginBottom: "8px",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "1px",
+        }}
+      >
         {title}
       </div>
 
       <div
         style={{
-          fontSize: "32px",
-          fontWeight: 800,
-          color: "#0F172A",
+          fontSize: "24px",
+          fontWeight: 700,
+          color: "#eef2ff",
         }}
       >
         {value}
@@ -99,12 +107,15 @@ function AdminRevenuePage() {
   }, [invoices]);
 
   return (
-    <div style={{ display: "grid", gap: "24px" }}>
+    <div
+      className="bg-[#07090f] text-[#eef2ff] min-h-full"
+      style={{ display: "grid", gap: "24px" }}
+    >
       <div>
         <div
           style={{
             fontSize: "12px",
-            color: "#f97316",
+            color: "#fb923c",
             fontWeight: 700,
             marginBottom: "8px",
           }}
@@ -112,11 +123,11 @@ function AdminRevenuePage() {
           Vantio
         </div>
 
-        <h2 style={{ fontSize: "36px", fontWeight: 800, margin: 0 }}>
+        <h2 style={{ fontSize: "22px", fontWeight: 700, margin: 0 }}>
           Einnahmen
         </h2>
 
-        <p style={{ color: "#64748B", marginTop: "10px" }}>
+        <p style={{ color: "#6b7a9a", marginTop: "10px", fontSize: "12px" }}>
           Übersicht über bezahlte Rechnungen und erwartete Einnahmen.
         </p>
       </div>
@@ -131,44 +142,53 @@ function AdminRevenuePage() {
         <SummaryCard
           title="Gesamte Einnahmen"
           value={formatCurrency(stats.totalRevenue)}
-          accent="#22C55E"
+          accent="#4ade80"
         />
 
         <SummaryCard
           title="Erwartete Einnahmen"
           value={formatCurrency(stats.expectedRevenue)}
-          accent="#F59E0B"
+          accent="#fb923c"
         />
 
         <SummaryCard
           title="Überfällige Beträge"
           value={formatCurrency(stats.overdueAmount)}
-          accent="#EF4444"
+          accent="#f87171"
         />
 
         <SummaryCard
           title="Bezahlte Rechnungen"
           value={stats.paidCount}
-          accent="#64748B"
+          accent="#7aaeff"
         />
       </div>
 
       <div
         style={{
-          background: "#fff",
-          border: "1px solid #E5E7EB",
-          borderRadius: "18px",
+          background: "#141824",
+          border: "1px solid rgba(255, 255, 255, 0.07)",
+          borderRadius: "14px",
           padding: "24px",
-          boxShadow: "0 4px 14px rgba(15,23,42,0.04)",
         }}
       >
-        <h3 style={{ fontSize: "22px", fontWeight: 700, marginTop: 0 }}>
+        <h3
+          style={{
+            fontSize: "9px",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+            color: "#6b7a9a",
+            marginTop: 0,
+            marginBottom: "16px",
+          }}
+        >
           Letzte Einnahmen
         </h3>
 
-        {loading && <p>Daten werden geladen...</p>}
+        {loading && <p style={{ color: "#6b7a9a" }}>Daten werden geladen...</p>}
 
-        {error && <p style={{ color: "red" }}>{error}</p>}
+        {error && <p style={{ color: "#f87171" }}>{error}</p>}
 
         {!loading && !error && (
           <table
@@ -182,8 +202,12 @@ function AdminRevenuePage() {
               <tr
                 style={{
                   textAlign: "left",
-                  borderBottom: "1px solid #E5E7EB",
-                  color: "#64748B",
+                  background: "#111520",
+                  color: "#6b7a9a",
+                  fontSize: "9px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.8px",
                 }}
               >
                 <th style={{ padding: "12px" }}>Rechnung</th>
@@ -197,21 +221,37 @@ function AdminRevenuePage() {
               {invoices.slice(0, 10).map((inv) => (
                 <tr
                   key={inv.id}
-                  style={{ borderBottom: "1px solid #F1F5F9" }}
+                  style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
                 >
-                  <td style={{ padding: "12px", fontWeight: 600 }}>
+                  <td
+                    style={{
+                      padding: "12px",
+                      fontWeight: 600,
+                      color: "#eef2ff",
+                      fontSize: "13px",
+                    }}
+                  >
                     {inv.invoice_number}
                   </td>
 
-                  <td style={{ padding: "12px" }}>
+                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
                     {formatDate(inv.issue_date)}
                   </td>
 
-                  <td style={{ padding: "12px" }}>
+                  <td
+                    style={{
+                      padding: "12px",
+                      color: "#4ade80",
+                      fontSize: "13px",
+                      fontWeight: 500,
+                    }}
+                  >
                     {formatCurrency(inv.amount, inv.currency)}
                   </td>
 
-                  <td style={{ padding: "12px" }}>{inv.status}</td>
+                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                    {inv.status}
+                  </td>
                 </tr>
               ))}
             </tbody>

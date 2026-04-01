@@ -18,29 +18,37 @@ function SummaryCard({ title, value, hint, accentColor }) {
   return (
     <div
       style={{
-        background: "#FFFFFF",
-        border: "1px solid #E5E7EB",
+        background: "#141824",
+        border: "1px solid rgba(255, 255, 255, 0.07)",
         borderTop: `4px solid ${accentColor}`,
-        borderRadius: "18px",
+        borderRadius: "14px",
         padding: "20px",
-        boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
       }}
     >
-      <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
+      <div
+        style={{
+          fontSize: "11px",
+          color: "#6b7a9a",
+          marginBottom: "8px",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "1px",
+        }}
+      >
         {title}
       </div>
       <div
         style={{
-          fontSize: "32px",
-          fontWeight: 800,
-          color: "#0F172A",
+          fontSize: "24px",
+          fontWeight: 700,
+          color: "#eef2ff",
           lineHeight: 1.1,
         }}
       >
         {value}
       </div>
       {hint ? (
-        <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
+        <div style={{ marginTop: "8px", color: "#6b7a9a", fontSize: "11px" }}>
           {hint}
         </div>
       ) : null}
@@ -121,12 +129,15 @@ function AdminExpensesPage() {
   }, [expenseRows]);
 
   return (
-    <div style={{ display: "grid", gap: "24px" }}>
+    <div
+      className="bg-[#07090f] text-[#eef2ff] min-h-full"
+      style={{ display: "grid", gap: "24px" }}
+    >
       <div>
         <div
           style={{
             fontSize: "12px",
-            color: "#f97316",
+            color: "#fb923c",
             fontWeight: 700,
             marginBottom: "8px",
           }}
@@ -134,11 +145,11 @@ function AdminExpensesPage() {
           Vantio
         </div>
 
-        <h2 style={{ fontSize: "36px", fontWeight: 800, margin: 0 }}>
+        <h2 style={{ fontSize: "22px", fontWeight: 700, margin: 0 }}>
           Ausgaben
         </h2>
 
-        <p style={{ color: "#64748B", marginTop: "10px" }}>
+        <p style={{ color: "#6b7a9a", marginTop: "10px", fontSize: "12px" }}>
           Übersicht über laufende Mietkosten, Nebenkosten und Reinigung pro Unit.
         </p>
       </div>
@@ -154,39 +165,38 @@ function AdminExpensesPage() {
           title="Laufende Ausgaben total"
           value={formatCurrency(summary.totalExpenses)}
           hint="Aktive monatliche Kosten"
-          accentColor="#334155"
+          accentColor="#7aaeff"
         />
 
         <SummaryCard
           title="Mietkosten Vermieter"
           value={formatCurrency(summary.totalRent)}
           hint="Monatliche Hauptmieten"
-          accentColor="#2563EB"
+          accentColor="#5b8cff"
         />
 
         <SummaryCard
           title="Nebenkosten"
           value={formatCurrency(summary.totalUtilities)}
           hint="Laufende Zusatzkosten"
-          accentColor="#F59E0B"
+          accentColor="#fb923c"
         />
 
         <SummaryCard
           title="Reinigung"
           value={formatCurrency(summary.totalCleaning)}
           hint="Monatliche Reinigungskosten"
-          accentColor="#16A34A"
+          accentColor="#4ade80"
         />
       </div>
 
       <div
         style={{
-          background: "#FFFFFF",
-          border: "1px solid #E5E7EB",
-          borderRadius: "18px",
+          background: "#141824",
+          border: "1px solid rgba(255, 255, 255, 0.07)",
+          borderRadius: "14px",
           padding: "20px",
           overflowX: "auto",
-          boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
         }}
       >
         <div
@@ -197,17 +207,26 @@ function AdminExpensesPage() {
             marginBottom: "16px",
           }}
         >
-          <h3 style={{ fontSize: "20px", fontWeight: 700, margin: 0 }}>
+          <h3
+            style={{
+              fontSize: "9px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              color: "#6b7a9a",
+              margin: 0,
+            }}
+          >
             Ausgaben pro Unit
           </h3>
 
-          <div style={{ fontSize: "14px", color: "#64748B" }}>
+          <div style={{ fontSize: "12px", color: "#6b7a9a" }}>
             {expenseRows.length} Einträge
           </div>
         </div>
 
         {expenseRows.length === 0 ? (
-          <p>Keine Units gefunden.</p>
+          <p style={{ color: "#6b7a9a" }}>Keine Units gefunden.</p>
         ) : (
           <table
             style={{
@@ -220,8 +239,12 @@ function AdminExpensesPage() {
               <tr
                 style={{
                   textAlign: "left",
-                  borderBottom: "1px solid #E5E7EB",
-                  color: "#64748B",
+                  background: "#111520",
+                  color: "#6b7a9a",
+                  fontSize: "9px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.8px",
                 }}
               >
                 <th style={{ padding: "12px" }}>Unit</th>
@@ -240,20 +263,46 @@ function AdminExpensesPage() {
               {expenseRows.map((row) => (
                 <tr
                   key={row.id}
-                  style={{ borderBottom: "1px solid #F1F5F9" }}
+                  style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
                 >
-                  <td style={{ padding: "12px", fontWeight: 700, color: "#0F172A" }}>
+                  <td
+                    style={{
+                      padding: "12px",
+                      fontWeight: 700,
+                      color: "#eef2ff",
+                      fontSize: "13px",
+                    }}
+                  >
                     {row.unitId}
                   </td>
-                  <td style={{ padding: "12px" }}>{row.place}</td>
-                  <td style={{ padding: "12px" }}>{row.type}</td>
-                  <td style={{ padding: "12px" }}>{formatCurrency(row.rent)}</td>
-                  <td style={{ padding: "12px" }}>{formatCurrency(row.utilities)}</td>
-                  <td style={{ padding: "12px" }}>{formatCurrency(row.cleaning)}</td>
-                  <td style={{ padding: "12px", fontWeight: 700 }}>
+                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                    {row.place}
+                  </td>
+                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                    {row.type}
+                  </td>
+                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                    {formatCurrency(row.rent)}
+                  </td>
+                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                    {formatCurrency(row.utilities)}
+                  </td>
+                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                    {formatCurrency(row.cleaning)}
+                  </td>
+                  <td
+                    style={{
+                      padding: "12px",
+                      fontWeight: 700,
+                      color: "#eef2ff",
+                      fontSize: "13px",
+                    }}
+                  >
                     {formatCurrency(row.total)}
                   </td>
-                  <td style={{ padding: "12px" }}>{row.leaseStartDate}</td>
+                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                    {row.leaseStartDate}
+                  </td>
                   <td style={{ padding: "12px" }}>
                     <span
                       style={{
@@ -261,13 +310,15 @@ function AdminExpensesPage() {
                         alignItems: "center",
                         padding: "6px 10px",
                         borderRadius: "999px",
-                        fontSize: "12px",
+                        fontSize: "10px",
                         fontWeight: 700,
-                        background: row.leaseStarted ? "#DCFCE7" : "#FEF3C7",
-                        color: row.leaseStarted ? "#166534" : "#92400E",
+                        background: row.leaseStarted
+                          ? "rgba(34, 197, 94, 0.1)"
+                          : "rgba(245, 158, 11, 0.1)",
+                        color: row.leaseStarted ? "#4ade80" : "#fbbf24",
                         border: row.leaseStarted
-                          ? "1px solid #86EFAC"
-                          : "1px solid #FCD34D",
+                          ? "1px solid rgba(34, 197, 94, 0.2)"
+                          : "1px solid rgba(245, 158, 11, 0.2)",
                       }}
                     >
                       {row.leaseStarted ? "Aktiv" : "Start in Zukunft"}
@@ -283,11 +334,11 @@ function AdminExpensesPage() {
       {summary.futureLeaseUnits > 0 && (
         <div
           style={{
-            background: "#FFFBEB",
-            border: "1px solid #FDE68A",
-            borderRadius: "18px",
+            background: "rgba(245, 158, 11, 0.06)",
+            border: "1px solid rgba(245, 158, 11, 0.15)",
+            borderRadius: "10px",
             padding: "18px 20px",
-            color: "#92400E",
+            color: "#fbbf24",
             fontSize: "14px",
             fontWeight: 500,
           }}

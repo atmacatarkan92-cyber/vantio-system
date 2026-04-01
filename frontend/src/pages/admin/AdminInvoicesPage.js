@@ -34,35 +34,35 @@ function getStatusMeta(status) {
   if (normalized === "paid") {
     return {
       label: "Bezahlt",
-      bg: "#DCFCE7",
-      color: "#166534",
-      border: "#86EFAC",
+      bg: "rgba(34, 197, 94, 0.1)",
+      color: "#4ade80",
+      border: "rgba(34, 197, 94, 0.2)",
     };
   }
 
   if (normalized === "overdue") {
     return {
       label: "Überfällig",
-      bg: "#FEE2E2",
-      color: "#991B1B",
-      border: "#FCA5A5",
+      bg: "rgba(248, 113, 113, 0.1)",
+      color: "#f87171",
+      border: "rgba(248, 113, 113, 0.2)",
     };
   }
 
   if (normalized === "cancelled") {
     return {
       label: "Storniert",
-      bg: "#E5E7EB",
-      color: "#374151",
-      border: "#D1D5DB",
+      bg: "rgba(255, 255, 255, 0.05)",
+      color: "#6b7a9a",
+      border: "rgba(255, 255, 255, 0.08)",
     };
   }
 
   return {
     label: "Offen",
-    bg: "#FEF3C7",
-    color: "#92400E",
-    border: "#FCD34D",
+    bg: "rgba(245, 158, 11, 0.1)",
+    color: "#fbbf24",
+    border: "rgba(245, 158, 11, 0.2)",
   };
 }
 
@@ -75,28 +75,36 @@ function SummaryCard({ title, count, amount, accentColor }) {
   return (
     <div
       style={{
-        background: "#FFFFFF",
-        border: "1px solid #E5E7EB",
+        background: "#141824",
+        border: "1px solid rgba(255, 255, 255, 0.07)",
         borderTop: `4px solid ${accentColor}`,
-        borderRadius: "18px",
+        borderRadius: "14px",
         padding: "20px",
-        boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
       }}
     >
-      <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
+      <div
+        style={{
+          fontSize: "11px",
+          color: "#6b7a9a",
+          marginBottom: "8px",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "1px",
+        }}
+      >
         {title}
       </div>
       <div
         style={{
-          fontSize: "34px",
-          fontWeight: 800,
-          color: "#0F172A",
+          fontSize: "24px",
+          fontWeight: 700,
+          color: "#eef2ff",
           lineHeight: 1.1,
         }}
       >
         {count}
       </div>
-      <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
+      <div style={{ marginTop: "8px", color: "#6b7a9a", fontSize: "11px" }}>
         {formatCurrency(amount)}
       </div>
     </div>
@@ -321,13 +329,26 @@ function AdminInvoicesPage() {
     return "Rechnungen";
   }, [statusFilter]);
 
+  const inputSelectStyle = {
+    padding: "10px 12px",
+    borderRadius: "8px",
+    border: "1px solid rgba(255, 255, 255, 0.08)",
+    fontSize: "14px",
+    background: "#111520",
+    color: "#eef2ff",
+    minWidth: "100px",
+  };
+
   return (
-    <div style={{ display: "grid", gap: "24px" }}>
+    <div
+      className="bg-[#07090f] text-[#eef2ff] min-h-full"
+      style={{ display: "grid", gap: "24px" }}
+    >
       <div>
         <div
           style={{
             fontSize: "12px",
-            color: "#f97316",
+            color: "#fb923c",
             fontWeight: 700,
             marginBottom: "8px",
           }}
@@ -335,11 +356,11 @@ function AdminInvoicesPage() {
           Vantio
         </div>
 
-        <h2 style={{ fontSize: "36px", fontWeight: 800, margin: 0 }}>
+        <h2 style={{ fontSize: "22px", fontWeight: 700, margin: 0 }}>
           {pageTitle}
         </h2>
 
-        <p style={{ color: "#64748B", marginTop: "10px" }}>
+        <p style={{ color: "#6b7a9a", marginTop: "10px", fontSize: "12px" }}>
           Übersicht über offene, bezahlte, überfällige und stornierte Rechnungen.
         </p>
       </div>
@@ -355,78 +376,74 @@ function AdminInvoicesPage() {
           title="Total Rechnungen"
           count={summary.totalCount}
           amount={summary.totalAmount}
-          accentColor="#CBD5E1"
+          accentColor="#7aaeff"
         />
 
         <SummaryCard
           title="Offen"
           count={summary.openCount}
           amount={summary.openAmount}
-          accentColor="#F59E0B"
+          accentColor="#fb923c"
         />
 
         <SummaryCard
           title="Bezahlt"
           count={summary.paidCount}
           amount={summary.paidAmount}
-          accentColor="#22C55E"
+          accentColor="#4ade80"
         />
 
         <SummaryCard
           title="Überfällig"
           count={summary.overdueCount}
           amount={summary.overdueAmount}
-          accentColor="#EF4444"
+          accentColor="#f87171"
         />
       </div>
 
       <div
         style={{
-          background: "#FFFFFF",
-          border: "1px solid #E5E7EB",
-          borderRadius: "18px",
+          background: "#141824",
+          border: "1px solid rgba(255, 255, 255, 0.07)",
+          borderRadius: "14px",
           padding: "20px",
-          boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
         }}
       >
-        <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 16px 0" }}>
+        <h3
+          style={{
+            fontSize: "9px",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+            color: "#6b7a9a",
+            margin: "0 0 16px 0",
+          }}
+        >
           Rechnungen aus Tenancies generieren
         </h3>
-        <p style={{ color: "#64748B", marginBottom: "16px", fontSize: "14px" }}>
+        <p style={{ color: "#6b7a9a", marginBottom: "16px", fontSize: "12px" }}>
           Erzeugt für den gewählten Monat je eine Rechnung pro aktiver Tenancy (Miete anteilig bei Ein-/Auszug).
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center" }}>
-          <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}>
+          <label style={{ fontSize: "10px", fontWeight: 600, color: "#6b7a9a" }}>
             Jahr
           </label>
           <select
             value={generateYear}
             onChange={(e) => setGenerateYear(Number(e.target.value))}
-            style={{
-              padding: "8px 12px",
-              borderRadius: "8px",
-              border: "1px solid #D1D5DB",
-              fontSize: "14px",
-              minWidth: "100px",
-            }}
+            style={inputSelectStyle}
           >
             {[now.getFullYear(), now.getFullYear() - 1, now.getFullYear() + 1].map((y) => (
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
-          <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", marginLeft: "8px" }}>
+          <label style={{ fontSize: "10px", fontWeight: 600, color: "#6b7a9a", marginLeft: "8px" }}>
             Monat
           </label>
           <select
             value={generateMonth}
             onChange={(e) => setGenerateMonth(Number(e.target.value))}
-            style={{
-              padding: "8px 12px",
-              borderRadius: "8px",
-              border: "1px solid #D1D5DB",
-              fontSize: "14px",
-              minWidth: "120px",
-            }}
+            style={{ ...inputSelectStyle, minWidth: "120px" }}
           >
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
               <option key={m} value={m}>
@@ -438,13 +455,9 @@ function AdminInvoicesPage() {
             type="button"
             onClick={handleGenerateInvoices}
             disabled={generating}
+            className="bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] text-white font-semibold rounded-[8px] border-none"
             style={{
-              background: "#2563EB",
-              color: "#fff",
-              border: "none",
-              borderRadius: "8px",
               padding: "10px 16px",
-              fontWeight: 600,
               fontSize: "14px",
               cursor: generating ? "wait" : "pointer",
               opacity: generating ? 0.7 : 1,
@@ -458,8 +471,20 @@ function AdminInvoicesPage() {
             style={{
               marginTop: "12px",
               fontSize: "14px",
-              color: generateMessage.startsWith("Fehler") ? "#B91C1C" : "#15803D",
+              padding: "10px 12px",
+              borderRadius: "10px",
               fontWeight: 500,
+              ...(generateMessage.startsWith("Fehler")
+                ? {
+                    background: "rgba(248, 113, 113, 0.08)",
+                    border: "1px solid rgba(248, 113, 113, 0.2)",
+                    color: "#f87171",
+                  }
+                : {
+                    background: "rgba(59, 130, 246, 0.06)",
+                    border: "1px solid rgba(59, 130, 246, 0.12)",
+                    color: "#7aaeff",
+                  }),
             }}
           >
             {generateMessage}
@@ -469,11 +494,10 @@ function AdminInvoicesPage() {
 
       <div
         style={{
-          background: "#FFFFFF",
-          border: "1px solid #E5E7EB",
-          borderRadius: "18px",
+          background: "#141824",
+          border: "1px solid rgba(255, 255, 255, 0.07)",
+          borderRadius: "14px",
           padding: "20px",
-          boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
         }}
       >
         <div
@@ -487,8 +511,8 @@ function AdminInvoicesPage() {
             <label
               style={{
                 display: "block",
-                fontSize: "12px",
-                color: "#64748B",
+                fontSize: "10px",
+                color: "#6b7a9a",
                 marginBottom: "8px",
                 fontWeight: 600,
               }}
@@ -504,10 +528,13 @@ function AdminInvoicesPage() {
               style={{
                 width: "100%",
                 height: "44px",
-                borderRadius: "12px",
-                border: "1px solid #D1D5DB",
+                borderRadius: "8px",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                background: "#111520",
+                color: "#eef2ff",
                 padding: "0 14px",
                 fontSize: "14px",
+                boxSizing: "border-box",
               }}
             />
           </div>
@@ -516,8 +543,8 @@ function AdminInvoicesPage() {
             <label
               style={{
                 display: "block",
-                fontSize: "12px",
-                color: "#64748B",
+                fontSize: "10px",
+                color: "#6b7a9a",
                 marginBottom: "8px",
                 fontWeight: 600,
               }}
@@ -531,11 +558,13 @@ function AdminInvoicesPage() {
               style={{
                 width: "100%",
                 height: "44px",
-                borderRadius: "12px",
-                border: "1px solid #D1D5DB",
+                borderRadius: "8px",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
                 padding: "0 14px",
                 fontSize: "14px",
-                background: "#fff",
+                background: "#111520",
+                color: "#eef2ff",
+                boxSizing: "border-box",
               }}
             >
               <option value="all">Alle Status</option>
@@ -550,8 +579,8 @@ function AdminInvoicesPage() {
             <label
               style={{
                 display: "block",
-                fontSize: "12px",
-                color: "#64748B",
+                fontSize: "10px",
+                color: "#6b7a9a",
                 marginBottom: "8px",
                 fontWeight: 600,
               }}
@@ -565,11 +594,13 @@ function AdminInvoicesPage() {
               style={{
                 width: "100%",
                 height: "44px",
-                borderRadius: "12px",
-                border: "1px solid #D1D5DB",
+                borderRadius: "8px",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
                 padding: "0 14px",
                 fontSize: "14px",
-                background: "#fff",
+                background: "#111520",
+                color: "#eef2ff",
+                boxSizing: "border-box",
               }}
             >
               <option value="due_date_desc">Fälligkeitsdatum absteigend</option>
@@ -587,12 +618,11 @@ function AdminInvoicesPage() {
 
       <div
         style={{
-          background: "#FFFFFF",
-          border: "1px solid #E5E7EB",
-          borderRadius: "18px",
+          background: "#141824",
+          border: "1px solid rgba(255, 255, 255, 0.07)",
+          borderRadius: "14px",
           padding: "20px",
           overflowX: "auto",
-          boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
         }}
       >
         <div
@@ -603,21 +633,30 @@ function AdminInvoicesPage() {
             marginBottom: "16px",
           }}
         >
-          <h3 style={{ fontSize: "20px", fontWeight: 700, margin: 0 }}>
+          <h3
+            style={{
+              fontSize: "9px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              color: "#6b7a9a",
+              margin: 0,
+            }}
+          >
             Rechnungsliste
           </h3>
 
-          <div style={{ fontSize: "14px", color: "#64748B" }}>
+          <div style={{ fontSize: "12px", color: "#6b7a9a" }}>
             {filteredInvoices.length} Einträge
           </div>
         </div>
 
-        {loading && <p>Rechnungen werden geladen...</p>}
+        {loading && <p style={{ color: "#6b7a9a" }}>Rechnungen werden geladen...</p>}
 
-        {!loading && error && <p style={{ color: "red" }}>{error}</p>}
+        {!loading && error && <p style={{ color: "#f87171" }}>{error}</p>}
 
         {!loading && !error && filteredInvoices.length === 0 && (
-          <p>Keine Rechnungen gefunden.</p>
+          <p style={{ color: "#6b7a9a" }}>Keine Rechnungen gefunden.</p>
         )}
 
         {!loading && !error && filteredInvoices.length > 0 && (
@@ -632,8 +671,12 @@ function AdminInvoicesPage() {
               <tr
                 style={{
                   textAlign: "left",
-                  borderBottom: "1px solid #E5E7EB",
-                  color: "#64748B",
+                  background: "#111520",
+                  color: "#6b7a9a",
+                  fontSize: "9px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.8px",
                 }}
               >
                 <th style={{ padding: "12px" }}>ID</th>
@@ -657,13 +700,14 @@ function AdminInvoicesPage() {
                 return (
                   <tr
                     key={invoice.id}
-                    style={{ borderBottom: "1px solid #F1F5F9" }}
+                    style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
                   >
                     <td
                       style={{
                         padding: "12px",
-                        color: "#0F172A",
+                        color: "#eef2ff",
                         fontWeight: 600,
+                        fontSize: "13px",
                       }}
                     >
                       {invoice.id}
@@ -672,14 +716,15 @@ function AdminInvoicesPage() {
                     <td
                       style={{
                         padding: "12px",
-                        color: "#0F172A",
+                        color: "#eef2ff",
                         fontWeight: 600,
+                        fontSize: "13px",
                       }}
                     >
                       <Link
                         to={`/admin/invoices/${invoice.id}`}
                         style={{
-                          color: "#2563EB",
+                          color: "#7aaeff",
                           textDecoration: "none",
                           fontWeight: 700,
                         }}
@@ -688,11 +733,20 @@ function AdminInvoicesPage() {
                       </Link>
                     </td>
 
-                    <td style={{ padding: "12px" }}>
+                    <td
+                      style={{
+                        padding: "12px",
+                        color: "#eef2ff",
+                        fontSize: "13px",
+                        fontWeight: 500,
+                      }}
+                    >
                       {formatCurrency(invoice.amount, invoice.currency)}
                     </td>
 
-                    <td style={{ padding: "12px" }}>{invoice.currency}</td>
+                    <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                      {invoice.currency}
+                    </td>
 
                     <td style={{ padding: "12px" }}>
                       <span
@@ -704,7 +758,7 @@ function AdminInvoicesPage() {
                           background: statusMeta.bg,
                           color: statusMeta.color,
                           border: `1px solid ${statusMeta.border}`,
-                          fontSize: "12px",
+                          fontSize: "10px",
                           fontWeight: 700,
                         }}
                       >
@@ -712,15 +766,15 @@ function AdminInvoicesPage() {
                       </span>
                     </td>
 
-                    <td style={{ padding: "12px" }}>
+                    <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
                       {formatDate(invoice.issue_date)}
                     </td>
 
-                    <td style={{ padding: "12px" }}>
+                    <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
                       {formatDate(invoice.due_date)}
                     </td>
 
-                    <td style={{ padding: "12px" }}>
+                    <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
                       {invoice.paid_at
                         ? formatDate(invoice.paid_at)
                         : "–"}
@@ -733,9 +787,9 @@ function AdminInvoicesPage() {
                           onClick={() => markAsPaid(invoice.id)}
                           disabled={marking}
                           style={{
-                            background: "#16A34A",
-                            color: "#fff",
-                            border: "none",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                            background: "transparent",
+                            color: "#8090b0",
                             borderRadius: "8px",
                             padding: "8px 12px",
                             fontSize: "12px",

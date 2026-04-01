@@ -2,18 +2,19 @@ import React, { useEffect, useMemo, useState } from "react";
 import { API_BASE_URL, getApiHeaders } from "../../config";
 
 const cardStyle = {
-  background: "#FFFFFF",
-  border: "1px solid #E5E7EB",
-  borderRadius: "18px",
+  background: "#141824",
+  border: "1px solid rgba(255, 255, 255, 0.07)",
+  borderRadius: "14px",
   padding: "24px",
-  boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
 };
 
 const inputStyle = {
   width: "100%",
   padding: "10px 12px",
   borderRadius: "8px",
-  border: "1px solid #E5E7EB",
+  border: "1px solid rgba(255, 255, 255, 0.08)",
+  background: "#111520",
+  color: "#eef2ff",
   fontSize: "14px",
   boxSizing: "border-box",
 };
@@ -21,9 +22,9 @@ const inputStyle = {
 const labelStyle = {
   display: "block",
   marginBottom: "6px",
-  fontSize: "13px",
+  fontSize: "10px",
   fontWeight: 600,
-  color: "#374151",
+  color: "#6b7a9a",
 };
 
 const initialForm = {
@@ -289,18 +290,57 @@ function AdminListingsPage() {
 
   const availabilityBadgeStyle = (s) => {
     const v = (s || "available").toLowerCase();
-    if (v === "occupied") return { bg: "#FFF7ED", color: "#C2410C", border: "#FED7AA" };
-    if (v === "unavailable") return { bg: "#F1F5F9", color: "#475569", border: "#CBD5E1" };
-    return { bg: "#ECFDF5", color: "#047857", border: "#A7F3D0" };
+    if (v === "occupied") {
+      return {
+        bg: "rgba(251, 146, 60, 0.1)",
+        color: "#fb923c",
+        border: "rgba(251, 146, 60, 0.2)",
+      };
+    }
+    if (v === "unavailable") {
+      return {
+        bg: "rgba(255, 255, 255, 0.05)",
+        color: "#6b7a9a",
+        border: "rgba(255, 255, 255, 0.08)",
+      };
+    }
+    return {
+      bg: "rgba(34, 197, 94, 0.1)",
+      color: "#4ade80",
+      border: "rgba(34, 197, 94, 0.2)",
+    };
+  };
+
+  const secondaryBtn = {
+    padding: "8px 12px",
+    border: "1px solid rgba(255, 255, 255, 0.1)",
+    borderRadius: "8px",
+    background: "transparent",
+    color: "#8090b0",
+    cursor: "pointer",
+    fontSize: "13px",
+  };
+
+  const dangerBtn = {
+    padding: "8px 12px",
+    border: "1px solid rgba(239, 68, 68, 0.2)",
+    borderRadius: "8px",
+    background: "rgba(239, 68, 68, 0.1)",
+    color: "#f87171",
+    cursor: "pointer",
+    fontSize: "13px",
   };
 
   return (
-    <div style={{ display: "grid", gap: "24px" }}>
+    <div
+      className="bg-[#07090f] text-[#eef2ff] min-h-full"
+      style={{ display: "grid", gap: "24px" }}
+    >
       <div>
-        <h2 style={{ fontSize: "24px", fontWeight: 800, margin: "0 0 8px 0", color: "#0F172A" }}>
+        <h2 style={{ fontSize: "22px", fontWeight: 700, margin: "0 0 8px 0", color: "#eef2ff" }}>
           Website Listings
         </h2>
-        <p style={{ color: "#64748B", margin: 0, fontSize: "14px" }}>
+        <p style={{ color: "#6b7a9a", margin: 0, fontSize: "12px" }}>
           Listing basiert auf einer bestehenden Unit. Unit wählen, dann Website-Felder ausfüllen.
         </p>
       </div>
@@ -314,7 +354,7 @@ function AdminListingsPage() {
             border: "none",
             fontSize: "16px",
             fontWeight: 700,
-            color: "#0F172A",
+            color: "#7aaeff",
             cursor: "pointer",
             marginBottom: showForm ? "16px" : 0,
           }}
@@ -326,7 +366,16 @@ function AdminListingsPage() {
             <div>
               <label style={labelStyle}>Listing-Typ *</label>
               <div style={{ display: "flex", gap: "24px", alignItems: "center", flexWrap: "wrap" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "14px" }}>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    color: "#eef2ff",
+                  }}
+                >
                   <input
                     type="radio"
                     name="listing_type"
@@ -336,7 +385,16 @@ function AdminListingsPage() {
                   />
                   Gesamte Wohnung (Unit)
                 </label>
-                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "14px" }}>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    color: "#eef2ff",
+                  }}
+                >
                   <input
                     type="radio"
                     name="listing_type"
@@ -351,8 +409,8 @@ function AdminListingsPage() {
 
             <div>
               <label style={labelStyle}>Unit (Apartment) *</label>
-              {unitsLoading && <p style={{ fontSize: "13px", color: "#64748B", margin: "0 0 8px 0" }}>Units werden geladen…</p>}
-              {unitsError && <p style={{ fontSize: "13px", color: "#B91C1C", margin: "0 0 8px 0" }}>{unitsError}</p>}
+              {unitsLoading && <p style={{ fontSize: "13px", color: "#6b7a9a", margin: "0 0 8px 0" }}>Units werden geladen…</p>}
+              {unitsError && <p style={{ fontSize: "13px", color: "#f87171", margin: "0 0 8px 0" }}>{unitsError}</p>}
               <select
                 name="unit_id"
                 value={form.unit_id}
@@ -373,7 +431,7 @@ function AdminListingsPage() {
                 })}
               </select>
               {!unitsLoading && !unitsError && units.length === 0 && (
-                <p style={{ fontSize: "12px", color: "#64748B", margin: "4px 0 0 0" }}>
+                <p style={{ fontSize: "12px", color: "#6b7a9a", margin: "4px 0 0 0" }}>
                   Keine Units in der Datenbank. Zuerst Units anlegen (z.B. per Seed-Script).
                 </p>
               )}
@@ -407,7 +465,7 @@ function AdminListingsPage() {
                     placeholder="city_id (UUID aus DB)"
                     style={inputStyle}
                   />
-                  <p style={{ fontSize: "12px", color: "#64748B", margin: "4px 0 0 0" }}>
+                  <p style={{ fontSize: "12px", color: "#6b7a9a", margin: "4px 0 0 0" }}>
                     Noch keine Städte aus Listings. UUID der Stadt eingeben (z.B. aus Seed) oder zuerst ein Listing mit Stadt anlegen.
                   </p>
                 </>
@@ -417,7 +475,7 @@ function AdminListingsPage() {
             {listingType === "room" && (
               <div>
                 <label style={labelStyle}>Room *</label>
-                {roomsLoading && <p style={{ fontSize: "13px", color: "#64748B", margin: "0 0 8px 0" }}>Rooms werden geladen…</p>}
+                {roomsLoading && <p style={{ fontSize: "13px", color: "#6b7a9a", margin: "0 0 8px 0" }}>Rooms werden geladen…</p>}
                 {!roomsLoading && roomsForSelectedUnit.length > 0 ? (
                   <select
                     name="room_id"
@@ -444,7 +502,7 @@ function AdminListingsPage() {
                       placeholder="room_id (UUID aus Datenbank)"
                       style={inputStyle}
                     />
-                    <p style={{ fontSize: "12px", color: "#64748B", margin: "4px 0 0 0" }}>
+                    <p style={{ fontSize: "12px", color: "#6b7a9a", margin: "4px 0 0 0" }}>
                       Keine Rooms für diese Unit in der Datenbank. room_id manuell eingeben oder Rooms für die Unit anlegen.
                     </p>
                   </>
@@ -578,31 +636,13 @@ function AdminListingsPage() {
                   <button
                     type="button"
                     onClick={() => removeImageRow(index)}
-                    style={{
-                      padding: "8px 12px",
-                      border: "1px solid #E5E7EB",
-                      borderRadius: "8px",
-                      background: "#FFF",
-                      cursor: "pointer",
-                      fontSize: "13px",
-                    }}
+                    style={dangerBtn}
                   >
                     Entfernen
                   </button>
                 </div>
               ))}
-              <button
-                type="button"
-                onClick={addImageRow}
-                style={{
-                  padding: "8px 12px",
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "8px",
-                  background: "#F8FAFC",
-                  cursor: "pointer",
-                  fontSize: "13px",
-                }}
-              >
+              <button type="button" onClick={addImageRow} style={secondaryBtn}>
                 + Bild-URL hinzufügen
               </button>
             </div>
@@ -629,7 +669,16 @@ function AdminListingsPage() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "14px" }}>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  color: "#eef2ff",
+                }}
+              >
                 <input
                   type="checkbox"
                   name="is_published"
@@ -650,18 +699,28 @@ function AdminListingsPage() {
               </div>
             </div>
 
-            {createSuccess && <p style={{ color: "#15803D", margin: 0, fontSize: "14px" }}>{createSuccess}</p>}
-            {createError && <p style={{ color: "#B91C1C", margin: 0, fontSize: "14px" }}>{createError}</p>}
+            {createSuccess && (
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "14px",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
+                  background: "rgba(59, 130, 246, 0.06)",
+                  border: "1px solid rgba(59, 130, 246, 0.12)",
+                  color: "#7aaeff",
+                }}
+              >
+                {createSuccess}
+              </p>
+            )}
+            {createError && <p style={{ color: "#f87171", margin: 0, fontSize: "14px" }}>{createError}</p>}
             <button
               type="submit"
               disabled={submitting}
+              className="bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] text-white font-semibold rounded-[8px] border-none"
               style={{
                 padding: "10px 20px",
-                background: "#0F172A",
-                color: "#FFF",
-                border: "none",
-                borderRadius: "10px",
-                fontWeight: 700,
                 fontSize: "14px",
                 cursor: submitting ? "not-allowed" : "pointer",
                 opacity: submitting ? 0.7 : 1,
@@ -674,24 +733,43 @@ function AdminListingsPage() {
       </div>
 
       <div style={cardStyle}>
-        <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 16px 0", color: "#0F172A" }}>
+        <h3
+          style={{
+            fontSize: "9px",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+            color: "#6b7a9a",
+            margin: "0 0 16px 0",
+          }}
+        >
           Alle Listings
         </h3>
-        {loading && <p style={{ color: "#64748B" }}>Listings werden geladen…</p>}
-        {error && <p style={{ color: "#B91C1C" }}>{error}</p>}
+        {loading && <p style={{ color: "#6b7a9a" }}>Listings werden geladen…</p>}
+        {error && <p style={{ color: "#f87171" }}>{error}</p>}
         {!loading && !error && listings.length === 0 && (
-          <p style={{ color: "#64748B" }}>
+          <p style={{ color: "#6b7a9a" }}>
             Noch keine Listings. Unit wählen und oben ein neues Listing anlegen.
           </p>
         )}
         {statusUpdateError && (
-          <p style={{ color: "#B91C1C", fontSize: "14px", margin: "0 0 12px 0" }}>{statusUpdateError}</p>
+          <p style={{ color: "#f87171", fontSize: "14px", margin: "0 0 12px 0" }}>{statusUpdateError}</p>
         )}
         {!loading && !error && listings.length > 0 && (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
               <thead>
-                <tr style={{ textAlign: "left", borderBottom: "1px solid #E5E7EB", background: "#F8FAFC" }}>
+                <tr
+                  style={{
+                    textAlign: "left",
+                    background: "#111520",
+                    color: "#6b7a9a",
+                    fontSize: "9px",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.8px",
+                  }}
+                >
                   <th style={{ padding: "12px" }}>Slug</th>
                   <th style={{ padding: "12px" }}>Titel (DE/EN)</th>
                   <th style={{ padding: "12px" }}>City</th>
@@ -708,25 +786,48 @@ function AdminListingsPage() {
                   const status = row.availability_status || "available";
                   const badgeStyle = availabilityBadgeStyle(status);
                   return (
-                    <tr key={row.id} style={{ borderBottom: "1px solid #F1F5F9" }}>
-                      <td style={{ padding: "12px", fontWeight: 600 }}>{row.slug || "—"}</td>
-                      <td style={{ padding: "12px" }}>
+                    <tr
+                      key={row.id}
+                      style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
+                    >
+                      <td
+                        style={{
+                          padding: "12px",
+                          fontWeight: 600,
+                          color: "#eef2ff",
+                          fontSize: "13px",
+                        }}
+                      >
+                        {row.slug || "—"}
+                      </td>
+                      <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
                         {row.title_de || "—"} / {row.title_en || "—"}
                       </td>
-                      <td style={{ padding: "12px" }}>{row.city_code || row.city_id || "—"}</td>
-                      <td style={{ padding: "12px" }}>{row.price_chf_month != null ? row.price_chf_month : "—"}</td>
+                      <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                        {row.city_code || row.city_id || "—"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px",
+                          color: "#4ade80",
+                          fontSize: "13px",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {row.price_chf_month != null ? row.price_chf_month : "—"}
+                      </td>
                       <td style={{ padding: "12px" }}>
-                        <span style={{ marginRight: "8px" }}>{row.is_published ? "Online" : "Offline"}</span>
+                        <span style={{ marginRight: "8px", color: "#eef2ff", fontSize: "13px" }}>
+                          {row.is_published ? "Online" : "Offline"}
+                        </span>
                         <button
                           type="button"
                           disabled={isUpdating}
                           onClick={() => patchListingStatus(row.id, { is_published: !row.is_published })}
                           style={{
+                            ...secondaryBtn,
                             padding: "4px 10px",
                             fontSize: "12px",
-                            border: "1px solid #E5E7EB",
-                            borderRadius: "6px",
-                            background: "#FFF",
                             cursor: isUpdating ? "not-allowed" : "pointer",
                             opacity: isUpdating ? 0.7 : 1,
                           }}
@@ -739,10 +840,10 @@ function AdminListingsPage() {
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
-                            padding: "4px 8px",
-                            borderRadius: "6px",
-                            fontSize: "12px",
-                            fontWeight: 600,
+                            padding: "6px 10px",
+                            borderRadius: "999px",
+                            fontSize: "10px",
+                            fontWeight: 700,
                             background: badgeStyle.bg,
                             color: badgeStyle.color,
                             border: `1px solid ${badgeStyle.border}`,
@@ -758,9 +859,10 @@ function AdminListingsPage() {
                           style={{
                             padding: "4px 8px",
                             fontSize: "12px",
-                            border: "1px solid #E5E7EB",
-                            borderRadius: "6px",
-                            background: "#FFF",
+                            border: "1px solid rgba(255, 255, 255, 0.08)",
+                            borderRadius: "8px",
+                            background: "#111520",
+                            color: "#eef2ff",
                             minWidth: "120px",
                           }}
                         >
@@ -769,8 +871,10 @@ function AdminListingsPage() {
                           <option value="unavailable">Nicht verfügbar</option>
                         </select>
                       </td>
-                      <td style={{ padding: "12px" }}>{row.sort_order != null ? row.sort_order : "—"}</td>
-                      <td style={{ padding: "12px", fontSize: "12px", color: "#64748B" }}>{row.id}</td>
+                      <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                        {row.sort_order != null ? row.sort_order : "—"}
+                      </td>
+                      <td style={{ padding: "12px", fontSize: "12px", color: "#6b7a9a" }}>{row.id}</td>
                     </tr>
                   );
                 })}
