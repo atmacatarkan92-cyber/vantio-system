@@ -10,10 +10,12 @@ function AdminLayout() {
 
   if (isLoginPage) {
     return (
-      <div style={{ display: "flex", minHeight: "100vh" }}>
+      <div className="flex min-h-screen bg-[#07090f] text-[#eef2ff]">
         <AdminSidebar />
-        <div style={{ flex: 1, padding: "40px" }}>
-          <h1>Vantio</h1>
+        <div
+          className="flex min-h-screen flex-1 flex-col overflow-auto bg-[#07090f] p-4 md:p-10"
+          style={{ scrollbarColor: "rgba(255,255,255,0.12) #07090f" }}
+        >
           <Outlet />
         </div>
       </div>
@@ -22,7 +24,7 @@ function AdminLayout() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center" }}>
+      <div className="flex min-h-screen items-center justify-center bg-[#07090f] text-[#6b7a9a]">
         <p>Lade …</p>
       </div>
     );
@@ -33,10 +35,12 @@ function AdminLayout() {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div className="flex min-h-screen bg-[#07090f] text-[#eef2ff]">
       <AdminSidebar />
-      <div style={{ flex: 1, padding: "40px" }}>
-        <h1>Vantio</h1>
+      <div
+        className="flex min-h-screen flex-1 flex-col overflow-auto bg-[#07090f] p-4 md:p-10"
+        style={{ scrollbarColor: "rgba(255,255,255,0.12) #07090f" }}
+      >
         <Outlet />
       </div>
     </div>
