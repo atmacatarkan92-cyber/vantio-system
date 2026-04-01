@@ -438,8 +438,7 @@ function getAuditEntryDisplayLines(entry, resolvers) {
   if (roomNew || roomOld) {
     if (action === "create" && roomNew) {
       const nm = String(roomNew.name || "").trim() || "—";
-      const st = String(roomNew.status || "").trim() || "—";
-      return [`Zimmer hinzugefügt: ${nm} (${st})`];
+      return [`Zimmer hinzugefügt: ${nm}`];
     }
     if (action === "delete" && roomOld) {
       return [`Zimmer gelöscht: ${String(roomOld.name || "").trim() || "—"}`];
@@ -455,7 +454,9 @@ function getAuditEntryDisplayLines(entry, resolvers) {
       const op = Number(roomOld.price);
       const np = Number(roomNew.price);
       if (!Number.isNaN(op) && !Number.isNaN(np) && op !== np) {
-        lines.push(`Preis: ${formatChfPlain(op)} → ${formatChfPlain(np)}`);
+        lines.push(
+          `Geplanter Mietpreis: ${formatChfPlain(op)} → ${formatChfPlain(np)}`
+        );
       }
       return lines.length ? ["Zimmer bearbeitet", ...lines] : ["Zimmer bearbeitet"];
     }
@@ -1482,15 +1483,7 @@ function AdminUnitDetailPage() {
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [roomForm, setRoomForm] = useState({
     roomName: "",
-    status: "Frei",
-    tenant: "",
     priceMonthly: "",
-    moveInDate: "",
-    freeFromDate: "",
-    reservedUntil: "",
-    blockedUntil: "",
-    blockedReason: "",
-    setupReadyDate: "",
     minimumStayMonths: "3",
     noticePeriodMonths: "3",
   });
@@ -1515,6 +1508,15 @@ function AdminUnitDetailPage() {
   const unitRooms = useMemo(() => {
     return rooms.filter((room) => room.unitId === safeUnit.unitId);
   }, [rooms, safeUnit.unitId]);
+
+  /** Belegung fürs Room-Modal: aus Tenancies, nicht aus manuell gesetztem room.status */
+  const roomModalDerivedOcc = useMemo(() => {
+    if (!isRoomModalOpen || !editingRoomId) return "frei";
+    const room = unitRooms.find((r) => String(r.id) === String(editingRoomId));
+    if (!room || unitTenancies == null) return null;
+    const occ = getRoomOccupancyStatus(room, unitTenancies);
+    return occ != null ? occ : "frei";
+  }, [isRoomModalOpen, editingRoomId, unitRooms, unitTenancies]);
 
   const activeUnitTenancies = useMemo(() => {
     if (!unitTenancies) return [];
@@ -1857,15 +1859,7 @@ function AdminUnitDetailPage() {
     setEditingRoomId(null);
     setRoomForm({
       roomName: `Zimmer ${unitRooms.length + 1}`,
-      status: "Frei",
-      tenant: "",
       priceMonthly: "",
-      moveInDate: "",
-      freeFromDate: unit.availableFrom || "",
-      reservedUntil: "",
-      blockedUntil: "",
-      blockedReason: "",
-      setupReadyDate: "",
       minimumStayMonths: "3",
       noticePeriodMonths: "3",
     });
@@ -1876,18 +1870,7 @@ function AdminUnitDetailPage() {
     setEditingRoomId(room.id);
     setRoomForm({
       roomName: room.roomName || "",
-      status: room.status || "Frei",
-      tenant: room.tenant === "-" ? "" : room.tenant || "",
       priceMonthly: room.priceMonthly ?? "",
-      moveInDate: room.moveInDate === "-" ? "" : room.moveInDate || "",
-      freeFromDate: room.freeFromDate === "-" ? "" : room.freeFromDate || "",
-      reservedUntil:
-        room.reservedUntil === "-" ? "" : room.reservedUntil || "",
-      blockedUntil: room.blockedUntil === "-" ? "" : room.blockedUntil || "",
-      blockedReason:
-        room.blockedReason === "-" ? "" : room.blockedReason || "",
-      setupReadyDate:
-        room.setupReadyDate === "-" ? "" : room.setupReadyDate || "",
       minimumStayMonths: String(room.minimumStayMonths || 3),
       noticePeriodMonths: String(room.noticePeriodMonths || 3),
     });
@@ -1899,15 +1882,7 @@ function AdminUnitDetailPage() {
     setEditingRoomId(null);
     setRoomForm({
       roomName: "",
-      status: "Frei",
-      tenant: "",
       priceMonthly: "",
-      moveInDate: "",
-      freeFromDate: unit.availableFrom || "",
-      reservedUntil: "",
-      blockedUntil: "",
-      blockedReason: "",
-      setupReadyDate: "",
       minimumStayMonths: "3",
       noticePeriodMonths: "3",
     });
@@ -1915,66 +1890,26 @@ function AdminUnitDetailPage() {
 
   function handleRoomChange(event) {
     const { name, value } = event.target;
-
-    setRoomForm((prev) => {
-      const next = {
-        ...prev,
-        [name]: value,
-      };
-
-      if (name === "status") {
-        if (value === "Blockiert" || value === "In Einrichtung") {
-          next.priceMonthly = "";
-        }
-
-        if (value !== "Belegt") {
-          next.tenant = "";
-          next.moveInDate = "";
-        }
-
-        if (value !== "Reserviert") {
-          next.reservedUntil = "";
-        }
-
-        if (value !== "Blockiert") {
-          next.blockedUntil = "";
-          next.blockedReason = "";
-        }
-
-        if (value !== "In Einrichtung") {
-          next.setupReadyDate = "";
-        }
-      }
-
-      return next;
-    });
+    setRoomForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   }
 
   function handleRoomSubmit(event) {
     event.preventDefault();
 
-    const isOccupied = roomForm.status === "Belegt";
-    const isReserved = roomForm.status === "Reserviert";
-    const isBlocked = roomForm.status === "Blockiert";
-    const isSetup = roomForm.status === "In Einrichtung";
-
     const payload = {
       roomName: roomForm.roomName,
-      status: roomForm.status,
-      tenant: isOccupied || isReserved ? roomForm.tenant || "-" : "-",
-      priceMonthly:
-        isBlocked || isSetup ? 0 : Number(roomForm.priceMonthly || 0),
-      moveInDate: isOccupied ? roomForm.moveInDate || "-" : "-",
-      freeFromDate:
-        roomForm.status === "Frei" ||
-        roomForm.status === "Belegt" ||
-        roomForm.status === "In Reinigung"
-          ? roomForm.freeFromDate || "-"
-          : "-",
-      reservedUntil: isReserved ? roomForm.reservedUntil || "-" : "-",
-      blockedUntil: isBlocked ? roomForm.blockedUntil || "-" : "-",
-      blockedReason: isBlocked ? roomForm.blockedReason || "-" : "-",
-      setupReadyDate: isSetup ? roomForm.setupReadyDate || "-" : "-",
+      status: "Frei",
+      tenant: "-",
+      priceMonthly: Number(roomForm.priceMonthly || 0),
+      moveInDate: "-",
+      freeFromDate: "-",
+      reservedUntil: "-",
+      blockedUntil: "-",
+      blockedReason: "-",
+      setupReadyDate: "-",
       minimumStayMonths: Number(roomForm.minimumStayMonths || 3),
       noticePeriodMonths: Number(roomForm.noticePeriodMonths || 3),
     };
@@ -3342,7 +3277,7 @@ function AdminUnitDetailPage() {
                       {room.roomName}
                     </p>
                     <p className="text-sm text-slate-500 mt-1">
-                      {formatChfOrDash(room.priceMonthly)}
+                      Soll {formatChfOrDash(room.priceMonthly)}
                       {rn !== "—" ? ` · ${rn}` : ""}
                       {rmi
                         ? ` · Einzug ${rmi}`
@@ -3428,7 +3363,7 @@ function AdminUnitDetailPage() {
                     <th className="py-3 pr-4">Zimmer</th>
                     <th className="py-3 pr-4">Status</th>
                     <th className="py-3 pr-4">Mieter</th>
-                    <th className="py-3 pr-4">Preis</th>
+                    <th className="py-3 pr-4">Geplanter Mietpreis</th>
                     <th className="py-3 pr-4">Einzug</th>
                     <th className="py-3 pr-4">Frei ab</th>
                     <th className="py-3 pr-4">Min. Dauer</th>
@@ -3655,88 +3590,37 @@ function AdminUnitDetailPage() {
 
                   <div>
                     <label className="block text-sm text-slate-600 mb-2">
-                      Status
+                      Status (automatisch)
                     </label>
-                    <select
-                      name="status"
-                      value={roomForm.status}
-                      onChange={handleRoomChange}
-                      className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                      <option>Frei</option>
-                      <option>Belegt</option>
-                      <option>Reserviert</option>
-                      <option>In Reinigung</option>
-                      <option>Blockiert</option>
-                      <option>In Einrichtung</option>
-                    </select>
+                    <div className="flex flex-col gap-1">
+                      {roomModalDerivedOcc == null ? (
+                        <span className="text-slate-400 text-sm">…</span>
+                      ) : (
+                        <Badge tone={getRoomOccBadgeTone(roomModalDerivedOcc)}>
+                          {formatOccupancyStatusDe(roomModalDerivedOcc)}
+                        </Badge>
+                      )}
+                      <p className="text-xs text-slate-500">
+                        Aus Mietverhältnissen (heute). Mieter und Ist-Miete: Mietvertrag.
+                      </p>
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-sm text-slate-600 mb-2">
-                      Mieter / reserviert für
-                    </label>
-                    <input
-                      type="text"
-                      name="tenant"
-                      value={roomForm.tenant}
-                      onChange={handleRoomChange}
-                      placeholder="z. B. Max Muster"
-                      disabled={
-                        roomForm.status !== "Belegt" &&
-                        roomForm.status !== "Reserviert"
-                      }
-                      className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-slate-100 disabled:text-slate-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-slate-600 mb-2">
-                      Preis pro Monat
+                      Geplanter Mietpreis (CHF)
                     </label>
                     <input
                       type="number"
                       name="priceMonthly"
                       value={roomForm.priceMonthly}
                       onChange={handleRoomChange}
-                      required={
-                        roomForm.status !== "Blockiert" &&
-                        roomForm.status !== "In Einrichtung"
-                      }
-                      disabled={
-                        roomForm.status === "Blockiert" ||
-                        roomForm.status === "In Einrichtung"
-                      }
                       placeholder="z. B. 950"
-                      className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-slate-100 disabled:text-slate-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-slate-600 mb-2">
-                      Einzugsdatum
-                    </label>
-                    <input
-                      type="date"
-                      name="moveInDate"
-                      value={roomForm.moveInDate}
-                      onChange={handleRoomChange}
-                      disabled={roomForm.status !== "Belegt"}
-                      className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-slate-100 disabled:text-slate-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-slate-600 mb-2">
-                      Frei ab / Auszugsdatum
-                    </label>
-                    <input
-                      type="date"
-                      name="freeFromDate"
-                      value={roomForm.freeFromDate}
-                      onChange={handleRoomChange}
                       className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
                     />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Soll-Preis für Planung / Vollbelegung; keine Ist-Miete.
+                    </p>
                   </div>
 
                   <div>
@@ -3766,67 +3650,6 @@ function AdminUnitDetailPage() {
                       className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
-
-                  {roomForm.status === "Reserviert" && (
-                    <div className="md:col-span-2">
-                      <label className="block text-sm text-slate-600 mb-2">
-                        Reserviert bis
-                      </label>
-                      <input
-                        type="date"
-                        name="reservedUntil"
-                        value={roomForm.reservedUntil}
-                        onChange={handleRoomChange}
-                        className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
-                  )}
-
-                  {roomForm.status === "Blockiert" && (
-                    <>
-                      <div>
-                        <label className="block text-sm text-slate-600 mb-2">
-                          Blockiert bis
-                        </label>
-                        <input
-                          type="date"
-                          name="blockedUntil"
-                          value={roomForm.blockedUntil}
-                          onChange={handleRoomChange}
-                          className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm text-slate-600 mb-2">
-                          Grund
-                        </label>
-                        <input
-                          type="text"
-                          name="blockedReason"
-                          value={roomForm.blockedReason}
-                          onChange={handleRoomChange}
-                          placeholder="z. B. Renovation"
-                          className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {roomForm.status === "In Einrichtung" && (
-                    <div className="md:col-span-2">
-                      <label className="block text-sm text-slate-600 mb-2">
-                        Bereit ab
-                      </label>
-                      <input
-                        type="date"
-                        name="setupReadyDate"
-                        value={roomForm.setupReadyDate}
-                        onChange={handleRoomChange}
-                        className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
-                  )}
                 </div>
 
                 <div className="flex justify-end gap-3 mt-6">

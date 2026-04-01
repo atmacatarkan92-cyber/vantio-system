@@ -560,6 +560,7 @@ export function normalizeUnit(u) {
 
 /**
  * Normalize room from API for pages that expect unitId, status, priceMonthly.
+ * room.price / priceMonthly = planned target rent (Soll); actual rent is on tenancy.
  */
 export function normalizeRoom(r) {
   if (!r) return r;

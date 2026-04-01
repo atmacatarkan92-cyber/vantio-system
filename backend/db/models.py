@@ -274,10 +274,12 @@ class Room(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     unit_id: str = Field(foreign_key="unit.id", index=True)
     name: str
+    # Planned target rent (Soll) for forecasting; actual rent is on tenancy / tenant.
     price: int = Field(default=0)
     floor: Optional[int] = Field(default=None)
     is_active: bool = Field(default=True)
     size_m2: Optional[float] = Field(default=None)
+    # Legacy; admin UI derives operational status from tenancies where possible.
     status: str = Field(default="Frei", max_length=32)
 
 

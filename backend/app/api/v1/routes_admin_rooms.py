@@ -55,6 +55,7 @@ def _room_to_dict(r: Room) -> dict:
 class RoomCreate(BaseModel):
     unit_id: str
     name: str
+    # Planning / Soll rent for forecasts & full-occupancy potential; actual rent lives on tenancy.
     price: int = Field(default=0, ge=0)
     floor: Optional[int] = Field(default=None, ge=0)
     is_active: bool = True
