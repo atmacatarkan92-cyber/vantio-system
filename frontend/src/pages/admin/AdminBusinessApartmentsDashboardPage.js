@@ -574,7 +574,7 @@ function AdminBusinessApartmentsDashboardPage() {
   }, [selectedPeriod]);
 
   return (
-    <div className="-m-6 min-h-screen bg-[#f8fafc] dark:bg-[#07090f] p-6 text-[#0f172a] dark:text-[#eef2ff] md:p-8">
+    <div className="-m-6 min-h-screen bg-[#f8fafc] p-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark] md:p-8">
       <div className="mx-auto max-w-[1800px] space-y-6">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div>
