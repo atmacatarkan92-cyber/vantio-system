@@ -739,12 +739,12 @@ function formatUnitDocumentCategoryLabel(category) {
 
 function SectionCard({ title, subtitle, children, rightSlot = null }) {
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+    <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
       <div className="flex items-start justify-between gap-4 mb-5">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+          <h3 className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">{title}</h3>
           {subtitle ? (
-            <p className="text-sm text-slate-500 mt-1">{subtitle}</p>
+            <p className="text-[12px] text-[#6b7a9a] mt-1">{subtitle}</p>
           ) : null}
         </div>
         {rightSlot}
@@ -763,24 +763,24 @@ function SmallStatCard({
   progressPercent,
 }) {
   const accentStyles = {
-    slate: "bg-slate-50 border-slate-200 text-slate-900",
-    green: "bg-emerald-50 border-emerald-200 text-emerald-700",
-    orange: "bg-orange-50 border-orange-200 text-orange-700",
-    rose: "bg-rose-50 border-rose-200 text-rose-700",
-    amber: "bg-amber-50 border-amber-200 text-amber-700",
-    blue: "bg-sky-50 border-sky-200 text-sky-700",
+    slate: "bg-[#111520] border-white/[0.08] text-[#eef2ff]",
+    green: "bg-green-500/10 border-green-500/20 text-green-400",
+    orange: "bg-amber-500/10 border-amber-500/20 text-amber-400",
+    rose: "bg-red-500/10 border-red-500/20 text-red-400",
+    amber: "bg-amber-500/10 border-amber-500/20 text-amber-400",
+    blue: "bg-blue-500/10 border-blue-500/20 text-[#7aaeff]",
   };
 
   const labelClass =
-    valueTone === "muted" ? "text-sm text-slate-500" : "text-sm opacity-70";
+    valueTone === "muted" ? "text-[10px] text-[#6b7a9a]" : "text-[10px] text-[#6b7a9a]";
   const valueClass =
     valueTone === "muted"
-      ? "text-xl font-semibold text-slate-500 mt-2"
-      : "text-2xl font-bold mt-2";
+      ? "text-xl font-semibold text-[#6b7a9a] mt-2"
+      : "text-2xl font-bold mt-2 text-[#eef2ff]";
   const hintClass =
     valueTone === "muted"
-      ? "text-[11px] text-slate-500 mt-2 leading-relaxed"
-      : "text-xs opacity-70 mt-2";
+      ? "text-[11px] text-[#6b7a9a] mt-2 leading-relaxed"
+      : "text-xs text-[#6b7a9a] mt-2";
 
   const pctRaw = progressPercent != null ? Number(progressPercent) : NaN;
   const showProgress = Number.isFinite(pctRaw);
@@ -796,12 +796,12 @@ function SmallStatCard({
       <p className={valueClass}>{value}</p>
       {showProgress ? (
         <div
-          className="mt-2 h-1.5 w-full rounded-full bg-black/10 overflow-hidden"
+          className="mt-2 h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden"
           aria-hidden
         >
           <div
             className={`h-full rounded-full ${
-              accent === "amber" ? "bg-amber-500" : "bg-slate-500/70"
+              accent === "amber" ? "bg-amber-500" : "bg-[#7aaeff]/70"
             }`}
             style={{ width: `${pctClamped}%` }}
           />
@@ -814,17 +814,17 @@ function SmallStatCard({
 
 function Badge({ children, tone = "slate" }) {
   const tones = {
-    slate: "bg-slate-100 text-slate-700",
-    green: "bg-emerald-100 text-emerald-700",
-    orange: "bg-orange-100 text-orange-700",
-    rose: "bg-rose-100 text-rose-700",
-    amber: "bg-amber-100 text-amber-700",
-    blue: "bg-sky-100 text-sky-700",
+    slate: "bg-white/[0.05] border border-white/[0.08] text-[#6b7a9a]",
+    green: "bg-green-500/10 border border-green-500/20 text-green-400",
+    orange: "bg-amber-500/10 border border-amber-500/20 text-amber-400",
+    rose: "bg-red-500/10 border border-red-500/20 text-red-400",
+    amber: "bg-amber-500/10 border border-amber-500/20 text-amber-400",
+    blue: "bg-blue-500/10 border border-blue-500/20 text-[#7aaeff]",
   };
 
   return (
     <span
-      className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+      className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
         tones[tone] || tones.slate
       }`}
     >
@@ -1829,25 +1829,25 @@ function AdminUnitDetailPage() {
 
   if (loading) {
     return (
-      <div>
-        <p className="text-slate-500">Lade Unit…</p>
+      <div className="bg-[#07090f] text-[#eef2ff] min-h-full -m-6 p-6 md:p-8">
+        <p className="text-[#6b7a9a]">Lade Unit…</p>
       </div>
     );
   }
 
   if (!unit) {
     return (
-      <div>
-        <h2 className="text-3xl font-bold text-slate-800 mb-2">
+      <div className="bg-[#07090f] text-[#eef2ff] min-h-full -m-6 p-6 md:p-8">
+        <h2 className="text-[22px] font-bold text-[#eef2ff] mb-2">
           Unit nicht gefunden
         </h2>
-        <p className="text-slate-500 mb-6">
+        <p className="text-[#6b7a9a] text-[12px] mb-6">
           Für diese Unit ID konnten keine Daten gefunden werden.
         </p>
 
         <Link
           to="/admin/apartments"
-          className="inline-block bg-orange-500 hover:bg-orange-600 text-white px-5 py-3 rounded-lg font-medium transition"
+          className="inline-block bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] text-white font-semibold rounded-[8px] border-none px-5 py-3 transition"
         >
           Zurück zu Units
         </Link>
@@ -2154,37 +2154,37 @@ function AdminUnitDetailPage() {
     String(unit.leaseStatus ?? unit.lease_status ?? "").trim() === "ended";
 
   return (
-    <div className="min-h-screen bg-slate-50 -m-6 p-6 md:p-8">
+    <div className="min-h-screen bg-[#07090f] text-[#eef2ff] -m-6 p-6 md:p-8">
       <div className="max-w-[1800px] mx-auto space-y-8">
         <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
           <div className={leaseContractEnded ? "opacity-75" : undefined}>
-            <p className="text-sm font-semibold text-orange-600">
+            <p className="text-[12px] font-semibold text-[#fb923c]">
               Unit Intelligence
             </p>
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900 mt-2">
+            <h2 className="text-[22px] md:text-[26px] font-bold tracking-tight text-[#eef2ff] mt-2">
               {getUnitPageMainTitle(unit)}
             </h2>
-            <p className="text-xs text-slate-400 mt-2 font-mono break-all">
+            <p className="text-xs text-[#6b7a9a] mt-2 font-mono break-all">
               {unit.id || unit.unitId}
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {unitContractState === "expiring_soon" ? (
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800">
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400">
                 Vertrag endet bald
               </span>
             ) : unitContractState === "expired" ? (
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-800">
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">
                 Vertrag abgelaufen
               </span>
             ) : unitContractState === "unknown" ? (
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-[#6b7a9a]">
                 Mietbeginn offen
               </span>
             ) : null}
             {derivedUnitOccupancy == null ? (
-              <span className="text-slate-400 text-sm">—</span>
+              <span className="text-[#6b7a9a] text-sm">—</span>
             ) : (
               <Badge tone={occupancyStatusBadgeTone(derivedUnitOccupancy)}>
                 {formatOccupancyStatusDe(derivedUnitOccupancy)}
@@ -2192,7 +2192,7 @@ function AdminUnitDetailPage() {
             )}
             <Link
               to="/admin/apartments"
-              className="inline-block border border-slate-300 hover:bg-slate-50 text-slate-700 px-5 py-3 rounded-xl font-medium transition"
+              className="inline-block border border-white/[0.1] bg-transparent text-[#8090b0] px-5 py-3 rounded-[8px] font-medium transition hover:bg-white/[0.04]"
             >
               Zurück
             </Link>
@@ -2202,7 +2202,7 @@ function AdminUnitDetailPage() {
                 if (!unitId) return;
                 navigate("/admin/apartments", { state: { editUnitId: String(unitId) } });
               }}
-              className="inline-block border border-slate-300 hover:bg-slate-50 text-slate-700 px-5 py-3 rounded-xl font-medium transition"
+              className="inline-block border border-white/[0.1] bg-transparent text-[#8090b0] px-5 py-3 rounded-[8px] font-medium transition hover:bg-white/[0.04]"
             >
               Bearbeiten
             </button>
@@ -2219,7 +2219,7 @@ function AdminUnitDetailPage() {
                   window.alert(err?.message || "Löschen fehlgeschlagen.");
                 }
               }}
-              className="inline-block border border-red-300 hover:bg-red-50 text-red-700 px-5 py-3 rounded-xl font-medium transition"
+              className="inline-block border border-red-500/20 bg-red-500/10 text-[#f87171] px-5 py-3 rounded-[8px] font-medium transition hover:bg-red-500/15"
             >
               Löschen
             </button>
@@ -2231,61 +2231,61 @@ function AdminUnitDetailPage() {
             title="Stammdaten"
             subtitle="Grunddaten und aktuelle Struktur dieser Unit"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-700">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[#eef2ff]">
               <div className="md:col-span-2 flex justify-end">
                 <button
                   type="button"
                   onClick={openAssignModal}
-                  className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                  className="inline-flex items-center rounded-lg border border-white/[0.07] bg-[#141824] px-3 py-2 text-sm font-semibold text-[#eef2ff] hover:bg-[#111520]"
                 >
                   Zuordnungen bearbeiten
                 </button>
               </div>
               <div>
-                <p className="text-sm text-slate-500">Unit ID</p>
-                <p className="font-medium">{unit.unitId}</p>
+                <p className="text-[10px] text-[#6b7a9a]">Unit ID</p>
+                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.unitId}</p>
               </div>
 
               <div>
-                <p className="text-sm text-slate-500">Typ</p>
-                <p className="font-medium">{unit.type}</p>
+                <p className="text-[10px] text-[#6b7a9a]">Typ</p>
+                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.type}</p>
               </div>
 
               <div>
-                <p className="text-sm text-slate-500">Ort</p>
-                <p className="font-medium">{unit.place}</p>
+                <p className="text-[10px] text-[#6b7a9a]">Ort</p>
+                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.place}</p>
               </div>
 
               <div>
-                <p className="text-sm text-slate-500">PLZ</p>
-                <p className="font-medium">{unit.zip}</p>
+                <p className="text-[10px] text-[#6b7a9a]">PLZ</p>
+                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.zip}</p>
               </div>
 
               <div>
-                <p className="text-sm text-slate-500">Adresse</p>
-                <p className="font-medium">{unit.address}</p>
+                <p className="text-[10px] text-[#6b7a9a]">Adresse</p>
+                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.address}</p>
               </div>
 
               <div>
-                <p className="text-sm text-slate-500">Zimmer gesamt</p>
-                <p className="font-medium">{unit.rooms}</p>
+                <p className="text-[10px] text-[#6b7a9a]">Zimmer gesamt</p>
+                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.rooms}</p>
               </div>
 
               <div>
-                <p className="text-sm text-slate-500">Liegenschaft</p>
-                <p className="font-medium">{unit.property_title || "—"}</p>
+                <p className="text-[10px] text-[#6b7a9a]">Liegenschaft</p>
+                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.property_title || "—"}</p>
               </div>
 
               <div>
-                <p className="text-sm text-slate-500">Verwaltung</p>
-                <p className="font-medium">
+                <p className="text-[10px] text-[#6b7a9a]">Verwaltung</p>
+                <p className="text-[13px] font-medium text-[#eef2ff]">
                   {unit.landlord_id ? (
                     linksResolving ? (
                       "…"
                     ) : (
                       <Link
                         to={`/admin/landlords/${encodeURIComponent(unit.landlord_id)}`}
-                        className="text-orange-600 hover:underline"
+                        className="text-[#7aaeff] hover:underline"
                       >
                         {verwaltungLabel || "—"}
                       </Link>
@@ -2297,15 +2297,15 @@ function AdminUnitDetailPage() {
               </div>
 
               <div>
-                <p className="text-sm text-slate-500">Bewirtschafter</p>
-                <p className="font-medium">
+                <p className="text-[10px] text-[#6b7a9a]">Bewirtschafter</p>
+                <p className="text-[13px] font-medium text-[#eef2ff]">
                   {unit.property_manager_id ? (
                     linksResolving ? (
                       "…"
                     ) : (
                       <Link
                         to={`/admin/bewirtschafter/${encodeURIComponent(unit.property_manager_id)}`}
-                        className="text-orange-600 hover:underline"
+                        className="text-[#7aaeff] hover:underline"
                       >
                         {bewirtschafterLabel || "—"}
                       </Link>
@@ -2317,12 +2317,12 @@ function AdminUnitDetailPage() {
               </div>
 
               <div>
-                <p className="text-sm text-slate-500">Eigentümer</p>
-                <p className="font-medium">
+                <p className="text-[10px] text-[#6b7a9a]">Eigentümer</p>
+                <p className="text-[13px] font-medium text-[#eef2ff]">
                   {unit.owner_id ? (
                     <Link
                       to={`/admin/owners/${encodeURIComponent(unit.owner_id)}`}
-                      className="text-orange-600 hover:underline"
+                      className="text-[#7aaeff] hover:underline"
                     >
                       {String(unit.ownerName ?? unit.owner_name ?? "").trim() || "—"}
                     </Link>
@@ -2333,56 +2333,56 @@ function AdminUnitDetailPage() {
               </div>
 
               <div>
-                <p className="text-sm text-slate-500">Verfügbar ab</p>
-                <p className="font-medium">{unit.availableFrom || "-"}</p>
+                <p className="text-[10px] text-[#6b7a9a]">Verfügbar ab</p>
+                <p className="text-[13px] font-medium text-[#eef2ff]">{unit.availableFrom || "-"}</p>
               </div>
 
-              <div className="md:col-span-2 border-t border-slate-200 pt-4 mt-2">
-                <p className="text-sm font-semibold text-slate-800 mb-3">
+              <div className="md:col-span-2 border-t border-white/[0.07] pt-4 mt-2">
+                <p className="text-sm font-semibold text-[#eef2ff] mb-3">
                   Vertrag Vermieter
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-slate-500">Vertragsart</p>
-                    <p className="font-medium">{landlordLeaseTypeLabel(unit)}</p>
+                    <p className="text-[10px] text-[#6b7a9a]">Vertragsart</p>
+                    <p className="text-[13px] font-medium text-[#eef2ff]">{landlordLeaseTypeLabel(unit)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-500">Mietbeginn</p>
-                    <p className="font-medium">
+                    <p className="text-[10px] text-[#6b7a9a]">Mietbeginn</p>
+                    <p className="text-[13px] font-medium text-[#eef2ff]">
                       {dashEmpties(unit.leaseStartDate ?? unit.lease_start_date)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-500">Vertragsende</p>
-                    <p className="font-medium">
+                    <p className="text-[10px] text-[#6b7a9a]">Vertragsende</p>
+                    <p className="text-[13px] font-medium text-[#eef2ff]">
                       {dashEmpties(unit.leaseEndDate ?? unit.lease_end_date)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-500">Kündigung eingereicht</p>
-                    <p className="font-medium">
+                    <p className="text-[10px] text-[#6b7a9a]">Kündigung eingereicht</p>
+                    <p className="text-[13px] font-medium text-[#eef2ff]">
                       {dashEmpties(unit.noticeGivenDate ?? unit.notice_given_date)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-500">Kündigung wirksam</p>
-                    <p className="font-medium">
+                    <p className="text-[10px] text-[#6b7a9a]">Kündigung wirksam</p>
+                    <p className="text-[13px] font-medium text-[#eef2ff]">
                       {dashEmpties(
                         unit.terminationEffectiveDate ?? unit.termination_effective_date
                       )}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-500">Rückgabe erfolgt</p>
-                    <p className="font-medium">
+                    <p className="text-[10px] text-[#6b7a9a]">Rückgabe erfolgt</p>
+                    <p className="text-[13px] font-medium text-[#eef2ff]">
                       {dashEmpties(
                         unit.returnedToLandlordDate ?? unit.returned_to_landlord_date
                       )}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-500">Status</p>
-                    <p className="font-medium">
+                    <p className="text-[10px] text-[#6b7a9a]">Status</p>
+                    <p className="text-[13px] font-medium text-[#eef2ff]">
                       {landlordLeaseContractStatusStr ? (
                         <Badge
                           tone={landlordLeaseStatusBadgeTone(
@@ -2403,7 +2403,7 @@ function AdminUnitDetailPage() {
                               landlordContractDerivedState
                             ] || landlordContractDerivedState}
                           </Badge>
-                          <span className="block text-xs text-slate-500 font-normal mt-1">
+                          <span className="block text-xs text-[#6b7a9a] font-normal mt-1">
                             Abgeleitet aus Mietbeginn und Vertragsende (kein gespeicherter
                             Vertragsstatus).
                           </span>
@@ -2412,7 +2412,7 @@ function AdminUnitDetailPage() {
                     </p>
                   </div>
                   <div className="md:col-span-2">
-                    <p className="text-sm text-slate-500">Notizen</p>
+                    <p className="text-[10px] text-[#6b7a9a]">Notizen</p>
                     <p className="font-medium whitespace-pre-wrap">
                       {landlordLeaseNotesDisplay(unit)}
                     </p>
@@ -2427,10 +2427,10 @@ function AdminUnitDetailPage() {
             subtitle={`Monat ${String(kpiMonth).padStart(2, "0")}/${kpiYear} · Backend-KPI (revenue_forecast / profit_service) · Monatliche Betrachtung (exkl. einmalige Kosten)`}
           >
             {unitKpiErr ? (
-              <p className="text-sm text-red-600 mb-3">{unitKpiErr}</p>
+              <p className="text-sm text-[#f87171] mb-3">{unitKpiErr}</p>
             ) : null}
             {unitKpiLoading ? (
-              <p className="text-sm text-slate-500 mb-3">KPI werden geladen …</p>
+              <p className="text-sm text-[#6b7a9a] mb-3">KPI werden geladen …</p>
             ) : null}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {safeUnit.type === "Apartment" ? (
@@ -2481,30 +2481,30 @@ function AdminUnitDetailPage() {
                 accent="green"
               />
             </div>
-            <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 text-sm text-emerald-950">
-              <p className="font-semibold text-emerald-900 mb-2">
+            <div className="mt-4 rounded-[10px] border border-green-500/20 bg-green-500/5 p-4 text-sm text-[#eef2ff]">
+              <p className="font-semibold text-[#4ade80] mb-2">
                 Monatliche Einnahmen (Details)
               </p>
-              <p className="text-xs text-slate-500 mb-3">
+              <p className="text-xs text-[#6b7a9a] mb-3">
                 Wiederkehrende Einnahmen nach Typ (Monatsäquivalent), summiert über
                 aktive Mietverhältnisse. «Aktueller Umsatz» oben ist der
                 Backend-KPI-Monat und kann davon abweichen.
               </p>
               {unitTenancyRevenueLoading ? (
-                <p className="text-slate-500">…</p>
+                <p className="text-[#6b7a9a]">…</p>
               ) : activeUnitTenancies.length === 0 ? (
-                <p className="text-slate-500">Keine aktiven Mietverhältnisse.</p>
+                <p className="text-[#6b7a9a]">Keine aktiven Mietverhältnisse.</p>
               ) : unitAggregatedRecurringBreakdown.length === 0 ? (
-                <p className="text-slate-500">Keine Einnahmen definiert</p>
+                <p className="text-[#6b7a9a]">Keine Einnahmen definiert</p>
               ) : (
                 <ul className="space-y-1">
                   {unitAggregatedRecurringBreakdown.map((b) => (
                     <li
                       key={b.typeKey}
-                      className="flex justify-between gap-4 text-emerald-900"
+                      className="flex justify-between gap-4 text-[#eef2ff]"
                     >
                       <span>{b.label}</span>
-                      <span className="font-medium tabular-nums text-emerald-950">
+                      <span className="font-medium tabular-nums text-[#4ade80]">
                         {formatCurrency(b.total)}
                       </span>
                     </li>
@@ -2514,13 +2514,13 @@ function AdminUnitDetailPage() {
               {!unitTenancyRevenueLoading &&
               activeUnitTenancies.length > 0 &&
               unitAggregatedOneTimeTotal > 0 ? (
-                <div className="mt-3 pt-3 border-t border-emerald-100/80">
-                  <p className="text-xs font-semibold text-emerald-800 mb-2">
+                <div className="mt-3 pt-3 border-t border-white/[0.05]">
+                  <p className="text-xs font-semibold text-[#6b7a9a] mb-2">
                     Einmalige Einnahmen
                   </p>
-                  <p className="text-sm text-emerald-900 mb-2">
+                  <p className="text-sm text-[#eef2ff] mb-2">
                     Gesamt:{" "}
-                    <span className="font-semibold tabular-nums text-emerald-950">
+                    <span className="font-semibold tabular-nums text-[#4ade80]">
                       {formatCurrency(unitAggregatedOneTimeTotal)}
                     </span>
                   </p>
@@ -2529,10 +2529,10 @@ function AdminUnitDetailPage() {
                       {unitAggregatedOneTimeBreakdown.map((b) => (
                         <li
                           key={`ot-${b.typeKey}`}
-                          className="flex justify-between gap-4 text-emerald-900"
+                          className="flex justify-between gap-4 text-[#eef2ff]"
                         >
                           <span>{b.label}</span>
-                          <span className="font-medium tabular-nums text-emerald-950">
+                          <span className="font-medium tabular-nums text-[#4ade80]">
                             {formatCurrency(b.total)}
                           </span>
                         </li>
@@ -2542,48 +2542,48 @@ function AdminUnitDetailPage() {
                 </div>
               ) : null}
             </div>
-            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-              <p className="font-semibold text-slate-600 mb-2">
+            <div className="mt-4 rounded-xl border border-white/[0.07] bg-[#111520] p-4 text-sm text-[#6b7a9a]">
+              <p className="font-semibold text-[#6b7a9a] mb-2">
                 Monatliche Kosten (Details)
               </p>
-              <p className="text-xs text-slate-500 mb-3">
+              <p className="text-xs text-[#6b7a9a] mb-3">
                 Aus unit_costs und Kautionsversicherung (jährliche Prämie ÷ 12). «Laufende
                 Kosten» oben ist der Backend-KPI-Monat und kann bei Abweichungen in den
                 Stammdaten davon abweichen.
               </p>
-              <div className="mb-3 pb-3 border-b border-slate-200/90">
-                <p className="text-sm text-slate-600">
-                  <span className="font-medium">Gesamtausgaben (dieser Monat):</span>{" "}
-                  <span className="font-semibold tabular-nums text-slate-700">
+              <div className="mb-3 pb-3 border-b border-white/[0.05]">
+                <p className="text-sm text-[#6b7a9a]">
+                  <span className="text-[13px] font-medium text-[#eef2ff]">Gesamtausgaben (dieser Monat):</span>{" "}
+                  <span className="font-semibold tabular-nums text-[#eef2ff]">
                     {formatCurrency(totalExpendituresInfoMonth)}
                   </span>
                 </p>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-[#6b7a9a] mt-1">
                   Informativ: Laufende Monatskosten zuzüglich einmalige Kosten mit
                   Erfassungsdatum in {String(kpiMonth).padStart(2, "0")}/{kpiYear} (ohne
                   KPI-Wirkung).
                 </p>
               </div>
               <div className="mb-3">
-                <p className="text-sm text-slate-600">
-                  <span className="text-slate-600 font-medium">
+                <p className="text-sm text-[#6b7a9a]">
+                  <span className="text-[#6b7a9a] font-medium">
                     Laufende Kosten gesamt:
                   </span>{" "}
-                  <span className="font-semibold tabular-nums text-slate-700">
+                  <span className="font-semibold tabular-nums text-[#eef2ff]">
                     {formatCurrency(runningCostsStammdatenTotal)}
                   </span>
                 </p>
                 {recurringCostBreakdownDisplay.length === 0 ? (
-                  <p className="text-slate-500 mt-2">Keine laufenden Kosten definiert</p>
+                  <p className="text-[#6b7a9a] mt-2">Keine laufenden Kosten definiert</p>
                 ) : (
                   <ul className="space-y-1 mt-2">
                     {recurringCostBreakdownDisplay.map((b) => (
                       <li
                         key={b.typeKey}
-                        className="flex justify-between gap-4 text-slate-600"
+                        className="flex justify-between gap-4 text-[#6b7a9a]"
                       >
                         <span>{b.label}</span>
-                        <span className="font-medium tabular-nums text-slate-700">
+                        <span className="font-medium tabular-nums text-[#eef2ff]">
                           {formatCurrency(b.total)}
                         </span>
                       </li>
@@ -2591,26 +2591,26 @@ function AdminUnitDetailPage() {
                   </ul>
                 )}
               </div>
-              <div className="mt-3 pt-3 border-t border-slate-200">
-                <p className="text-sm text-slate-600 mb-2">
-                  <span className="text-slate-600 font-medium">
+              <div className="mt-3 pt-3 border-t border-white/[0.07]">
+                <p className="text-sm text-[#6b7a9a] mb-2">
+                  <span className="text-[#6b7a9a] font-medium">
                     Einmalige Kosten gesamt:
                   </span>{" "}
-                  <span className="font-semibold tabular-nums text-slate-700">
+                  <span className="font-semibold tabular-nums text-[#eef2ff]">
                     {formatCurrency(oneTimeCostTotalDisplay)}
                   </span>
                 </p>
                 {oneTimeCostTotalDisplay <= 0 ? (
-                  <p className="text-slate-500">Keine einmaligen Kosten</p>
+                  <p className="text-[#6b7a9a]">Keine einmaligen Kosten</p>
                 ) : (
                   <ul className="space-y-1 text-sm">
                     {oneTimeCostBreakdownDisplay.map((b) => (
                       <li
                         key={`otc-${b.typeKey}`}
-                        className="flex justify-between gap-4 text-slate-600"
+                        className="flex justify-between gap-4 text-[#6b7a9a]"
                       >
                         <span>{b.label}</span>
-                        <span className="font-medium tabular-nums text-slate-700">
+                        <span className="font-medium tabular-nums text-[#eef2ff]">
                           {formatCurrency(b.total)}
                         </span>
                       </li>
@@ -2627,12 +2627,12 @@ function AdminUnitDetailPage() {
               subtitle="Kostenpositionen aus unit_costs (Monatlich/Jährlich; Einmalig separat)"
             >
               {costError ? (
-                <p className="text-sm text-red-600 mb-3">{costError}</p>
+                <p className="text-sm text-[#f87171] mb-3">{costError}</p>
               ) : null}
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-700">
+                <table className="w-full text-left text-sm text-[#eef2ff]">
                   <thead>
-                    <tr className="border-b border-slate-200 text-slate-500">
+                    <tr className="bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#6b7a9a]">
                       <th className="py-2 pr-4 font-medium">Kostenart</th>
                       <th className="py-2 pr-4 font-medium">Betrag (CHF)</th>
                       <th className="py-2 pr-4 font-medium">Aktionen</th>
@@ -2643,7 +2643,7 @@ function AdminUnitDetailPage() {
                       <tr>
                         <td
                           colSpan={3}
-                          className="py-3 text-slate-500 text-sm"
+                          className="py-3 text-[#6b7a9a] text-sm"
                         >
                           {costLoading && !costError
                             ? "Lade …"
@@ -2654,7 +2654,7 @@ function AdminUnitDetailPage() {
                       recurringUnitCosts.map((row) => (
                         <tr
                           key={String(row.id)}
-                          className="border-b border-slate-100"
+                          className="border-b border-white/[0.05]"
                         >
                           <td className="py-2 pr-4 font-medium">
                             {row.cost_type || "—"}
@@ -2666,7 +2666,7 @@ function AdminUnitDetailPage() {
                                   maximumFractionDigits: 2,
                                 })}`
                               : "—"}
-                            <span className="ml-2 text-xs text-slate-500">
+                            <span className="ml-2 text-xs text-[#6b7a9a]">
                               {String(row.frequency || "monthly").trim().toLowerCase() === "yearly"
                                 ? "(jährlich)"
                                 : "(monatlich)"}
@@ -2678,7 +2678,7 @@ function AdminUnitDetailPage() {
                                 type="button"
                                 disabled={costLoading}
                                 onClick={() => handleUnitCostEdit(row)}
-                                className="text-orange-600 hover:underline text-sm font-medium disabled:opacity-50"
+                                className="text-[#7aaeff] hover:underline text-sm font-medium disabled:opacity-50"
                               >
                                 Bearbeiten
                               </button>
@@ -2686,7 +2686,7 @@ function AdminUnitDetailPage() {
                                 type="button"
                                 disabled={costLoading}
                                 onClick={() => handleUnitCostDelete(row)}
-                                className="text-red-600 hover:underline text-sm font-medium disabled:opacity-50"
+                                className="text-[#f87171] hover:underline text-sm font-medium disabled:opacity-50"
                               >
                                 Löschen
                               </button>
@@ -2698,7 +2698,7 @@ function AdminUnitDetailPage() {
                   </tbody>
                 </table>
               </div>
-              <p className="text-sm text-slate-700 mt-3 font-medium">
+              <p className="text-sm text-[#eef2ff] mt-3 font-medium">
                 Total: CHF{" "}
                 {unitCostsTotalMonthly.toLocaleString("de-CH", {
                   minimumFractionDigits: 2,
@@ -2708,10 +2708,10 @@ function AdminUnitDetailPage() {
               </p>
               <form
                 onSubmit={handleUnitCostSubmit}
-                className="mt-6 pt-4 border-t border-slate-200 space-y-3"
+                className="mt-6 pt-4 border-t border-white/[0.07] space-y-3"
               >
                 <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3">
-                  <label className="flex flex-col gap-1 text-sm text-slate-600">
+                  <label className="flex flex-col gap-1 text-sm text-[#6b7a9a]">
                     <span>Kostenart</span>
                     <select
                       value={costForm.cost_type}
@@ -2724,7 +2724,7 @@ function AdminUnitDetailPage() {
                         }))
                       }
                       disabled={costLoading}
-                      className="text-sm border border-slate-300 rounded-lg px-2 py-1.5 bg-white text-slate-800 disabled:opacity-50 min-w-[200px]"
+                      className="text-sm border border-white/[0.08] rounded-[8px] px-2 py-1.5 bg-[#111520] text-[#eef2ff] disabled:opacity-50 min-w-[200px]"
                     >
                       <option value="">— wählen —</option>
                       {UNIT_COST_TYPE_OPTIONS.map((opt) => (
@@ -2735,7 +2735,7 @@ function AdminUnitDetailPage() {
                     </select>
                   </label>
                   {costForm.cost_type === "Sonstiges" ? (
-                    <label className="flex flex-col gap-1 text-sm text-slate-600">
+                    <label className="flex flex-col gap-1 text-sm text-[#6b7a9a]">
                       <span>Bezeichnung</span>
                       <input
                         type="text"
@@ -2747,12 +2747,12 @@ function AdminUnitDetailPage() {
                           }))
                         }
                         disabled={costLoading}
-                        className="text-sm border border-slate-300 rounded-lg px-2 py-1.5 bg-white text-slate-800 disabled:opacity-50 min-w-[200px]"
+                        className="text-sm border border-white/[0.08] rounded-[8px] px-2 py-1.5 bg-[#111520] text-[#eef2ff] disabled:opacity-50 min-w-[200px]"
                         placeholder="z. B. Haftpflicht"
                       />
                     </label>
                   ) : null}
-                  <label className="flex flex-col gap-1 text-sm text-slate-600">
+                  <label className="flex flex-col gap-1 text-sm text-[#6b7a9a]">
                     <span>Betrag (CHF)</span>
                     <input
                       type="text"
@@ -2765,10 +2765,10 @@ function AdminUnitDetailPage() {
                         }))
                       }
                       disabled={costLoading}
-                      className="text-sm border border-slate-300 rounded-lg px-2 py-1.5 bg-white text-slate-800 disabled:opacity-50 w-40"
+                      className="text-sm border border-white/[0.08] rounded-[8px] px-2 py-1.5 bg-[#111520] text-[#eef2ff] disabled:opacity-50 w-40"
                     />
                   </label>
-                  <label className="flex flex-col gap-1 text-sm text-slate-600">
+                  <label className="flex flex-col gap-1 text-sm text-[#6b7a9a]">
                     <span>Frequenz</span>
                     <select
                       value={costForm.frequency || "monthly"}
@@ -2776,7 +2776,7 @@ function AdminUnitDetailPage() {
                         setCostForm((f) => ({ ...f, frequency: e.target.value }))
                       }
                       disabled={costLoading}
-                      className="text-sm border border-slate-300 rounded-lg px-2 py-1.5 bg-white text-slate-800 disabled:opacity-50 min-w-[160px]"
+                      className="text-sm border border-white/[0.08] rounded-[8px] px-2 py-1.5 bg-[#111520] text-[#eef2ff] disabled:opacity-50 min-w-[160px]"
                     >
                       <option value="monthly">Monatlich</option>
                       <option value="yearly">Jährlich</option>
@@ -2787,7 +2787,7 @@ function AdminUnitDetailPage() {
                     <button
                       type="submit"
                       disabled={costLoading}
-                      className="text-sm bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium disabled:opacity-50"
+                      className="text-sm bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] text-white font-semibold rounded-[8px] border-none px-4 py-2 disabled:opacity-50"
                     >
                       {costLoading ? "…" : "Speichern"}
                     </button>
@@ -2795,14 +2795,14 @@ function AdminUnitDetailPage() {
                       type="button"
                       disabled={costLoading}
                       onClick={handleUnitCostCancel}
-                      className="text-sm border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium disabled:opacity-50"
+                      className="text-sm border border-white/[0.1] hover:bg-[#111520] text-[#eef2ff] px-4 py-2 rounded-lg font-medium disabled:opacity-50"
                     >
                       Abbrechen
                     </button>
                   </div>
                 </div>
                 {editingCostId ? (
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[#6b7a9a]">
                     Bearbeitung: Eintrag wird aktualisiert.
                   </p>
                 ) : null}
@@ -2816,12 +2816,12 @@ function AdminUnitDetailPage() {
               subtitle="Einmalige Buchungen; nicht in den laufenden Kosten oder den KPI oben enthalten"
             >
               {oneTimeUnitCosts.length === 0 ? (
-                <p className="text-sm text-slate-500">Keine einmaligen Kosten erfasst.</p>
+                <p className="text-[10px] text-[#6b7a9a]">Keine einmaligen Kosten erfasst.</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm text-slate-700">
+                  <table className="w-full text-left text-sm text-[#eef2ff]">
                     <thead>
-                      <tr className="border-b border-slate-200 text-slate-500">
+                      <tr className="bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#6b7a9a]">
                         <th className="py-2 pr-4 font-medium">Kostenart</th>
                         <th className="py-2 pr-4 font-medium">Betrag CHF</th>
                         <th className="py-2 pr-4 font-medium">Aktionen</th>
@@ -2831,7 +2831,7 @@ function AdminUnitDetailPage() {
                       {oneTimeUnitCosts.map((row) => (
                         <tr
                           key={String(row.id)}
-                          className="border-b border-slate-100"
+                          className="border-b border-white/[0.05]"
                         >
                           <td className="py-2 pr-4 font-medium">
                             {row.cost_type || "—"}
@@ -2849,7 +2849,7 @@ function AdminUnitDetailPage() {
                               type="button"
                               disabled={costLoading}
                               onClick={() => handleUnitCostDelete(row)}
-                              className="text-red-600 hover:underline text-sm font-medium disabled:opacity-50"
+                              className="text-[#f87171] hover:underline text-sm font-medium disabled:opacity-50"
                             >
                               Löschen
                             </button>
@@ -2869,23 +2869,23 @@ function AdminUnitDetailPage() {
           subtitle="Hinterlegung gegenüber dem Vermieter (nicht Mieterkaution)"
         >
           {showLandlordDepositNone ? (
-            <p className="text-sm text-slate-500">Keine Kaution erfasst</p>
+            <p className="text-[10px] text-[#6b7a9a]">Keine Kaution erfasst</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-700">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[#eef2ff]">
               <div>
-                <p className="text-sm text-slate-500">Kautionsart</p>
-                <p className="font-medium">{landlordDepositKindLabel}</p>
+                <p className="text-[10px] text-[#6b7a9a]">Kautionsart</p>
+                <p className="text-[13px] font-medium text-[#eef2ff]">{landlordDepositKindLabel}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-500">Kautionsbetrag</p>
-                <p className="font-medium">
+                <p className="text-[10px] text-[#6b7a9a]">Kautionsbetrag</p>
+                <p className="text-[13px] font-medium text-[#eef2ff]">
                   {formatChfOrDash(unit.landlordDepositAmount)}
                 </p>
               </div>
               {landlordDepositTypeKey === "insurance" ? (
                 <div>
-                  <p className="text-sm text-slate-500">Jahresprämie</p>
-                  <p className="font-medium">
+                  <p className="text-[10px] text-[#6b7a9a]">Jahresprämie</p>
+                  <p className="text-[13px] font-medium text-[#eef2ff]">
                     {formatChfOrDash(unit.landlordDepositAnnualPremium)}
                   </p>
                 </div>
@@ -2899,13 +2899,13 @@ function AdminUnitDetailPage() {
           subtitle="Dateien zu dieser Unit"
           rightSlot={
             <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:flex-wrap sm:justify-end">
-              <label className="flex items-center gap-2 text-sm text-slate-600">
+              <label className="flex items-center gap-2 text-sm text-[#6b7a9a]">
                 <span className="whitespace-nowrap">Kategorie</span>
                 <select
                   value={unitDocCategory}
                   onChange={(e) => setUnitDocCategory(e.target.value)}
                   disabled={unitDocUploading || !unitId}
-                  className="text-sm border border-slate-300 rounded-lg px-2 py-1.5 bg-white text-slate-800 disabled:opacity-50"
+                  className="text-sm border border-white/[0.1] rounded-[8px] px-2 py-1.5 bg-[#111520] border border-white/[0.08] text-[#eef2ff] disabled:opacity-50"
                 >
                   <option value="">—</option>
                   <option value="rent_contract">Mietvertrag</option>
@@ -2925,7 +2925,7 @@ function AdminUnitDetailPage() {
                 type="button"
                 onClick={handleUnitDocumentPick}
                 disabled={unitDocUploading || !unitId}
-                className="text-sm border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg font-medium disabled:opacity-50"
+                className="text-sm border border-white/[0.1] hover:bg-[#111520] text-[#eef2ff] px-3 py-2 rounded-lg font-medium disabled:opacity-50"
               >
                 {unitDocUploading ? "Wird hochgeladen …" : "Hochladen"}
               </button>
@@ -2933,19 +2933,19 @@ function AdminUnitDetailPage() {
           }
         >
           {unitDocUploadError ? (
-            <p className="text-sm text-red-600 mb-2">{unitDocUploadError}</p>
+            <p className="text-sm text-[#f87171] mb-2">{unitDocUploadError}</p>
           ) : null}
           {unitDocumentsLoading ? (
-            <p className="text-sm text-slate-500">Lade Dokumente …</p>
+            <p className="text-[10px] text-[#6b7a9a]">Lade Dokumente …</p>
           ) : unitDocumentsError ? (
-            <p className="text-sm text-red-600">{unitDocumentsError}</p>
+            <p className="text-sm text-[#f87171]">{unitDocumentsError}</p>
           ) : unitDocuments.length === 0 ? (
-            <p className="text-sm text-slate-500">Keine Dokumente vorhanden</p>
+            <p className="text-[10px] text-[#6b7a9a]">Keine Dokumente vorhanden</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-700">
+              <table className="w-full text-left text-sm text-[#eef2ff]">
                 <thead>
-                  <tr className="border-b border-slate-200 text-slate-500">
+                  <tr className="bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#6b7a9a]">
                     <th className="py-2 pr-4 font-medium">Datei</th>
                     <th className="py-2 pr-4 font-medium">Typ</th>
                     <th className="py-2 pr-4 font-medium">Kategorie</th>
@@ -2956,16 +2956,16 @@ function AdminUnitDetailPage() {
                 </thead>
                 <tbody>
                   {unitDocuments.map((doc) => (
-                    <tr key={String(doc.id)} className="border-b border-slate-100">
+                    <tr key={String(doc.id)} className="border-b border-white/[0.05]">
                       <td className="py-2 pr-4 font-medium">{doc.file_name || "—"}</td>
-                      <td className="py-2 pr-4 text-slate-600">{formatUnitDocumentType(doc)}</td>
-                      <td className="py-2 pr-4 text-slate-600">
+                      <td className="py-2 pr-4 text-[#6b7a9a]">{formatUnitDocumentType(doc)}</td>
+                      <td className="py-2 pr-4 text-[#6b7a9a]">
                         {formatUnitDocumentCategoryLabel(doc.category)}
                       </td>
-                      <td className="py-2 pr-4 text-slate-600">
+                      <td className="py-2 pr-4 text-[#6b7a9a]">
                         {formatUnitDocumentDate(doc.created_at)}
                       </td>
-                      <td className="py-2 pr-4 text-slate-600">
+                      <td className="py-2 pr-4 text-[#6b7a9a]">
                         {doc.uploaded_by_name != null && doc.uploaded_by_name !== ""
                           ? doc.uploaded_by_name
                           : "—"}
@@ -2975,14 +2975,14 @@ function AdminUnitDetailPage() {
                           <button
                             type="button"
                             onClick={() => handleOpenUnitDocument(doc.id)}
-                            className="text-orange-600 hover:underline font-medium"
+                            className="text-[#7aaeff] hover:underline font-medium"
                           >
                             Öffnen
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteUnitDocument(doc.id)}
-                            className="text-slate-500 hover:text-rose-600 hover:underline text-sm"
+                            className="text-[#6b7a9a] hover:text-[#f87171] hover:underline text-sm"
                           >
                             Löschen
                           </button>
@@ -3001,16 +3001,16 @@ function AdminUnitDetailPage() {
           subtitle="Alle Mietverhältnisse dieser Unit (aktiv, geplant/reserviert, beendet). Sortierung: zuerst Aktive, dann Geplant/Reserviert, dann Historie. Einnahmen / Monat aus TenancyRevenue (Backend, Monatsäquivalent)."
         >
           {unitTenancies === null ? (
-            <p className="text-sm text-slate-500">Lade Mietverhältnisse …</p>
+            <p className="text-[10px] text-[#6b7a9a]">Lade Mietverhältnisse …</p>
           ) : unitTenanciesForMieterTable.length === 0 ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-[10px] text-[#6b7a9a]">
               Keine Mietverhältnisse für diese Unit erfasst.
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-700">
+              <table className="w-full text-left text-sm text-[#eef2ff]">
                 <thead>
-                  <tr className="border-b border-slate-200 text-slate-500">
+                  <tr className="bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#6b7a9a]">
                     <th className="py-2 pr-4 font-medium">Name</th>
                     <th className="py-2 pr-4 font-medium">Status</th>
                     <th className="py-2 pr-4 font-medium text-right">
@@ -3028,11 +3028,11 @@ function AdminUnitDetailPage() {
                     const tdt = String(tn.tenant_deposit_type || "").toLowerCase();
                     const statusMeta = tenancyMieterTableStatusMeta(tn);
                     return (
-                      <tr key={String(tn.id)} className="border-b border-slate-100">
+                      <tr key={String(tn.id)} className="border-b border-white/[0.05]">
                         <td className="py-2 pr-4 font-medium">
                           <Link
                             to={`/admin/tenants/${String(tn.tenant_id)}`}
-                            className="text-orange-600 hover:text-orange-700 hover:underline"
+                            className="text-[#7aaeff] hover:text-[#a8c8ff] hover:underline"
                           >
                             {tenantNameMap[String(tn.tenant_id)] || "…"}
                           </Link>
@@ -3043,21 +3043,21 @@ function AdminUnitDetailPage() {
                         <td className="py-2 pr-4 text-right">
                           {formatChfOrDash(tn.monthly_revenue_equivalent)}
                         </td>
-                        <td className="py-2 pr-4 text-slate-600">
+                        <td className="py-2 pr-4 text-[#6b7a9a]">
                           {tenantDepositTypeLabel(tn.tenant_deposit_type)}
                         </td>
-                        <td className="py-2 pr-4 text-right text-slate-600">
+                        <td className="py-2 pr-4 text-right text-[#6b7a9a]">
                           {formatChfOrDash(tn.tenant_deposit_amount)}
                         </td>
-                        <td className="py-2 pr-4 text-slate-600">
+                        <td className="py-2 pr-4 text-[#6b7a9a]">
                           {tdt === "insurance"
                             ? tenantDepositProviderLabel(tn.tenant_deposit_provider)
                             : "—"}
                         </td>
-                        <td className="py-2 pr-4 text-slate-600">
+                        <td className="py-2 pr-4 text-[#6b7a9a]">
                           {formatTenancyMoveIn(tn.move_in_date)}
                         </td>
-                        <td className="py-2 pr-4 text-slate-600 font-medium">
+                        <td className="py-2 pr-4 text-[#6b7a9a] font-medium">
                           {formatTenancyMoveOut(
                             tn.display_end_date != null && String(tn.display_end_date).trim() !== ""
                               ? tn.display_end_date
@@ -3135,23 +3135,23 @@ function AdminUnitDetailPage() {
                 key={`${warning.text}-${index}`}
                 className={`rounded-2xl border p-4 ${
                   warning.tone === "rose"
-                    ? "border-rose-200 bg-rose-50"
+                    ? "border-red-500/20 bg-red-500/10"
                     : warning.tone === "slate"
-                      ? "border-slate-200 bg-slate-50"
+                      ? "border-white/[0.07] bg-[#111520]"
                       : warning.tone === "emerald"
-                        ? "border-emerald-200 bg-emerald-50"
-                        : "border-amber-200 bg-amber-50"
+                        ? "border-green-500/20 bg-green-500/10"
+                        : "border-amber-500/20 bg-amber-500/10"
                 }`}
               >
                 <p
                   className={`text-sm font-medium ${
                     warning.tone === "rose"
-                      ? "text-rose-700"
+                      ? "text-red-400"
                       : warning.tone === "slate"
-                        ? "text-slate-700"
+                        ? "text-[#eef2ff]"
                         : warning.tone === "emerald"
-                          ? "text-emerald-700"
-                          : "text-amber-700"
+                          ? "text-green-400"
+                          : "text-amber-400"
                   }`}
                 >
                   {warning.text}
@@ -3160,8 +3160,8 @@ function AdminUnitDetailPage() {
             ))}
 
             {unitWarnings.length === 0 && (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                <p className="text-sm font-medium text-emerald-700">
+              <div className="rounded-2xl border border-green-500/20 bg-green-500/10 p-4">
+                <p className="text-sm font-medium text-green-400">
                   Keine kritischen Warnungen für diese Unit
                 </p>
               </div>
@@ -3270,13 +3270,13 @@ function AdminUnitDetailPage() {
                 return (
                 <div
                   key={room.id}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex items-center justify-between gap-4"
+                  className="rounded-2xl border border-white/[0.07] bg-[#111520] p-4 flex items-center justify-between gap-4"
                 >
                   <div>
-                    <p className="font-semibold text-slate-800">
+                    <p className="font-semibold text-[#eef2ff]">
                       {room.roomName}
                     </p>
-                    <p className="text-sm text-slate-500 mt-1">
+                    <p className="text-sm text-[#6b7a9a] mt-1">
                       Soll {formatChfOrDash(room.priceMonthly)}
                       {rn !== "—" ? ` · ${rn}` : ""}
                       {rmi
@@ -3284,7 +3284,7 @@ function AdminUnitDetailPage() {
                         : ` · Kein Einzug erfasst`}
                     </p>
                     {futureSig ? (
-                      <p className="text-xs text-slate-600 mt-1">{futureSig}</p>
+                      <p className="text-xs text-[#6b7a9a] mt-1">{futureSig}</p>
                     ) : null}
                   </div>
 
@@ -3296,7 +3296,7 @@ function AdminUnitDetailPage() {
               })}
 
               {unitRooms.length === 0 && (
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-[#6b7a9a]">
                   Noch keine Rooms vorhanden.
                 </p>
               )}
@@ -3349,7 +3349,7 @@ function AdminUnitDetailPage() {
             rightSlot={
               <button
                 onClick={handleOpenRoomModal}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl font-medium transition"
+                className="bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] text-white font-semibold rounded-[8px] border-none px-4 py-2 transition"
               >
                 + Room hinzufügen
               </button>
@@ -3358,7 +3358,7 @@ function AdminUnitDetailPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-200 text-slate-500 text-sm">
+                  <tr className="bg-[#111520] text-[9px] font-bold uppercase tracking-[.8px] text-[#6b7a9a] text-sm">
                     <th className="py-3 pr-4">Room ID</th>
                     <th className="py-3 pr-4">Zimmer</th>
                     <th className="py-3 pr-4">Status</th>
@@ -3392,15 +3392,15 @@ function AdminUnitDetailPage() {
                     return (
                     <tr
                       key={room.id}
-                      className="border-b border-slate-100 text-slate-700"
+                      className="border-b border-white/[0.05] text-[#eef2ff]"
                     >
-                      <td className="py-4 pr-4 font-medium text-orange-600">
+                      <td className="py-4 pr-4 font-medium text-[#4ade80]">
                         {room.roomId}
                       </td>
                       <td className="py-4 pr-4">
                         <div>{room.roomName}</div>
                         {futureSig ? (
-                          <div className="text-xs text-slate-500 mt-0.5">
+                          <div className="text-xs text-[#6b7a9a] mt-0.5">
                             {futureSig}
                           </div>
                         ) : null}
@@ -3428,13 +3428,13 @@ function AdminUnitDetailPage() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleOpenEditRoomModal(room)}
-                            className="px-3 py-2 rounded-lg border border-slate-300 text-sm hover:bg-slate-50"
+                            className="px-3 py-2 rounded-lg border border-white/[0.1] text-sm hover:bg-[#111520]"
                           >
                             Bearbeiten
                           </button>
                           <button
                             onClick={() => handleDeleteRoom(room.id)}
-                            className="px-3 py-2 rounded-lg border border-red-300 text-red-600 text-sm hover:bg-red-50"
+                            className="px-3 py-2 rounded-[8px] border border-red-500/20 bg-red-500/10 text-[#f87171] text-sm hover:bg-red-500/15"
                           >
                             Löschen
                           </button>
@@ -3448,7 +3448,7 @@ function AdminUnitDetailPage() {
                     <tr>
                       <td
                         colSpan="10"
-                        className="py-8 text-center text-slate-500"
+                        className="py-8 text-center text-[#6b7a9a]"
                       >
                         Noch keine Rooms vorhanden.
                       </td>
@@ -3496,31 +3496,31 @@ function AdminUnitDetailPage() {
           subtitle="Änderungen an dieser Unit (Audit-Log, neueste zuerst)"
         >
           {auditLogLoading ? (
-            <p className="text-sm text-slate-500">Lade Verlauf …</p>
+            <p className="text-[10px] text-[#6b7a9a]">Lade Verlauf …</p>
           ) : auditLogError ? (
-            <p className="text-sm text-red-600">{auditLogError}</p>
+            <p className="text-sm text-[#f87171]">{auditLogError}</p>
           ) : auditLogs.length === 0 ? (
-            <p className="text-sm text-slate-500">Keine Aktivitäten vorhanden</p>
+            <p className="text-[10px] text-[#6b7a9a]">Keine Aktivitäten vorhanden</p>
           ) : (
-            <ul className="space-y-0 border-l border-slate-200 pl-4 ml-1">
+            <ul className="space-y-0 border-l border-white/[0.07] pl-4 ml-1">
               {auditLogs.map((entry) => (
                 <li
                   key={entry.id}
                   className="relative pb-4 last:pb-0 pl-2 -ml-px border-l border-transparent"
                 >
                   <span
-                    className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-orange-500"
+                    className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[#fb923c]"
                     aria-hidden
                   />
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[#6b7a9a]">
                     {formatAuditTimestamp(entry.created_at)}
                   </p>
-                  <div className="font-medium text-slate-800 mt-0.5 space-y-1">
+                  <div className="font-medium text-[#eef2ff] mt-0.5 space-y-1">
                     {getAuditEntryDisplayLines(entry, auditResolvers).map((line, idx) => (
                       <p key={idx}>{line}</p>
                     ))}
                   </div>
-                  <p className="text-sm text-slate-600 mt-1">
+                  <p className="text-sm text-[#6b7a9a] mt-1">
                     {auditActionLabel(entry.action)}
                     {" · "}
                     {entry.actor_name ||
@@ -3535,16 +3535,16 @@ function AdminUnitDetailPage() {
         </SectionCard>
 
         {isRoomModalOpen && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-            <div className="bg-white w-full max-w-3xl rounded-2xl shadow-xl border border-slate-200 p-6 max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+            <div className="bg-[#141824] w-full max-w-3xl rounded-2xl shadow-xl border border-white/[0.07] p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-2xl font-bold text-slate-800">
+                  <h3 className="text-2xl font-bold text-[#eef2ff]">
                     {editingRoomId
                       ? "Room bearbeiten"
                       : "Neuen Room hinzufügen"}
                   </h3>
-                  <p className="text-slate-500 mt-1">
+                  <p className="text-[#6b7a9a] mt-1">
                     {editingRoomId
                       ? "Bearbeite hier den vorhandenen Room."
                       : "Room ID wird automatisch vergeben."}
@@ -3553,17 +3553,17 @@ function AdminUnitDetailPage() {
 
                 <button
                   onClick={handleCloseRoomModal}
-                  className="text-slate-500 hover:text-slate-700 text-2xl leading-none"
+                  className="text-[#6b7a9a] hover:text-[#eef2ff] text-2xl leading-none"
                 >
                   ×
                 </button>
               </div>
 
-              <div className="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
-                <p className="text-sm text-slate-500">
+              <div className="mb-6 bg-[#111520] border border-white/[0.07] rounded-xl p-4">
+                <p className="text-[10px] text-[#6b7a9a]">
                   {editingRoomId ? "Room ID" : "Automatische Room ID"}
                 </p>
-                <p className="text-xl font-bold text-slate-800 mt-1">
+                <p className="text-xl font-bold text-[#eef2ff] mt-1">
                   {editingRoomId
                     ? unitRooms.find(
                         (room) => String(room.id) === String(editingRoomId)
@@ -3575,7 +3575,7 @@ function AdminUnitDetailPage() {
               <form onSubmit={handleRoomSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-slate-600 mb-2">
+                    <label className="block text-sm text-[#6b7a9a] mb-2">
                       Zimmername
                     </label>
                     <input
@@ -3584,30 +3584,30 @@ function AdminUnitDetailPage() {
                       value={roomForm.roomName}
                       onChange={handleRoomChange}
                       required
-                      className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                      className="w-full border border-white/[0.08] rounded-[8px] px-4 py-3 bg-[#111520] text-[#eef2ff] outline-none focus:ring-2 focus:ring-[#7aaeff]/40"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm text-slate-600 mb-2">
+                    <label className="block text-sm text-[#6b7a9a] mb-2">
                       Status (automatisch)
                     </label>
                     <div className="flex flex-col gap-1">
                       {roomModalDerivedOcc == null ? (
-                        <span className="text-slate-400 text-sm">…</span>
+                        <span className="text-[#6b7a9a] text-sm">…</span>
                       ) : (
                         <Badge tone={getRoomOccBadgeTone(roomModalDerivedOcc)}>
                           {formatOccupancyStatusDe(roomModalDerivedOcc)}
                         </Badge>
                       )}
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-[#6b7a9a]">
                         Aus Mietverhältnissen (heute). Mieter und Ist-Miete: Mietvertrag.
                       </p>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm text-slate-600 mb-2">
+                    <label className="block text-sm text-[#6b7a9a] mb-2">
                       Geplanter Mietpreis (CHF)
                     </label>
                     <input
@@ -3616,15 +3616,15 @@ function AdminUnitDetailPage() {
                       value={roomForm.priceMonthly}
                       onChange={handleRoomChange}
                       placeholder="z. B. 950"
-                      className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                      className="w-full border border-white/[0.08] rounded-[8px] px-4 py-3 bg-[#111520] text-[#eef2ff] outline-none focus:ring-2 focus:ring-[#7aaeff]/40"
                     />
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-[#6b7a9a] mt-1">
                       Soll-Preis für Planung / Vollbelegung; keine Ist-Miete.
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-sm text-slate-600 mb-2">
+                    <label className="block text-sm text-[#6b7a9a] mb-2">
                       Mindestmietdauer in Monaten
                     </label>
                     <input
@@ -3633,12 +3633,12 @@ function AdminUnitDetailPage() {
                       value={roomForm.minimumStayMonths}
                       onChange={handleRoomChange}
                       min="1"
-                      className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                      className="w-full border border-white/[0.08] rounded-[8px] px-4 py-3 bg-[#111520] text-[#eef2ff] outline-none focus:ring-2 focus:ring-[#7aaeff]/40"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm text-slate-600 mb-2">
+                    <label className="block text-sm text-[#6b7a9a] mb-2">
                       Kündigungsfrist in Monaten
                     </label>
                     <input
@@ -3647,7 +3647,7 @@ function AdminUnitDetailPage() {
                       value={roomForm.noticePeriodMonths}
                       onChange={handleRoomChange}
                       min="1"
-                      className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+                      className="w-full border border-white/[0.08] rounded-[8px] px-4 py-3 bg-[#111520] text-[#eef2ff] outline-none focus:ring-2 focus:ring-[#7aaeff]/40"
                     />
                   </div>
                 </div>
@@ -3656,14 +3656,14 @@ function AdminUnitDetailPage() {
                   <button
                     type="button"
                     onClick={handleCloseRoomModal}
-                    className="px-5 py-3 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+                    className="px-5 py-3 rounded-[8px] border border-white/[0.1] bg-transparent text-[#8090b0] hover:bg-white/[0.04]"
                   >
                     Abbrechen
                   </button>
 
                   <button
                     type="submit"
-                    className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-3 rounded-lg font-medium transition"
+                    className="bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] text-white font-semibold rounded-[8px] border-none px-5 py-3 transition"
                   >
                     {editingRoomId
                       ? "Änderungen speichern"
@@ -3676,29 +3676,29 @@ function AdminUnitDetailPage() {
         )}
         {assignOpen && (
           <div
-            className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35 p-4"
+            className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4"
             onClick={() => !assignSaving && setAssignOpen(false)}
             role="presentation"
           >
             <div
-              className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-lg max-h-[90vh] overflow-y-auto"
+              className="w-full max-w-lg rounded-xl border border-white/[0.07] bg-[#141824] p-6 shadow-lg max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
               aria-labelledby="unit-assign-title"
             >
-              <h2 id="unit-assign-title" className="text-lg font-semibold text-slate-900 mb-1">
+              <h2 id="unit-assign-title" className="text-lg font-semibold text-[#eef2ff] mb-1">
                 Zuordnungen
               </h2>
-              <p className="text-sm text-slate-500 mb-4">
+              <p className="text-sm text-[#6b7a9a] mb-4">
                 Eigentümer, Verwaltung, Bewirtschafter und Liegenschaft für diese Unit.
               </p>
               {assignListsLoading ? (
-                <p className="text-sm text-slate-500 py-4">Lade Auswahl …</p>
+                <p className="text-sm text-[#6b7a9a] py-4">Lade Auswahl …</p>
               ) : (
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="unit-assign-property" className="block text-xs font-medium text-slate-500 mb-1">
+                    <label htmlFor="unit-assign-property" className="block text-xs font-medium text-[#6b7a9a] mb-1">
                       Liegenschaft
                     </label>
                     <select
@@ -3708,7 +3708,7 @@ function AdminUnitDetailPage() {
                         setAssignForm((f) => ({ ...f, property_id: e.target.value }))
                       }
                       disabled={assignSaving}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 bg-white"
+                      className="w-full rounded-[8px] border border-white/[0.08] px-3 py-2 text-sm text-[#eef2ff] bg-[#111520]"
                     >
                       <option value="">—</option>
                       {assignLists.properties.map((p) => (
@@ -3719,7 +3719,7 @@ function AdminUnitDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="unit-assign-landlord" className="block text-xs font-medium text-slate-500 mb-1">
+                    <label htmlFor="unit-assign-landlord" className="block text-xs font-medium text-[#6b7a9a] mb-1">
                       Verwaltung
                     </label>
                     <select
@@ -3729,7 +3729,7 @@ function AdminUnitDetailPage() {
                         setAssignForm((f) => ({ ...f, landlord_id: e.target.value }))
                       }
                       disabled={assignSaving}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 bg-white"
+                      className="w-full rounded-[8px] border border-white/[0.08] px-3 py-2 text-sm text-[#eef2ff] bg-[#111520]"
                     >
                       <option value="">—</option>
                       {assignLists.landlords.map((ll) => (
@@ -3740,7 +3740,7 @@ function AdminUnitDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="unit-assign-pm" className="block text-xs font-medium text-slate-500 mb-1">
+                    <label htmlFor="unit-assign-pm" className="block text-xs font-medium text-[#6b7a9a] mb-1">
                       Bewirtschafter
                     </label>
                     <select
@@ -3750,7 +3750,7 @@ function AdminUnitDetailPage() {
                         setAssignForm((f) => ({ ...f, property_manager_id: e.target.value }))
                       }
                       disabled={assignSaving}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 bg-white"
+                      className="w-full rounded-[8px] border border-white/[0.08] px-3 py-2 text-sm text-[#eef2ff] bg-[#111520]"
                     >
                       <option value="">—</option>
                       {assignLists.pms.map((pm) => (
@@ -3761,7 +3761,7 @@ function AdminUnitDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="unit-assign-owner" className="block text-xs font-medium text-slate-500 mb-1">
+                    <label htmlFor="unit-assign-owner" className="block text-xs font-medium text-[#6b7a9a] mb-1">
                       Eigentümer
                     </label>
                     <select
@@ -3771,7 +3771,7 @@ function AdminUnitDetailPage() {
                         setAssignForm((f) => ({ ...f, owner_id: e.target.value }))
                       }
                       disabled={assignSaving}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 bg-white"
+                      className="w-full rounded-[8px] border border-white/[0.08] px-3 py-2 text-sm text-[#eef2ff] bg-[#111520]"
                     >
                       <option value="">—</option>
                       {assignLists.owners.map((o) => (
@@ -3785,13 +3785,13 @@ function AdminUnitDetailPage() {
                   </div>
                 </div>
               )}
-              {assignErr ? <p className="mt-3 text-sm text-red-700">{assignErr}</p> : null}
+              {assignErr ? <p className="mt-3 text-sm text-[#f87171]">{assignErr}</p> : null}
               <div className="flex gap-2 justify-end mt-6">
                 <button
                   type="button"
                   disabled={assignSaving}
                   onClick={() => setAssignOpen(false)}
-                  className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+                  className="rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:opacity-50"
                 >
                   Abbrechen
                 </button>
@@ -3799,7 +3799,7 @@ function AdminUnitDetailPage() {
                   type="button"
                   disabled={assignSaving || assignListsLoading}
                   onClick={saveAssignModal}
-                  className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
+                  className="rounded-[8px] bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 border-none"
                 >
                   {assignSaving ? "Speichern …" : "Speichern"}
                 </button>

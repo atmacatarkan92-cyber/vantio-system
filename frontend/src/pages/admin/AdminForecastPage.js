@@ -67,93 +67,184 @@ function AdminForecastPage() {
     };
   }, [units, revenueForecast, profitMonth]);
 
+  const kpiShell = (accent) => ({
+    background: "#141824",
+    border: "1px solid rgba(255, 255, 255, 0.07)",
+    borderTop: `4px solid ${accent}`,
+    borderRadius: "14px",
+    padding: "20px",
+  });
+
   return (
-    <div style={{display:"grid",gap:"24px"}}>
+    <div
+      className="bg-[#07090f] text-[#eef2ff] min-h-full"
+      style={{ display: "grid", gap: "24px" }}
+    >
 
       <div>
-        <div style={{
-          fontSize:"12px",
-          color:"#f97316",
-          fontWeight:700,
-          marginBottom:"8px"
-        }}>
+        <div
+          style={{
+            fontSize: "12px",
+            color: "#fb923c",
+            fontWeight: 700,
+            marginBottom: "8px",
+          }}
+        >
           Vantio
         </div>
 
-        <h2 style={{
-          fontSize:"36px",
-          fontWeight:800,
-          margin:0
-        }}>
+        <h2
+          style={{
+            fontSize: "22px",
+            fontWeight: 700,
+            margin: 0,
+          }}
+        >
           Prognose
         </h2>
 
-        <p style={{
-          color:"#64748B",
-          marginTop:"10px"
-        }}>
+        <p
+          style={{
+            color: "#6b7a9a",
+            marginTop: "10px",
+            fontSize: "12px",
+          }}
+        >
           Erwarteter Umsatz und Gewinn für den nächsten Monat.
         </p>
       </div>
 
-      <div style={{
-        display:"grid",
-        gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",
-        gap:"16px"
-      }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+          gap: "16px",
+        }}
+      >
 
-        <div className="card">
-          <h4>Erwarteter Umsatz</h4>
-          <h2>{formatCurrencyMaybe(forecast.totalRevenue)}</h2>
+        <div style={kpiShell("#4ade80")}>
+          <h4
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              color: "#6b7a9a",
+              margin: "0 0 8px 0",
+            }}
+          >
+            Erwarteter Umsatz
+          </h4>
+          <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#4ade80", margin: 0 }}>
+            {formatCurrencyMaybe(forecast.totalRevenue)}
+          </h2>
         </div>
 
-        <div className="card">
-          <h4>Erwarteter Gewinn</h4>
-          <h2>{formatCurrencyMaybe(forecast.totalProfit)}</h2>
+        <div style={kpiShell("#7aaeff")}>
+          <h4
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              color: "#6b7a9a",
+              margin: "0 0 8px 0",
+            }}
+          >
+            Erwarteter Gewinn
+          </h4>
+          <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#eef2ff", margin: 0 }}>
+            {formatCurrencyMaybe(forecast.totalProfit)}
+          </h2>
         </div>
 
       </div>
 
-      <div style={{
-        background:"#fff",
-        borderRadius:"16px",
-        padding:"20px",
-        border:"1px solid #E5E7EB"
-      }}>
+      <div
+        style={{
+          background: "#141824",
+          borderRadius: "14px",
+          padding: "20px",
+          border: "1px solid rgba(255, 255, 255, 0.07)",
+        }}
+      >
 
-        <h3>Forecast pro Unit</h3>
+        <h3
+          style={{
+            fontSize: "9px",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+            color: "#6b7a9a",
+            margin: 0,
+          }}
+        >
+          Forecast pro Unit
+        </h3>
 
-        <table style={{
-          width:"100%",
-          marginTop:"16px",
-          borderCollapse:"collapse"
-        }}>
+        <table
+          style={{
+            width: "100%",
+            marginTop: "16px",
+            borderCollapse: "collapse",
+          }}
+        >
 
           <thead>
-            <tr style={{borderBottom:"1px solid #E5E7EB"}}>
-              <th style={{textAlign:"left",padding:"10px"}}>Unit</th>
-              <th style={{textAlign:"left",padding:"10px"}}>Ort</th>
-              <th style={{textAlign:"left",padding:"10px"}}>Umsatz</th>
-              <th style={{textAlign:"left",padding:"10px"}}>Kosten</th>
-              <th style={{textAlign:"left",padding:"10px"}}>Gewinn</th>
-              <th style={{textAlign:"left",padding:"10px"}}>Risiko</th>
+            <tr
+              style={{
+                background: "#111520",
+                color: "#6b7a9a",
+                fontSize: "9px",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.8px",
+              }}
+            >
+              <th style={{ textAlign: "left", padding: "10px" }}>Unit</th>
+              <th style={{ textAlign: "left", padding: "10px" }}>Ort</th>
+              <th style={{ textAlign: "left", padding: "10px" }}>Umsatz</th>
+              <th style={{ textAlign: "left", padding: "10px" }}>Kosten</th>
+              <th style={{ textAlign: "left", padding: "10px" }}>Gewinn</th>
+              <th style={{ textAlign: "left", padding: "10px" }}>Risiko</th>
             </tr>
           </thead>
 
           <tbody>
 
             {forecast.rows.map((row) => (
-                <tr key={row.id} style={{ borderBottom: "1px solid #F1F5F9" }}>
-                  <td style={{ padding: "10px", fontWeight: 700 }}>{row.id}</td>
-                  <td style={{ padding: "10px" }}>{row.city}</td>
-                  <td style={{ padding: "10px" }}>
+                <tr
+                  key={row.id}
+                  style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
+                >
+                  <td
+                    style={{
+                      padding: "10px",
+                      fontWeight: 700,
+                      color: "#eef2ff",
+                      fontSize: "13px",
+                    }}
+                  >
+                    {row.id}
+                  </td>
+                  <td style={{ padding: "10px", color: "#eef2ff", fontSize: "13px" }}>{row.city}</td>
+                  <td
+                    style={{
+                      padding: "10px",
+                      color: "#4ade80",
+                      fontSize: "13px",
+                      fontWeight: 500,
+                    }}
+                  >
                     {formatCurrencyMaybe(row.revenue)}
                   </td>
-                  <td style={{ padding: "10px" }}>{formatCurrencyMaybe(row.costs)}</td>
-                  <td style={{ padding: "10px", fontWeight: 700 }}>
+                  <td style={{ padding: "10px", color: "#eef2ff", fontSize: "13px" }}>
+                    {formatCurrencyMaybe(row.costs)}
+                  </td>
+                  <td style={{ padding: "10px", fontWeight: 700, color: "#eef2ff", fontSize: "13px" }}>
                     {formatCurrencyMaybe(row.profit)}
                   </td>
-                  <td style={{ padding: "10px", fontWeight: 700, color: "#64748B" }}>
+                  <td style={{ padding: "10px", fontWeight: 700, color: "#6b7a9a", fontSize: "13px" }}>
                     {row.risk ?? "-"}
                   </td>
                 </tr>

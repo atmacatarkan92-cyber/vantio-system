@@ -141,21 +141,35 @@ function AdminPerformancePage() {
     };
   }, [units, rooms, tenancies, profitMonth]);
 
+  const kpiCard = (accent) => ({
+    background: "#141824",
+    border: "1px solid rgba(255, 255, 255, 0.07)",
+    borderTop: `4px solid ${accent}`,
+    borderRadius: "14px",
+    padding: "20px",
+  });
+
   if (loading) {
     return (
-      <div style={{ display: "grid", gap: "24px" }}>
-        <p style={{ color: "#64748B" }}>Lade Performance…</p>
+      <div
+        className="bg-[#07090f] text-[#eef2ff] min-h-full"
+        style={{ display: "grid", gap: "24px" }}
+      >
+        <p style={{ color: "#6b7a9a" }}>Lade Performance…</p>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "grid", gap: "24px" }}>
+    <div
+      className="bg-[#07090f] text-[#eef2ff] min-h-full"
+      style={{ display: "grid", gap: "24px" }}
+    >
       <div>
         <div
           style={{
             fontSize: "12px",
-            color: "#f97316",
+            color: "#fb923c",
             fontWeight: 700,
             marginBottom: "8px",
           }}
@@ -165,8 +179,8 @@ function AdminPerformancePage() {
 
         <h2
           style={{
-            fontSize: "36px",
-            fontWeight: 800,
+            fontSize: "22px",
+            fontWeight: 700,
             margin: 0,
           }}
         >
@@ -175,8 +189,9 @@ function AdminPerformancePage() {
 
         <p
           style={{
-            color: "#64748B",
+            color: "#6b7a9a",
             marginTop: "10px",
+            fontSize: "12px",
           }}
         >
           Analyse der profitabelsten und schwächsten Units (aktive Mietverhältnisse).
@@ -190,42 +205,105 @@ function AdminPerformancePage() {
           gap: "16px",
         }}
       >
-        <div className="card">
-          <h4>Gesamt Umsatz</h4>
-          <h2>{formatCurrency(stats.totalRevenue)}</h2>
+        <div style={kpiCard("#4ade80")}>
+          <h4
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              color: "#6b7a9a",
+              margin: "0 0 8px 0",
+            }}
+          >
+            Gesamt Umsatz
+          </h4>
+          <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#4ade80", margin: 0 }}>
+            {formatCurrency(stats.totalRevenue)}
+          </h2>
         </div>
 
-        <div className="card">
-          <h4>Gesamt Gewinn</h4>
-          <h2>{formatCurrency(stats.totalProfit)}</h2>
+        <div style={kpiCard("#7aaeff")}>
+          <h4
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              color: "#6b7a9a",
+              margin: "0 0 8px 0",
+            }}
+          >
+            Gesamt Gewinn
+          </h4>
+          <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#eef2ff", margin: 0 }}>
+            {formatCurrency(stats.totalProfit)}
+          </h2>
         </div>
 
-        <div className="card">
-          <h4>Beste Unit</h4>
-          <h3>
+        <div style={kpiCard("#a78bfa")}>
+          <h4
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              color: "#6b7a9a",
+              margin: "0 0 8px 0",
+            }}
+          >
+            Beste Unit
+          </h4>
+          <h3 style={{ fontSize: "15px", fontWeight: 600, color: "#eef2ff", margin: "0 0 8px 0" }}>
             {getUnitLabel(stats.best?.unit, stats.best?.listIndex)}
           </h3>
-          <p>{formatCurrency(stats.best?.profit)}</p>
+          <p style={{ margin: 0, fontSize: "11px", color: "#6b7a9a" }}>
+            {formatCurrency(stats.best?.profit)}
+          </p>
         </div>
 
-        <div className="card">
-          <h4>Schwächste Unit</h4>
-          <h3>
+        <div style={kpiCard("#f87171")}>
+          <h4
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              color: "#6b7a9a",
+              margin: "0 0 8px 0",
+            }}
+          >
+            Schwächste Unit
+          </h4>
+          <h3 style={{ fontSize: "15px", fontWeight: 600, color: "#eef2ff", margin: "0 0 8px 0" }}>
             {getUnitLabel(stats.worst?.unit, stats.worst?.listIndex)}
           </h3>
-          <p>{formatCurrency(stats.worst?.profit)}</p>
+          <p style={{ margin: 0, fontSize: "11px", color: "#6b7a9a" }}>
+            {formatCurrency(stats.worst?.profit)}
+          </p>
         </div>
       </div>
 
       <div
         style={{
-          background: "#fff",
-          borderRadius: "16px",
+          background: "#141824",
+          borderRadius: "14px",
           padding: "20px",
-          border: "1px solid #E5E7EB",
+          border: "1px solid rgba(255, 255, 255, 0.07)",
         }}
       >
-        <h3>Performance pro Unit</h3>
+        <h3
+          style={{
+            fontSize: "9px",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+            color: "#6b7a9a",
+            margin: 0,
+          }}
+        >
+          Performance pro Unit
+        </h3>
 
         <table
           style={{
@@ -235,7 +313,16 @@ function AdminPerformancePage() {
           }}
         >
           <thead>
-            <tr style={{ borderBottom: "1px solid #E5E7EB" }}>
+            <tr
+              style={{
+                background: "#111520",
+                color: "#6b7a9a",
+                fontSize: "9px",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.8px",
+              }}
+            >
               <th style={{ textAlign: "left", padding: "10px" }}>Unit</th>
               <th style={{ textAlign: "left", padding: "10px" }}>Ort</th>
               <th style={{ textAlign: "left", padding: "10px" }}>
@@ -251,21 +338,37 @@ function AdminPerformancePage() {
             {stats.results.map((row) => (
               <tr
                 key={row.unit?.id ?? row.id}
-                style={{ borderBottom: "1px solid #F1F5F9" }}
+                style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
               >
-                <td style={{ padding: "10px", fontWeight: 700 }}>
+                <td
+                  style={{
+                    padding: "10px",
+                    fontWeight: 700,
+                    color: "#eef2ff",
+                    fontSize: "13px",
+                  }}
+                >
                   {getUnitLabel(row.unit, row.listIndex)}
                 </td>
 
-                <td style={{ padding: "10px" }}>{row.city}</td>
+                <td style={{ padding: "10px", color: "#eef2ff", fontSize: "13px" }}>{row.city}</td>
 
-                <td style={{ padding: "10px" }}>{row.occupancyLabel}</td>
+                <td style={{ padding: "10px", color: "#eef2ff", fontSize: "13px" }}>
+                  {row.occupancyLabel}
+                </td>
 
-                <td style={{ padding: "10px" }}>
+                <td
+                  style={{
+                    padding: "10px",
+                    color: "#4ade80",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                  }}
+                >
                   {formatCurrency(row.revenue)}
                 </td>
 
-                <td style={{ padding: "10px" }}>
+                <td style={{ padding: "10px", color: "#eef2ff", fontSize: "13px" }}>
                   {formatCurrency(row.costs)}
                 </td>
 
@@ -273,7 +376,8 @@ function AdminPerformancePage() {
                   style={{
                     padding: "10px",
                     fontWeight: 700,
-                    color: row.profit >= 0 ? "#16A34A" : "#DC2626",
+                    fontSize: "13px",
+                    color: row.profit >= 0 ? "#4ade80" : "#f87171",
                   }}
                 >
                   {formatCurrency(row.profit)}
