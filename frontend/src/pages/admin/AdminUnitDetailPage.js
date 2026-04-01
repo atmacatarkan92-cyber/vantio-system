@@ -48,7 +48,14 @@ import {
 } from "../../utils/unitOccupancyStatus";
 import { getCoLivingMetrics } from "../../utils/adminUnitCoLivingMetrics";
 import { getPhase4OperationalWarnings } from "../../utils/unitOperationalIntelligence";
-import { getUnitCostsTotal, landlordDepositInsuranceMonthly } from "../../utils/adminUnitRunningCosts";
+import {
+  getUnitCostsTotal,
+  landlordDepositInsuranceMonthly,
+  getUnitMonthlyRunningCosts,
+  recurringUnitCostBreakdownWithInsurance,
+  oneTimeUnitCostBreakdownEntries,
+  totalOneTimeUnitCosts,
+} from "../../utils/adminUnitRunningCosts";
 import {
   aggregateRecurringMonthlyBreakdownRows,
   aggregateOneTimeBreakdownRows,
@@ -1504,6 +1511,23 @@ function AdminUnitDetailPage() {
     [recurringUnitCosts]
   );
 
+  const recurringCostBreakdownDisplay = useMemo(
+    () => recurringUnitCostBreakdownWithInsurance(unit, unitCosts),
+    [unit, unitCosts]
+  );
+  const oneTimeCostBreakdownDisplay = useMemo(
+    () => oneTimeUnitCostBreakdownEntries(unitCosts),
+    [unitCosts]
+  );
+  const oneTimeCostTotalDisplay = useMemo(
+    () => totalOneTimeUnitCosts(unitCosts),
+    [unitCosts]
+  );
+  const runningCostsStammdatenTotal = useMemo(
+    () => getUnitMonthlyRunningCosts(unit, unitCosts),
+    [unit, unitCosts]
+  );
+
   if (loading) {
     return (
       <div>
@@ -2266,6 +2290,68 @@ function AdminUnitDetailPage() {
                   ) : null}
                 </div>
               ) : null}
+            </div>
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+              <p className="font-semibold text-slate-800 mb-1">Kosten Zusammensetzung</p>
+              <p className="text-xs text-slate-500 mb-3">
+                Aus unit_costs und Kautionsversicherung (jährliche Prämie ÷ 12). «Laufende
+                Kosten» oben ist der Backend-KPI-Monat und kann bei Abweichungen in den
+                Stammdaten davon abweichen.
+              </p>
+              <div className="mb-3">
+                <p className="text-sm text-slate-800">
+                  <span className="text-slate-600 font-medium">
+                    Laufende Kosten gesamt:
+                  </span>{" "}
+                  <span className="font-semibold tabular-nums">
+                    {formatCurrency(runningCostsStammdatenTotal)}
+                  </span>
+                </p>
+                {recurringCostBreakdownDisplay.length === 0 ? (
+                  <p className="text-slate-500 mt-2">Keine laufenden Kosten definiert</p>
+                ) : (
+                  <ul className="space-y-1 mt-2">
+                    {recurringCostBreakdownDisplay.map((b) => (
+                      <li
+                        key={b.typeKey}
+                        className="flex justify-between gap-4 text-slate-700"
+                      >
+                        <span>{b.label}</span>
+                        <span className="font-medium tabular-nums">
+                          {formatCurrency(b.total)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="mt-3 pt-3 border-t border-slate-200">
+                <p className="text-sm text-slate-800 mb-2">
+                  <span className="text-slate-600 font-medium">
+                    Einmalige Kosten gesamt:
+                  </span>{" "}
+                  <span className="font-semibold tabular-nums">
+                    {formatCurrency(oneTimeCostTotalDisplay)}
+                  </span>
+                </p>
+                {oneTimeCostTotalDisplay <= 0 ? (
+                  <p className="text-slate-500">Keine einmaligen Kosten</p>
+                ) : (
+                  <ul className="space-y-1 text-sm">
+                    {oneTimeCostBreakdownDisplay.map((b) => (
+                      <li
+                        key={`otc-${b.typeKey}`}
+                        className="flex justify-between gap-4 text-slate-600"
+                      >
+                        <span>{b.label}</span>
+                        <span className="font-medium tabular-nums">
+                          {formatCurrency(b.total)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           </SectionCard>
 
