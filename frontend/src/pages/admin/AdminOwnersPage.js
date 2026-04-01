@@ -8,28 +8,19 @@ import { buildGoogleMapsSearchUrl, formatLandlordAddressLine } from "../../utils
 const modalInputStyle = {
   width: "100%",
   padding: "10px 12px",
-  borderRadius: "12px",
-  border: "1px solid #D1D5DB",
+  borderRadius: "8px",
+  border: "1px solid rgba(255,255,255,0.08)",
+  background: "#111520",
+  color: "#eef2ff",
   fontSize: "14px",
 };
 const modalLabelStyle = {
   display: "block",
   marginBottom: "6px",
-  fontSize: "13px",
-  fontWeight: 600,
-  color: "#475569",
+  fontSize: "10px",
+  fontWeight: 500,
+  color: "#6b7a9a",
 };
-
-function getCardStyle(accentColor) {
-  return {
-    background: "#FFFFFF",
-    border: "1px solid #E5E7EB",
-    borderTop: `4px solid ${accentColor}`,
-    borderRadius: "18px",
-    padding: "20px",
-    boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
-  };
-}
 
 function AdminOwnersPage() {
   const [items, setItems] = useState([]);
@@ -188,95 +179,59 @@ function AdminOwnersPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: "24px" }}>
-        <p style={{ color: "#64748B" }}>Lade Eigentümer …</p>
+      <div className="min-h-[40vh] bg-[#07090f] px-4 py-8 text-[#6b7a9a]">
+        Lade Eigentümer …
       </div>
     );
   }
 
   return (
-    <div style={{ display: "grid", gap: "24px" }}>
+    <div className="grid min-h-screen gap-6 bg-[#07090f] px-4 py-6 text-[#eef2ff]">
       <div>
-        <div
-          style={{
-            fontSize: "12px",
-            color: "#f97316",
-            fontWeight: 700,
-            marginBottom: "8px",
-          }}
-        >
-          Vantio
-        </div>
+        <div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[#fb923c]">Vantio</div>
 
-        <h2 style={{ fontSize: "36px", fontWeight: 800, margin: 0 }}>Eigentümer</h2>
+        <h2 className="text-[22px] font-bold">Eigentümer</h2>
 
-        <p style={{ color: "#64748B", marginTop: "10px" }}>
+        <p className="mt-2 text-[12px] text-[#6b7a9a]">
           Verwaltung von Eigentümer-Kontakten (CRM).
         </p>
       </div>
 
       {error && (
-        <div
-          style={{
-            background: "#FEF2F2",
-            border: "1px solid #FECACA",
-            borderRadius: "12px",
-            padding: "12px 16px",
-            color: "#B91C1C",
-            fontSize: "14px",
-          }}
-        >
+        <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[14px] text-[#f87171]">
           {error}
         </div>
       )}
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "16px",
-        }}
-      >
-        <div style={getCardStyle("#334155")}>
-          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#7aaeff] bg-[#141824] p-5">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
             Eigentümer gesamt
-          </div>
-          <div style={{ fontSize: "34px", fontWeight: 800, color: "#0F172A" }}>{summary.totalCount}</div>
-          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
-            Alle erfassten Kontakte
-          </div>
+          </p>
+          <p className="mt-2 text-[24px] font-bold text-[#eef2ff]">{summary.totalCount}</p>
+          <p className="mt-2 text-[11px] text-[#6b7a9a]">Alle erfassten Kontakte</p>
         </div>
 
-        <div style={getCardStyle("#16A34A")}>
-          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>Aktiv</div>
-          <div style={{ fontSize: "34px", fontWeight: 800, color: "#166534" }}>{summary.activeCount}</div>
-          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>Status aktiv</div>
+        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#4ade80] bg-[#141824] p-5">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Aktiv</p>
+          <p className="mt-2 text-[24px] font-bold text-[#4ade80]">{summary.activeCount}</p>
+          <p className="mt-2 text-[11px] text-[#6b7a9a]">Status aktiv</p>
         </div>
 
-        <div style={getCardStyle("#64748B")}>
-          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>Inaktiv</div>
-          <div style={{ fontSize: "34px", fontWeight: 800, color: "#334155" }}>{summary.inactiveCount}</div>
-          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>Status inaktiv</div>
+        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#6b7a9a] bg-[#141824] p-5">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Inaktiv</p>
+          <p className="mt-2 text-[24px] font-bold text-[#8090b0]">{summary.inactiveCount}</p>
+          <p className="mt-2 text-[11px] text-[#6b7a9a]">Status inaktiv</p>
         </div>
 
-        <div style={getCardStyle("#2563EB")}>
-          <div style={{ fontSize: "13px", color: "#64748B", marginBottom: "8px" }}>Mit Units</div>
-          <div style={{ fontSize: "34px", fontWeight: 800, color: "#1D4ED8" }}>{ownersWithUnitsCount}</div>
-          <div style={{ marginTop: "8px", color: "#64748B", fontSize: "14px" }}>
-            Mindestens eine Unit zugeordnet
-          </div>
+        <div className="relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 border-t-[#a78bfa] bg-[#141824] p-5">
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Mit Units</p>
+          <p className="mt-2 text-[24px] font-bold text-[#7aaeff]">{ownersWithUnitsCount}</p>
+          <p className="mt-2 text-[11px] text-[#6b7a9a]">Mindestens eine Unit zugeordnet</p>
         </div>
       </div>
 
-      <div
-        style={{
-          background: "#FFFFFF",
-          border: "1px solid #E5E7EB",
-          borderRadius: "18px",
-          padding: "20px",
-          boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
-        }}
-      >
+      <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-5">
         <div
           style={{
             display: "flex",
@@ -297,43 +252,19 @@ function AdminOwnersPage() {
             }}
           >
             <div style={{ flex: "1 1 220px", minWidth: 0 }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "12px",
-                  color: "#64748B",
-                  marginBottom: "8px",
-                  fontWeight: 600,
-                }}
-              >
-                Suche
-              </label>
+              <label className="mb-2 block text-[10px] font-medium text-[#6b7a9a]">Suche</label>
               <input
                 type="text"
                 placeholder="Nach Name, E-Mail, Telefon oder Adresse suchen"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  width: "100%",
-                  height: "44px",
-                  borderRadius: "12px",
-                  border: "1px solid #D1D5DB",
-                  padding: "0 14px",
-                  fontSize: "14px",
-                  boxSizing: "border-box",
-                }}
+                className="box-border h-[44px] w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3.5 text-[14px] text-[#eef2ff] placeholder:text-[#6b7a9a]/70"
               />
             </div>
             <div style={{ flex: "0 1 180px", minWidth: "min(100%, 160px)" }}>
               <label
                 htmlFor="owners-list-filter"
-                style={{
-                  display: "block",
-                  fontSize: "12px",
-                  color: "#64748B",
-                  marginBottom: "8px",
-                  fontWeight: 600,
-                }}
+                className="mb-2 block text-[10px] font-medium text-[#6b7a9a]"
               >
                 Anzeige
               </label>
@@ -342,17 +273,7 @@ function AdminOwnersPage() {
                 value={listFilter}
                 onChange={(e) => setListFilter(e.target.value)}
                 aria-label="Anzeige"
-                style={{
-                  width: "100%",
-                  height: "44px",
-                  borderRadius: "12px",
-                  border: "1px solid #D1D5DB",
-                  padding: "0 12px",
-                  fontSize: "14px",
-                  boxSizing: "border-box",
-                  background: "#FFFFFF",
-                  color: "#0F172A",
-                }}
+                className="box-border h-[44px] w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 text-[14px] text-[#eef2ff]"
               >
                 <option value="active">Aktiv</option>
                 <option value="inactive">Inaktiv</option>
@@ -363,69 +284,31 @@ function AdminOwnersPage() {
           <button
             type="button"
             onClick={openCreate}
-            style={{
-              height: "44px",
-              padding: "0 18px",
-              borderRadius: "12px",
-              border: "none",
-              background: "#0F172A",
-              color: "#FFF",
-              fontWeight: 600,
-              fontSize: "14px",
-              cursor: "pointer",
-            }}
+            className="h-[44px] cursor-pointer rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-[18px] text-[14px] font-semibold text-white hover:opacity-95"
           >
             + Neuer Eigentümer
           </button>
         </div>
       </div>
 
-      <div
-        style={{
-          background: "#FFFFFF",
-          border: "1px solid #E5E7EB",
-          borderRadius: "18px",
-          padding: "20px",
-          overflowX: "auto",
-          boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "16px",
-          }}
-        >
-          <h3 style={{ fontSize: "20px", fontWeight: 700, margin: 0 }}>Eigentümerübersicht</h3>
-          <div style={{ fontSize: "14px", color: "#64748B" }}>{filteredRows.length} Einträge</div>
+      <div className="overflow-x-auto rounded-[14px] border border-white/[0.07] bg-[#141824] p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-[16px] font-bold text-[#eef2ff]">Eigentümerübersicht</h3>
+          <div className="text-[13px] text-[#6b7a9a]">{filteredRows.length} Einträge</div>
         </div>
 
         {filteredRows.length === 0 ? (
-          <p style={{ color: "#64748B" }}>Keine Eigentümer gefunden.</p>
+          <p className="text-[#6b7a9a]">Keine Eigentümer gefunden.</p>
         ) : (
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: "14px",
-            }}
-          >
+          <table className="w-full border-collapse text-[14px]">
             <thead>
-              <tr
-                style={{
-                  textAlign: "left",
-                  borderBottom: "1px solid #E5E7EB",
-                  color: "#64748B",
-                }}
-              >
-                <th style={{ padding: "12px" }}>Name</th>
-                <th style={{ padding: "12px" }}>Adresse</th>
-                <th style={{ padding: "12px" }}>Telefon</th>
-                <th style={{ padding: "12px" }}>E-Mail</th>
-                <th style={{ padding: "12px" }}>Status</th>
-                <th style={{ padding: "12px", whiteSpace: "nowrap" }}>Aktionen</th>
+              <tr className="border-b border-white/[0.05] bg-[#111520] text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                <th className="px-3 py-3">Name</th>
+                <th className="px-3 py-3">Adresse</th>
+                <th className="px-3 py-3">Telefon</th>
+                <th className="px-3 py-3">E-Mail</th>
+                <th className="px-3 py-3">Status</th>
+                <th className="whitespace-nowrap px-3 py-3">Aktionen</th>
               </tr>
             </thead>
             <tbody>
@@ -434,26 +317,18 @@ function AdminOwnersPage() {
                 const addrDisplay = formatLandlordAddressLine(item);
                 const canOpenMap = addrDisplay !== "—";
                 return (
-                  <tr key={item.id} style={{ borderBottom: "1px solid #F1F5F9" }}>
-                    <td style={{ padding: "12px" }}>
+                  <tr key={item.id} className="border-b border-white/[0.05]">
+                    <td className="px-3 py-3">
                       <Link
                         to={`/admin/owners/${encodeURIComponent(item.id)}`}
-                        style={{ color: "#0F172A", fontWeight: 600, textDecoration: "none" }}
+                        className="font-semibold text-[#7aaeff] no-underline hover:underline"
                       >
                         {item.name || "—"}
                       </Link>
                     </td>
-                    <td style={{ padding: "12px" }}>
-                      <div
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          flexWrap: "wrap",
-                          maxWidth: "100%",
-                        }}
-                      >
-                        <span style={{ minWidth: 0 }}>{addrDisplay}</span>
+                    <td className="px-3 py-3 text-[#eef2ff]">
+                      <div className="inline-flex max-w-full flex-wrap items-center gap-1">
+                        <span className="min-w-0">{addrDisplay}</span>
                         {canOpenMap ? (
                           <button
                             type="button"
@@ -470,20 +345,8 @@ function AdminOwnersPage() {
                                 "noopener,noreferrer"
                               )
                             }
-                            style={{
-                              flexShrink: 0,
-                              padding: "2px",
-                              margin: 0,
-                              border: "none",
-                              background: "transparent",
-                              borderRadius: "6px",
-                              cursor: "pointer",
-                              color: "#64748B",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              verticalAlign: "middle",
-                            }}
+                            className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-[8px] border border-white/[0.1] bg-transparent p-0.5 text-[#8090b0] hover:bg-white/[0.04]"
+                            style={{ margin: 0 }}
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
@@ -504,37 +367,23 @@ function AdminOwnersPage() {
                         ) : null}
                       </div>
                     </td>
-                    <td style={{ padding: "12px" }}>{item.phone || "—"}</td>
-                    <td style={{ padding: "12px" }}>{item.email || "—"}</td>
-                    <td style={{ padding: "12px" }}>
+                    <td className="px-3 py-3 text-[#eef2ff]">{item.phone || "—"}</td>
+                    <td className="px-3 py-3 text-[#eef2ff]">{item.email || "—"}</td>
+                    <td className="px-3 py-3">
                       <span
-                        style={{
-                          display: "inline-block",
-                          padding: "4px 10px",
-                          borderRadius: "999px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          background: isActive ? "#ECFDF5" : "#F1F5F9",
-                          color: isActive ? "#166534" : "#64748B",
-                          border: isActive ? "1px solid #A7F3D0" : "1px solid #E2E8F0",
-                        }}
+                        className={
+                          isActive
+                            ? "inline-flex items-center rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-0.5 text-[10px] font-bold text-green-400"
+                            : "inline-flex items-center rounded-full border border-white/[0.08] bg-white/[0.05] px-2.5 py-0.5 text-[10px] font-bold text-[#6b7a9a]"
+                        }
                       >
                         {isActive ? "Aktiv" : "Inaktiv"}
                       </span>
                     </td>
-                    <td style={{ padding: "12px" }}>
+                    <td className="px-3 py-3">
                       <Link
                         to={`/admin/owners/${encodeURIComponent(item.id)}`}
-                        style={{
-                          display: "inline-block",
-                          padding: "6px 12px",
-                          background: "#0F172A",
-                          color: "#FFF",
-                          borderRadius: "6px",
-                          fontSize: "13px",
-                          fontWeight: 600,
-                          textDecoration: "none",
-                        }}
+                        className="inline-block rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] no-underline hover:bg-white/[0.04]"
                       >
                         Öffnen
                       </Link>
@@ -549,68 +398,27 @@ function AdminOwnersPage() {
 
       {formOpen && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.35)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "16px",
-          }}
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4"
           onClick={() => !saving && setFormOpen(false)}
         >
           <div
-            style={{
-              background: "#FFF",
-              padding: "24px",
-              borderRadius: "18px",
-              maxWidth: "440px",
-              width: "100%",
-              boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
-              border: "1px solid #E5E7EB",
-            }}
+            className="w-full max-w-[440px] rounded-[14px] border border-white/[0.07] bg-[#141824] p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ marginBottom: "16px", fontSize: "20px", fontWeight: 700 }}>Neuer Eigentümer</h3>
-            <form onSubmit={handleSubmit} style={{ display: "grid", gap: "14px" }}>
+            <h3 className="mb-4 text-[18px] font-bold text-[#eef2ff]">Neuer Eigentümer</h3>
+            <form onSubmit={handleSubmit} className="grid gap-3.5">
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "6px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    color: "#475569",
-                  }}
-                >
-                  Name *
-                </label>
+                <label className="mb-1.5 block text-[10px] text-[#6b7a9a]">Name *</label>
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   required
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: "12px",
-                    border: "1px solid #D1D5DB",
-                    fontSize: "14px",
-                  }}
+                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2.5 text-[14px] text-[#eef2ff]"
                 />
               </div>
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "6px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    color: "#475569",
-                  }}
-                >
+                <label className="mb-1.5 block text-[10px] text-[#6b7a9a]">
                   E-Mail (optional)
                 </label>
                 <input
@@ -650,9 +458,7 @@ function AdminOwnersPage() {
                   required
                 />
                 {plzNotFound ? (
-                  <p style={{ margin: "6px 0 0 0", fontSize: "12px", color: "#94A3B8" }}>
-                    PLZ nicht gefunden
-                  </p>
+                  <p className="mt-1.5 text-xs text-[#6b7a9a]">PLZ nicht gefunden</p>
                 ) : null}
               </div>
               <div>
@@ -706,30 +512,25 @@ function AdminOwnersPage() {
                       !(form.postal_code || "").trim() ||
                       !(form.city || "").trim()
                     }
+                    className="self-start rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-xs font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50"
                     style={{
-                      padding: "8px 12px",
-                      background: "#FFF",
-                      border: "1px solid #CBD5E1",
-                      borderRadius: "8px",
-                      fontWeight: 600,
-                      fontSize: "13px",
                       cursor: saving || addressCheckBusy ? "not-allowed" : "pointer",
                     }}
                   >
                     {addressCheckBusy ? "…" : "Adresse prüfen"}
                   </button>
                 </div>
-                <p style={{ margin: 0, fontSize: "12px", color: "#64748B" }}>
+                <p className="m-0 text-xs text-[#6b7a9a]">
                   Öffnet Google Maps in einem neuen Tab. Der Kanton wird im Hintergrund ergänzt, wenn die
                   Abfrage einen Wert liefert.
                 </p>
                 {cantonHint ? (
-                  <p style={{ margin: 0, fontSize: "12px", color: "#64748B" }}>{cantonHint}</p>
+                  <p className="m-0 text-xs text-[#6b7a9a]">{cantonHint}</p>
                 ) : null}
               </div>
               <div>
                 <label style={modalLabelStyle}>Kanton</label>
-                <p style={{ margin: "0 0 6px 0", fontSize: "12px", color: "#64748B", fontWeight: 400 }}>
+                <p className="mb-1.5 text-xs font-normal text-[#6b7a9a]">
                   Optional — oft nach «Adresse prüfen» gesetzt; manuelle Auswahl möglich.
                 </p>
                 <select
@@ -738,8 +539,7 @@ function AdminOwnersPage() {
                   disabled={cantonLockedByPlz}
                   style={{
                     ...modalInputStyle,
-                    background: "#fff",
-                    ...(cantonLockedByPlz ? { background: "#F8FAFC", color: "#64748B" } : {}),
+                    ...(cantonLockedByPlz ? { opacity: 0.85 } : {}),
                   }}
                 >
                   <option value="">—</option>
@@ -754,47 +554,21 @@ function AdminOwnersPage() {
                 </select>
               </div>
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "6px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    color: "#475569",
-                  }}
-                >
-                  Status
-                </label>
+                <label className="mb-1.5 block text-[10px] text-[#6b7a9a]">Status</label>
                 <select
                   value={form.status}
                   onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: "12px",
-                    border: "1px solid #D1D5DB",
-                    fontSize: "14px",
-                    background: "#fff",
-                  }}
+                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2.5 text-[14px] text-[#eef2ff]"
                 >
                   <option value="active">Aktiv</option>
                   <option value="inactive">Inaktiv</option>
                 </select>
               </div>
-              <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+              <div className="mt-2 flex gap-2.5">
                 <button
                   type="submit"
                   disabled={saving}
-                  style={{
-                    flex: 1,
-                    padding: "12px",
-                    borderRadius: "12px",
-                    border: "none",
-                    background: "#EA580C",
-                    color: "#FFF",
-                    fontWeight: 600,
-                    cursor: saving ? "wait" : "pointer",
-                  }}
+                  className="flex-1 cursor-pointer rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] py-3 font-semibold text-white hover:opacity-95 disabled:cursor-wait disabled:opacity-70"
                 >
                   {saving ? "Speichern…" : "Speichern"}
                 </button>
@@ -802,14 +576,7 @@ function AdminOwnersPage() {
                   type="button"
                   disabled={saving}
                   onClick={() => setFormOpen(false)}
-                  style={{
-                    padding: "12px 16px",
-                    borderRadius: "12px",
-                    border: "1px solid #E2E8F0",
-                    background: "#F8FAFC",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
+                  className="rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-3 font-semibold text-[#8090b0] hover:bg-white/[0.04]"
                 >
                   Abbrechen
                 </button>

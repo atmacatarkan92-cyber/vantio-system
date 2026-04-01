@@ -5,7 +5,9 @@ const inputStyle = {
   width: "100%",
   padding: "10px 12px",
   borderRadius: "8px",
-  border: "1px solid #E5E7EB",
+  border: "1px solid rgba(255,255,255,0.08)",
+  background: "#111520",
+  color: "#eef2ff",
   fontSize: "14px",
   boxSizing: "border-box",
 };
@@ -13,13 +15,13 @@ const inputStyle = {
 const labelStyle = {
   display: "block",
   marginBottom: "6px",
-  fontSize: "13px",
-  fontWeight: 600,
-  color: "#374151",
+  fontSize: "10px",
+  fontWeight: 500,
+  color: "#6b7a9a",
 };
 
 const fieldErrorStyle = {
-  color: "#B91C1C",
+  color: "#f87171",
   fontSize: "12px",
   marginTop: "4px",
   marginBottom: 0,
@@ -27,11 +29,10 @@ const fieldErrorStyle = {
 };
 
 const cardStyle = {
-  background: "#FFFFFF",
-  border: "1px solid #E5E7EB",
-  borderRadius: "18px",
+  background: "#141824",
+  border: "1px solid rgba(255,255,255,0.07)",
+  borderRadius: "14px",
   padding: "24px",
-  boxShadow: "0 4px 14px rgba(15, 23, 42, 0.04)",
 };
 
 function isValidEmail(email) {
@@ -41,7 +42,7 @@ function isValidEmail(email) {
 function inputStyleWithError(hasError) {
   return {
     ...inputStyle,
-    borderColor: hasError ? "#DC2626" : "#E5E7EB",
+    borderColor: hasError ? "rgba(248,113,113,0.6)" : "rgba(255,255,255,0.08)",
   };
 }
 
@@ -135,20 +136,14 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div style={{ padding: "0 8px" }}>
-      <h2 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "16px" }}>
-        Users / User Management
-      </h2>
+    <div className="min-h-screen bg-[#07090f] px-2 text-[#eef2ff]">
+      <h2 className="mb-4 text-[22px] font-bold">Users / User Management</h2>
 
       {error && (
-        <p style={{ color: "#B91C1C", marginBottom: "12px", fontSize: "14px" }}>
-          {error}
-        </p>
+        <p className="mb-3 text-[14px] text-[#f87171]">{error}</p>
       )}
       {success && (
-        <p style={{ color: "#166534", marginBottom: "12px", fontSize: "14px" }}>
-          {success}
-        </p>
+        <p className="mb-3 text-[14px] text-[#4ade80]">{success}</p>
       )}
 
       <div style={cardStyle}>
@@ -230,15 +225,7 @@ export default function AdminUsersPage() {
             <button
               type="submit"
               disabled={submitting}
-              style={{
-                padding: "10px 16px",
-                background: "#0F172A",
-                color: "#FFF",
-                border: "none",
-                borderRadius: "8px",
-                fontWeight: 600,
-                cursor: submitting ? "not-allowed" : "pointer",
-              }}
+              className="rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-4 py-2.5 font-semibold text-white hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {submitting ? "Creating …" : "Create User"}
             </button>
@@ -251,31 +238,14 @@ export default function AdminUsersPage() {
                 setErrors({ email: "", password: "", role: "" });
                 setForm({ email: "", password: "", role: "", name: "" });
               }}
-              style={{
-                padding: "10px 16px",
-                background: "#F1F5F9",
-                border: "1px solid #E2E8F0",
-                borderRadius: "8px",
-                cursor: submitting ? "not-allowed" : "pointer",
-              }}
+              className="rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-2.5 font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-60"
             >
               Clear
             </button>
           </div>
         </form>
 
-        <div
-          style={{
-            marginTop: "18px",
-            background: "#F8FAFC",
-            border: "1px solid #E2E8F0",
-            borderRadius: "12px",
-            padding: "14px 16px",
-            color: "#475569",
-            fontSize: "13px",
-            lineHeight: 1.5,
-          }}
-        >
+        <div className="mt-[18px] rounded-[10px] border border-blue-500/[0.12] bg-blue-500/[0.06] px-4 py-3.5 text-[13px] leading-relaxed text-[#7aaeff]">
           Admin-created users are bound to the organization of the logged-in admin.
         </div>
       </div>

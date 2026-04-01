@@ -7,10 +7,31 @@ import {
 } from "../../api/adminData";
 
 const tableStyle = { width: "100%", borderCollapse: "collapse" };
-const thStyle = { textAlign: "left", padding: "12px 8px", borderBottom: "2px solid #E5E7EB" };
-const tdStyle = { padding: "12px 8px", borderBottom: "1px solid #E5E7EB" };
-const inputStyle = { width: "100%", padding: "8px 10px", borderRadius: "6px", border: "1px solid #E5E7EB" };
-const labelStyle = { display: "block", marginBottom: "4px", fontSize: "13px", fontWeight: 600 };
+const thStyle = {
+  textAlign: "left",
+  padding: "12px 8px",
+  borderBottom: "1px solid rgba(255,255,255,0.05)",
+  background: "#111520",
+  color: "#6b7a9a",
+  fontSize: "9px",
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.8px",
+};
+const tdStyle = {
+  padding: "12px 8px",
+  borderBottom: "1px solid rgba(255,255,255,0.05)",
+  color: "#eef2ff",
+};
+const inputStyle = {
+  width: "100%",
+  padding: "8px 10px",
+  borderRadius: "8px",
+  border: "1px solid rgba(255,255,255,0.08)",
+  background: "#111520",
+  color: "#eef2ff",
+};
+const labelStyle = { display: "block", marginBottom: "4px", fontSize: "10px", fontWeight: 500, color: "#6b7a9a" };
 
 function AdminPropertiesPage() {
   const [properties, setProperties] = useState([]);
@@ -114,35 +135,28 @@ function AdminPropertiesPage() {
   };
 
   if (loading) {
-    return <p>Lade Liegenschaften …</p>;
+    return (
+      <p className="min-h-[40vh] bg-[#07090f] px-2 py-8 text-[#6b7a9a]">Lade Liegenschaften …</p>
+    );
   }
 
   return (
-    <div style={{ padding: "0 8px" }}>
-      <h2 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "16px" }}>
-        Liegenschaften (Properties)
-      </h2>
+    <div className="min-h-screen bg-[#07090f] px-2 py-4 text-[#eef2ff]">
+      <h2 className="mb-4 text-[22px] font-bold">Liegenschaften (Properties)</h2>
       {error && (
-        <p style={{ color: "#B91C1C", marginBottom: "12px", fontSize: "14px" }}>{error}</p>
+        <p className="mb-3 text-[14px] text-[#f87171]">{error}</p>
       )}
-      <div style={{ marginBottom: "16px" }}>
+      <div className="mb-4">
         <button
           type="button"
           onClick={openCreate}
-          style={{
-            padding: "10px 16px",
-            background: "#0F172A",
-            color: "#FFF",
-            border: "none",
-            borderRadius: "8px",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
+          className="rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-4 py-2.5 font-semibold text-white hover:opacity-95"
         >
           + Neue Liegenschaft
         </button>
       </div>
 
+      <div className="overflow-hidden rounded-[14px] border border-white/[0.07] bg-[#141824]">
       <table style={tableStyle}>
         <thead>
           <tr>
@@ -156,7 +170,7 @@ function AdminPropertiesPage() {
         <tbody>
           {properties.length === 0 ? (
             <tr>
-              <td colSpan={5} style={{ ...tdStyle, color: "#64748B" }}>
+              <td colSpan={5} style={{ ...tdStyle, color: "#6b7a9a" }}>
                 Noch keine Einträge. Erstellen Sie eine neue Liegenschaft.
               </td>
             </tr>
@@ -175,14 +189,7 @@ function AdminPropertiesPage() {
                   <button
                     type="button"
                     onClick={() => openEdit(row)}
-                    style={{
-                      padding: "6px 12px",
-                      background: "#F1F5F9",
-                      border: "1px solid #E2E8F0",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      fontSize: "13px",
-                    }}
+                    className="cursor-pointer rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]"
                   >
                     Bearbeiten
                   </button>
@@ -192,34 +199,18 @@ function AdminPropertiesPage() {
           )}
         </tbody>
       </table>
+      </div>
 
       {formOpen && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.3)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60"
           onClick={() => !saving && setFormOpen(false)}
         >
           <div
-            style={{
-              background: "#FFF",
-              padding: "24px",
-              borderRadius: "12px",
-              maxWidth: "420px",
-              width: "100%",
-              maxHeight: "90vh",
-              overflow: "auto",
-              boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
-            }}
+            className="max-h-[90vh] w-full max-w-[420px] overflow-auto rounded-[14px] border border-white/[0.07] bg-[#141824] p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ marginBottom: "16px", fontSize: "18px" }}>
+            <h3 className="mb-4 text-[18px] font-bold text-[#eef2ff]">
               {editingId ? "Liegenschaft bearbeiten" : "Neue Liegenschaft"}
             </h3>
             <form onSubmit={handleSubmit} style={{ display: "grid", gap: "12px" }}>
@@ -315,32 +306,18 @@ function AdminPropertiesPage() {
                   rows={2}
                 />
               </div>
-              <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+              <div className="mt-2 flex gap-2">
                 <button
                   type="submit"
                   disabled={saving}
-                  style={{
-                    padding: "10px 16px",
-                    background: "#0F172A",
-                    color: "#FFF",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontWeight: 600,
-                    cursor: saving ? "not-allowed" : "pointer",
-                  }}
+                  className="rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-4 py-2.5 font-semibold text-white hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {saving ? "Speichern …" : "Speichern"}
                 </button>
                 <button
                   type="button"
                   onClick={() => !saving && setFormOpen(false)}
-                  style={{
-                    padding: "10px 16px",
-                    background: "#F1F5F9",
-                    border: "1px solid #E2E8F0",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                  }}
+                  className="rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-2.5 font-semibold text-[#8090b0] hover:bg-white/[0.04]"
                 >
                   Abbrechen
                 </button>
