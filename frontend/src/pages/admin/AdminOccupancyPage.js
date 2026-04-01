@@ -84,6 +84,15 @@ function getStatusBadgeType(status) {
   return "neutral";
 }
 
+function getUnitDisplayLabel(unit) {
+  if (unit.address && unit.city) {
+    return `${unit.address}, ${unit.city}`;
+  }
+  if (unit.address) return unit.address;
+  if (unit.name) return unit.name;
+  return unit.unitId || unit.id;
+}
+
 function AdminOccupancyPage() {
   const [units, setUnits] = useState([]);
   const [rooms, setRooms] = useState([]);
@@ -151,6 +160,7 @@ function AdminOccupancyPage() {
         const displayStatus = getDisplayStatus(occupiedCount, reservedCount, totalRooms);
         return {
           unitId: occ.unit_id,
+          unit: unit ?? null,
           place: unit ? unit.place || unit.city : occ.unit_id,
           address: unit ? unit.address : "",
           totalRooms,
@@ -190,6 +200,7 @@ function AdminOccupancyPage() {
 
       return {
         unitId: unit.unitId,
+        unit,
         place: unit.place,
         address: unit.address,
         totalRooms,
@@ -308,8 +319,15 @@ function AdminOccupancyPage() {
                       to={`/admin/units/${row.unitId}`}
                       className="text-orange-600 hover:text-orange-700 hover:underline"
                     >
-                      {row.unitId}
+                      {getUnitDisplayLabel(
+                        row.unit || { unitId: row.unitId, id: row.unitId }
+                      )}
                     </Link>
+                    {row.unitId ? (
+                      <p className="text-xs text-slate-400 mt-0.5 font-mono break-all">
+                        {row.unitId}
+                      </p>
+                    ) : null}
                   </td>
                   <td className="py-4 pr-4">{row.place}</td>
                   <td className="py-4 pr-4">{row.address}</td>
@@ -367,20 +385,27 @@ function AdminOccupancyPage() {
         subtitle="Diese Units haben aktuell die tiefste Belegungsquote."
       >
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-          {weakestUnits.map((unit) => (
+          {weakestUnits.map((row) => (
             <div
-              key={unit.unitId}
+              key={row.unitId}
               className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
             >
-              <p className="text-sm text-slate-500">{unit.place}</p>
+              <p className="text-sm text-slate-500">{row.place}</p>
               <p className="text-lg font-bold text-slate-900 mt-1">
-                {unit.unitId}
+                {getUnitDisplayLabel(
+                  row.unit || { unitId: row.unitId, id: row.unitId }
+                )}
               </p>
+              {row.unitId ? (
+                <p className="text-xs text-slate-400 mt-0.5 font-mono break-all">
+                  {row.unitId}
+                </p>
+              ) : null}
               <p className="text-2xl font-bold text-rose-600 mt-3">
-                {formatPercent(unit.occupancyRate)}
+                {formatPercent(row.occupancyRate)}
               </p>
               <p className="text-sm text-slate-500 mt-2">
-                {unit.occupiedCount} von {unit.totalRooms} Rooms belegt
+                {row.occupiedCount} von {row.totalRooms} Rooms belegt
               </p>
             </div>
           ))}
