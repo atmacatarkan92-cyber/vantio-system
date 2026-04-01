@@ -26,7 +26,7 @@ function Bereich({ title, children, defaultOpen = true }) {
         className="flex w-full items-center justify-between bg-transparent px-2 pb-1 pt-3 text-left"
         style={{ cursor: "pointer" }}
       >
-        <span className="text-[9px] font-bold uppercase tracking-[1.5px] text-[#3a4460]">{title}</span>
+        <span className="text-[9px] font-bold uppercase tracking-[1.5px] text-[#4a5680]">{title}</span>
         <span className="text-[11px] text-[#6b7a9a]">{open ? "−" : "+"}</span>
       </button>
 
