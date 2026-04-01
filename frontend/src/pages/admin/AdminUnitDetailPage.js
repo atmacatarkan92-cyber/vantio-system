@@ -45,6 +45,7 @@ import {
   parseIsoDate,
   isTenancyActiveByDates,
   isTenancyFuture,
+  isTenancyReservedSlot,
 } from "../../utils/unitOccupancyStatus";
 import { getCoLivingMetrics } from "../../utils/adminUnitCoLivingMetrics";
 import { getPhase4OperationalWarnings } from "../../utils/unitOperationalIntelligence";
@@ -365,6 +366,46 @@ function formatTenancyMoveIn(iso) {
   if (!iso) return "—";
   const s = String(iso);
   return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : s;
+}
+
+function formatTenancyMoveOut(iso) {
+  if (!iso) return "—";
+  const s = String(iso);
+  return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : s;
+}
+
+function tenancyMieterTableSortRank(t, todayIso) {
+  if (isTenancyActiveByDates(t, todayIso)) return 0;
+  if (isTenancyReservedSlot(t, todayIso) || isTenancyFuture(t, todayIso)) return 1;
+  return 2;
+}
+
+/** Display meta for Mieter table: Aktiv / Reserviert / Geplant / Beendet */
+function tenancyMieterTableStatusMeta(t, todayIso = getTodayIsoForOccupancy()) {
+  if (isTenancyActiveByDates(t, todayIso)) {
+    return { label: "Aktiv", tone: "green" };
+  }
+  if (isTenancyReservedSlot(t, todayIso)) {
+    return { label: "Reserviert", tone: "amber" };
+  }
+  if (isTenancyFuture(t, todayIso)) {
+    return { label: "Geplant", tone: "blue" };
+  }
+  const st = String(t.status || "").toLowerCase();
+  if (st === "ended") {
+    return { label: "Beendet", tone: "slate" };
+  }
+  const mo = parseIsoDate(t.move_out_date);
+  if (mo && mo < todayIso) {
+    return { label: "Beendet", tone: "slate" };
+  }
+  if (st) {
+    return {
+      label: st.charAt(0).toUpperCase() + st.slice(1),
+      tone: "slate",
+    };
+  }
+  return { label: "—", tone: "slate" };
 }
 
 const TENANT_DEPOSIT_TYPE_LABELS = {
@@ -1195,16 +1236,13 @@ function AdminUnitDetailPage() {
 
   useEffect(() => {
     if (!unitTenancies || !unitId) return;
-    const today = getTodayIsoForOccupancy();
-    const active = unitTenancies.filter((t) =>
-      isTenancyActiveByDates(t, today)
-    );
-    const future = unitTenancies.filter((t) => isTenancyFuture(t, today));
+    const uid = String(unitId);
     const ids = [
-      ...new Set([
-        ...active.map((t) => String(t.tenant_id)),
-        ...future.map((t) => String(t.tenant_id)),
-      ]),
+      ...new Set(
+        unitTenancies
+          .filter((t) => String(t.unit_id || t.unitId) === uid)
+          .map((t) => String(t.tenant_id))
+      ),
     ].filter((id) => id && id !== "undefined");
     if (ids.length === 0) {
       setTenantNameMap({});
@@ -1277,6 +1315,23 @@ function AdminUnitDetailPage() {
         String(t.unit_id || t.unitId) === uid &&
         isTenancyActiveByDates(t, today)
     );
+  }, [unitTenancies, safeUnit.unitId, safeUnit.id]);
+
+  const unitTenanciesForMieterTable = useMemo(() => {
+    if (!unitTenancies) return [];
+    const uid = String(safeUnit.unitId || safeUnit.id || "");
+    const today = getTodayIsoForOccupancy();
+    const rows = unitTenancies.filter(
+      (t) => String(t.unit_id || t.unitId) === uid
+    );
+    return [...rows].sort((a, b) => {
+      const ra = tenancyMieterTableSortRank(a, today);
+      const rb = tenancyMieterTableSortRank(b, today);
+      if (ra !== rb) return ra - rb;
+      const da = parseIsoDate(a.move_in_date) || "";
+      const db = parseIsoDate(b.move_in_date) || "";
+      return db.localeCompare(da);
+    });
   }, [unitTenancies, safeUnit.unitId, safeUnit.id]);
 
   const metrics = useMemo(() => {
@@ -2782,30 +2837,35 @@ function AdminUnitDetailPage() {
 
         <SectionCard
           title="Mieter"
-          subtitle="Aktive Mietverhältnisse (Status: active). Einnahmen-Spalte: Monatsäquivalent aus TenancyRevenue (Backend), nicht klassische Monatsmiete."
+          subtitle="Alle Mietverhältnisse dieser Unit (aktiv, geplant/reserviert, beendet). Sortierung: zuerst Aktive, dann Geplant/Reserviert, dann Historie. Einnahmen / Monat aus TenancyRevenue (Backend, Monatsäquivalent)."
         >
           {unitTenancies === null ? (
             <p className="text-sm text-slate-500">Lade Mietverhältnisse …</p>
-          ) : activeUnitTenancies.length === 0 ? (
-            <p className="text-sm text-slate-500">Keine aktiven Mieter.</p>
+          ) : unitTenanciesForMieterTable.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              Keine Mietverhältnisse für diese Unit erfasst.
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm text-slate-700">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500">
                     <th className="py-2 pr-4 font-medium">Name</th>
+                    <th className="py-2 pr-4 font-medium">Status</th>
                     <th className="py-2 pr-4 font-medium text-right">
-                      Monatsäquivalent (Einnahmen)
+                      Einnahmen / Monat
                     </th>
                     <th className="py-2 pr-4 font-medium">Kautionsart</th>
                     <th className="py-2 pr-4 font-medium text-right">Kautionsbetrag</th>
                     <th className="py-2 pr-4 font-medium">Anbieter</th>
                     <th className="py-2 pr-4 font-medium">Mietbeginn</th>
+                    <th className="py-2 pr-4 font-medium">Mietende</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {activeUnitTenancies.map((tn) => {
+                  {unitTenanciesForMieterTable.map((tn) => {
                     const tdt = String(tn.tenant_deposit_type || "").toLowerCase();
+                    const statusMeta = tenancyMieterTableStatusMeta(tn);
                     return (
                       <tr key={String(tn.id)} className="border-b border-slate-100">
                         <td className="py-2 pr-4 font-medium">
@@ -2815,6 +2875,9 @@ function AdminUnitDetailPage() {
                           >
                             {tenantNameMap[String(tn.tenant_id)] || "…"}
                           </Link>
+                        </td>
+                        <td className="py-2 pr-4">
+                          <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
                         </td>
                         <td className="py-2 pr-4 text-right">
                           {formatChfOrDash(tn.monthly_revenue_equivalent)}
@@ -2832,6 +2895,9 @@ function AdminUnitDetailPage() {
                         </td>
                         <td className="py-2 pr-4 text-slate-600">
                           {formatTenancyMoveIn(tn.move_in_date)}
+                        </td>
+                        <td className="py-2 pr-4 text-slate-600">
+                          {formatTenancyMoveOut(tn.move_out_date)}
                         </td>
                       </tr>
                     );
