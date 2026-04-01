@@ -93,6 +93,24 @@ function dateOnlyOrNull(raw) {
   return s.slice(0, 10);
 }
 
+function computeLeaseStatusKey(formData) {
+  const leaseStart = dateOnlyOrNull(formData?.leaseStartDate);
+  const notice = dateOnlyOrNull(formData?.noticeGivenDate);
+  const returned = dateOnlyOrNull(formData?.returnedToLandlordDate);
+  const today = getTodayDateString();
+  if (returned && returned <= today) return "ended";
+  if (notice) return "notice_given";
+  if (leaseStart) return "active";
+  return "";
+}
+
+function leaseStatusLabel(key) {
+  if (key === "active") return "Aktiv";
+  if (key === "notice_given") return "Gekündigt";
+  if (key === "ended") return "Beendet";
+  return "—";
+}
+
 function strOrNull(raw) {
   const t = String(raw ?? "").trim();
   return t === "" ? null : t;
@@ -330,7 +348,27 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
                 </td>
                 <td className="py-4 pr-4">{unit.place}</td>
                 <td className="py-4 pr-4">{unit.zip}</td>
-                <td className="py-4 pr-4">{unit.address}</td>
+                <td className="py-4 pr-4">
+                  <div className="flex items-center gap-2">
+                    <span>{unit.address}</span>
+                    {unit.address ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.open(
+                            buildGoogleMapsSearchUrl(unit.address, unit.zip, unit.place),
+                            "_blank",
+                            "noopener,noreferrer"
+                          )
+                        }
+                        className="text-slate-400 hover:text-slate-700"
+                        title="In Google Maps öffnen"
+                      >
+                        📍
+                      </button>
+                    ) : null}
+                  </div>
+                </td>
                 <td className="py-4 pr-4">{unit.type}</td>
                 <td className="py-4 pr-4">{unit.property_title || "—"}</td>
                 <td className="py-4 pr-4">
@@ -361,20 +399,12 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
                   {unit.leaseStartDate || "—"}
                 </td>
                 <td className="py-4 pr-4">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => onEdit(unit)}
-                      className="px-3 py-2 rounded-lg border border-slate-300 text-sm hover:bg-slate-50"
-                    >
-                      Bearbeiten
-                    </button>
-                    <button
-                      onClick={() => onDelete(unit.id)}
-                      className="px-3 py-2 rounded-lg border border-red-300 text-red-600 text-sm hover:bg-red-50"
-                    >
-                      Löschen
-                    </button>
-                  </div>
+                  <Link
+                    to={`/admin/units/${unit.unitId}`}
+                    className="px-3 py-2 rounded-lg border border-slate-300 text-sm hover:bg-slate-50 inline-block"
+                  >
+                    Öffnen
+                  </Link>
                 </td>
               </tr>
             );
@@ -457,7 +487,27 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
                   </td>
                   <td className="py-4 pr-4">{unit.place}</td>
                 <td className="py-4 pr-4">{unit.zip}</td>
-                <td className="py-4 pr-4">{unit.address}</td>
+                <td className="py-4 pr-4">
+                  <div className="flex items-center gap-2">
+                    <span>{unit.address}</span>
+                    {unit.address ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.open(
+                            buildGoogleMapsSearchUrl(unit.address, unit.zip, unit.place),
+                            "_blank",
+                            "noopener,noreferrer"
+                          )
+                        }
+                        className="text-slate-400 hover:text-slate-700"
+                        title="In Google Maps öffnen"
+                      >
+                        📍
+                      </button>
+                    ) : null}
+                  </div>
+                </td>
                 <td className="py-4 pr-4">{unit.property_title || "—"}</td>
                 <td className="py-4 pr-4">
                   {occ == null ? (
@@ -491,20 +541,12 @@ function CoLivingTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, onD
                     {unit.leaseStartDate || "—"}
                   </td>
                   <td className="py-4 pr-4">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => onEdit(unit)}
-                        className="px-3 py-2 rounded-lg border border-slate-300 text-sm hover:bg-slate-50"
-                      >
-                        Bearbeiten
-                      </button>
-                      <button
-                        onClick={() => onDelete(unit.id)}
-                        className="px-3 py-2 rounded-lg border border-red-300 text-red-600 text-sm hover:bg-red-50"
-                      >
-                        Löschen
-                      </button>
-                    </div>
+                    <Link
+                      to={`/admin/units/${unit.unitId}`}
+                      className="px-3 py-2 rounded-lg border border-slate-300 text-sm hover:bg-slate-50 inline-block"
+                    >
+                      Öffnen
+                    </Link>
                   </td>
                 </tr>
               );
@@ -1102,6 +1144,7 @@ function AdminApartmentsPage() {
 
     setSaving(true);
 
+    const computedLeaseStatus = computeLeaseStatusKey(formData) || null;
     const persistedUnitFields = {
       tenant_price_monthly_chf: 0,
       available_from: dateOnlyOrNull(formData.availableFrom),
@@ -1123,7 +1166,7 @@ function AdminApartmentsPage() {
         formData.terminationEffectiveDate
       ),
       returned_to_landlord_date: dateOnlyOrNull(formData.returnedToLandlordDate),
-      lease_status: strOrNull(formData.leaseStatus),
+      lease_status: computedLeaseStatus,
       lease_notes: strOrNull(formData.leaseNotes),
     };
 
@@ -2106,17 +2149,15 @@ function AdminApartmentsPage() {
                       <label className="block text-sm text-slate-600 mb-2">
                         Vertragsstatus
                       </label>
-                      <select
-                        name="leaseStatus"
-                        value={formData.leaseStatus}
-                        onChange={handleChange}
-                        className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                      <div
+                        className="w-full border border-slate-200 bg-slate-50 rounded-lg px-4 py-3 text-slate-800"
+                        aria-readonly="true"
                       >
-                        <option value="">—</option>
-                        <option value="active">Aktiv</option>
-                        <option value="notice_given">Gekündigt</option>
-                        <option value="ended">Beendet</option>
-                      </select>
+                        {leaseStatusLabel(computeLeaseStatusKey(formData))}
+                        <span className="block text-xs text-slate-500 mt-1 font-normal">
+                          Automatisch berechnet aus Mietbeginn / Kündigung / Rückgabe.
+                        </span>
+                      </div>
                     </div>
 
                     <div className="md:col-span-2">

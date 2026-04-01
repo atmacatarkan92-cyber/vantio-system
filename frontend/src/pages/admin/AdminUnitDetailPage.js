@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import RoomMap from "../../components/RoomMap";
 import RoomCalendar from "../../components/RoomCalendar";
 import OccupancyMap from "../../components/OccupancyMap";
@@ -20,6 +20,7 @@ import {
   uploadAdminUnitDocument,
   fetchAdminUnitDocumentDownloadUrl,
   deleteAdminUnitDocument,
+  deleteAdminUnit,
   fetchAdminUnitCosts,
   createAdminUnitCost,
   updateAdminUnitCost,
@@ -819,6 +820,7 @@ const UNIT_COST_FIXED_SET = new Set([
 function AdminUnitDetailPage() {
   const { unitId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const [unit, setUnit] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1736,6 +1738,33 @@ function AdminUnitDetailPage() {
             >
               Zurück
             </Link>
+            <button
+              type="button"
+              onClick={() => {
+                if (!unitId) return;
+                navigate("/admin/apartments", { state: { editUnitId: String(unitId) } });
+              }}
+              className="inline-block border border-slate-300 hover:bg-slate-50 text-slate-700 px-5 py-3 rounded-xl font-medium transition"
+            >
+              Bearbeiten
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!unitId) return;
+                const ok = window.confirm("Möchtest du diese Unit wirklich löschen?");
+                if (!ok) return;
+                try {
+                  await deleteAdminUnit(String(unitId));
+                  navigate("/admin/apartments");
+                } catch (err) {
+                  window.alert(err?.message || "Löschen fehlgeschlagen.");
+                }
+              }}
+              className="inline-block border border-red-300 hover:bg-red-50 text-red-700 px-5 py-3 rounded-xl font-medium transition"
+            >
+              Löschen
+            </button>
           </div>
         </div>
 
