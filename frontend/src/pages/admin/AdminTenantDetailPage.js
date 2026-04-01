@@ -302,10 +302,9 @@ function dateOnlyOrNull(value) {
   return s.slice(0, 10);
 }
 
-function applyRecurringRevenueDatesFromTenancy(form, freqRaw, moveInRaw, moveOutRaw) {
+function applyRecurringRevenueDatesFromTenancy(form, freqRaw, moveInRaw, _moveOutRaw) {
   const nf = normalizeRevenueFrequency(freqRaw);
   const mi = dateOnlyOrNull(moveInRaw) || "";
-  const mo = dateOnlyOrNull(moveOutRaw) || "";
   if (nf === "one_time") {
     return { ...form, frequency: freqRaw, start_date: "", end_date: "" };
   }
@@ -313,8 +312,23 @@ function applyRecurringRevenueDatesFromTenancy(form, freqRaw, moveInRaw, moveOut
     ...form,
     frequency: freqRaw,
     start_date: form.start_date || mi,
-    end_date: form.end_date || mo || "",
+    end_date: "",
   };
+}
+
+/** Zeitraum column: recurring ends follow tenancy display end; one_time uses stored dates. */
+function revenueRowZeitraumDisplay(rr, tn) {
+  const f = normalizeRevenueFrequency(rr?.frequency);
+  const startIso =
+    dateOnlyOrNull(rr?.start_date) || dateOnlyOrNull(tn?.move_in_date) || "";
+  const startLabel = startIso ? String(startIso).slice(0, 10) : "—";
+  if (f === "one_time") {
+    const s = rr?.start_date ? String(rr.start_date).slice(0, 10) : "—";
+    const e = rr?.end_date ? String(rr.end_date).slice(0, 10) : "—";
+    return `${s} – ${e}`;
+  }
+  const endLabel = tenancyDisplayEndIso(tn) || "—";
+  return `${startLabel} – ${endLabel}`;
 }
 
 function RevenueTypeSelect({ value, onChange, disabled, id, selectStyle }) {
@@ -731,8 +745,6 @@ export default function AdminTenantDetailPage() {
   const [tenancyEditTenantDepositProvider, setTenancyEditTenantDepositProvider] = useState("");
   const [tenancyEditSaving, setTenancyEditSaving] = useState(false);
   const [tenancyEditErr, setTenancyEditErr] = useState(null);
-  const tenancyEditBaselineDisplayEndRef = useRef("");
-  const tenancyEditPrevDisplayEndRef = useRef("");
 
   const [tenancyRevenueByTenancyId, setTenancyRevenueByTenancyId] = useState({});
   const [tenancyRevenueLoadingId, setTenancyRevenueLoadingId] = useState(null);
@@ -805,8 +817,6 @@ export default function AdminTenantDetailPage() {
     setTenancyEditTenantDepositType("");
     setTenancyEditTenantDepositAmount("");
     setTenancyEditTenantDepositProvider("");
-    tenancyEditBaselineDisplayEndRef.current = "";
-    tenancyEditPrevDisplayEndRef.current = "";
     setTenancyRevenueErr(null);
     setRevenueEditingId(null);
     setRevenueForm({
@@ -829,12 +839,6 @@ export default function AdminTenantDetailPage() {
     setTenancyEditTerminationEffective(teInit);
     setTenancyEditActualMoveOut(dateOnlyOrNull(tn.actual_move_out_date) || "");
     setTenancyEditTerminatedBy(String(tn.terminated_by || "").toLowerCase() || "");
-    const baseEnd = tenancyDisplayEndIso(tn) || "";
-    tenancyEditBaselineDisplayEndRef.current = baseEnd;
-    tenancyEditPrevDisplayEndRef.current = tenancyDraftDisplayEndIso(
-      dateOnlyOrNull(tn.actual_move_out_date),
-      teInit
-    );
     const tdt = String(tn.tenant_deposit_type || "").toLowerCase();
     setTenancyEditTenantDepositType(tdt || "");
     const tda = tn.tenant_deposit_amount;
@@ -909,12 +913,14 @@ export default function AdminTenantDetailPage() {
   const startRevenueEdit = (row) => {
     if (!row?.id) return;
     setRevenueEditingId(String(row.id));
+    const rf = normalizeRevenueFrequency(row.frequency);
+    const isOneTime = rf === "one_time";
     setRevenueForm({
       type: String(row.type || "").trim() || "rent",
       amount_chf: row.amount_chf != null ? String(row.amount_chf) : "",
-      frequency: normalizeRevenueFrequency(row.frequency),
+      frequency: rf,
       start_date: row.start_date != null ? String(row.start_date).slice(0, 10) : "",
-      end_date: row.end_date != null ? String(row.end_date).slice(0, 10) : "",
+      end_date: isOneTime && row.end_date != null ? String(row.end_date).slice(0, 10) : "",
       notes: row.notes != null ? String(row.notes) : "",
     });
     setTenancyRevenueErr(null);
@@ -954,31 +960,6 @@ export default function AdminTenantDetailPage() {
     setTenancyRevenueErr(null);
   };
 
-  useEffect(() => {
-    if (!tenancyEditingId) return;
-    const tid = String(tenancyEditingId);
-    const prev = tenancyEditPrevDisplayEndRef.current;
-    const next = tenancyDraftDisplayEndIso(tenancyEditActualMoveOut, tenancyEditTerminationEffective);
-    if (prev === next) return;
-
-    setTenancyRevenueByTenancyId((prevState) => {
-      const rows = prevState?.[tid];
-      if (!Array.isArray(rows)) return prevState;
-      const baseline = tenancyEditBaselineDisplayEndRef.current;
-      const updated = rows.map((row) => {
-        const f = normalizeRevenueFrequency(row.frequency);
-        if (f === "one_time") return row;
-        const ed = row.end_date ? String(row.end_date).slice(0, 10) : "";
-        const shouldSync =
-          ed === "" || ed === prev || (baseline !== "" && ed === baseline);
-        if (!shouldSync) return row;
-        return { ...row, end_date: next || null };
-      });
-      return { ...prevState, [tid]: updated };
-    });
-    tenancyEditPrevDisplayEndRef.current = next;
-  }, [tenancyEditActualMoveOut, tenancyEditTerminationEffective, tenancyEditingId]);
-
   const submitRevenueForm = async (tenancyId, tnForDefaults) => {
     const tid = tenancyId != null ? String(tenancyId) : "";
     if (!tid) return;
@@ -993,9 +974,12 @@ export default function AdminTenantDetailPage() {
       return;
     }
     const freq = normalizeRevenueFrequency(revenueForm.frequency);
-    const start_date = dateOnlyOrNull(revenueForm.start_date);
-    const end_date = dateOnlyOrNull(revenueForm.end_date);
-    if (start_date && end_date && end_date < start_date) {
+    let start_date = dateOnlyOrNull(revenueForm.start_date);
+    if (freq !== "one_time" && !start_date) {
+      start_date = dateOnlyOrNull(tnForDefaults?.move_in_date) || null;
+    }
+    const end_date = freq === "one_time" ? dateOnlyOrNull(revenueForm.end_date) : null;
+    if (freq === "one_time" && start_date && end_date && end_date < start_date) {
       setTenancyRevenueErr("Enddatum muss nach dem Startdatum liegen.");
       return;
     }
@@ -1308,7 +1292,7 @@ export default function AdminTenantDetailPage() {
       }
       const sd = dateOnlyOrNull(r?.start_date);
       const ed = dateOnlyOrNull(r?.end_date);
-      if (sd && ed && ed < sd) {
+      if (freq === "one_time" && sd && ed && ed < sd) {
         setAssignErr("Enddatum muss nach dem Startdatum liegen.");
         return;
       }
@@ -1359,12 +1343,13 @@ export default function AdminTenantDetailPage() {
         if (!tid) return createdTenancy;
         const rows = Array.isArray(assignRevenueRows) ? assignRevenueRows : [];
         for (const r of rows) {
+          const fr = normalizeRevenueFrequency(r.frequency);
           await createAdminTenancyRevenue(tid, {
             type: String(r.type || "").trim(),
             amount_chf: Number(String(r.amount_chf).replace(",", ".")),
-            frequency: normalizeRevenueFrequency(r.frequency),
+            frequency: fr,
             start_date: dateOnlyOrNull(r.start_date),
-            end_date: dateOnlyOrNull(r.end_date),
+            end_date: fr === "one_time" ? dateOnlyOrNull(r.end_date) : null,
             notes: String(r.notes || "").trim() || null,
           });
         }
@@ -2627,16 +2612,50 @@ export default function AdminTenantDetailPage() {
                                             disabled={tenancyRevenueLoadingId === String(tn.id)}
                                           />
                                         </div>
-                                        <div>
-                                          <label style={labelStyle}>Ende (optional)</label>
-                                          <input
-                                            type="date"
-                                            style={inputStyle}
-                                            value={revenueForm.end_date}
-                                            onChange={(e) => setRevenueForm((f) => ({ ...f, end_date: e.target.value }))}
-                                            disabled={tenancyRevenueLoadingId === String(tn.id)}
-                                          />
-                                        </div>
+                                        {normalizeRevenueFrequency(revenueForm.frequency) === "one_time" ? (
+                                          <div>
+                                            <label style={labelStyle}>Ende (optional)</label>
+                                            <input
+                                              type="date"
+                                              style={inputStyle}
+                                              value={revenueForm.end_date}
+                                              onChange={(e) => setRevenueForm((f) => ({ ...f, end_date: e.target.value }))}
+                                              disabled={tenancyRevenueLoadingId === String(tn.id)}
+                                            />
+                                          </div>
+                                        ) : (
+                                          <div>
+                                            <label style={labelStyle}>Ende (Mietende)</label>
+                                            <div
+                                              style={{
+                                                ...inputStyle,
+                                                background: "#F8FAFC",
+                                                border: "1px solid #E2E8F0",
+                                                color: "#334155",
+                                                fontWeight: 600,
+                                              }}
+                                            >
+                                              {formatDateOnly(
+                                                tenancyDraftDisplayEndIso(
+                                                  tenancyEditActualMoveOut,
+                                                  tenancyEditTerminationEffective
+                                                ) || tenancyDisplayEndIso(tn) ||
+                                                  ""
+                                              )}
+                                            </div>
+                                            <div
+                                              style={{
+                                                fontSize: "10px",
+                                                color: "#94A3B8",
+                                                marginTop: "4px",
+                                                maxWidth: "220px",
+                                              }}
+                                            >
+                                              Ende wird automatisch aus Mietende übernommen (gespeichert ohne festes
+                                              Enddatum).
+                                            </div>
+                                          </div>
+                                        )}
                                         <div style={{ minWidth: "240px", flex: "1 1 240px" }}>
                                           <label style={labelStyle}>Notizen (optional)</label>
                                           <input
@@ -2700,9 +2719,7 @@ export default function AdminTenantDetailPage() {
                                             tenancyRevenueByTenancyId[String(tn.id)].length > 0 ? (
                                               tenancyRevenueByTenancyId[String(tn.id)].map((rr) => {
                                                 const rid = String(rr.id);
-                                                const range = rr.start_date || rr.end_date
-                                                  ? `${rr.start_date ? rr.start_date.slice(0, 10) : "—"} – ${rr.end_date ? rr.end_date.slice(0, 10) : "—"}`
-                                                  : "—";
+                                                const range = revenueRowZeitraumDisplay(rr, tn);
                                                 return (
                                                   <tr key={rid}>
                                                     <td style={tdCell}>{revenueTypeLabelForDisplay(rr.type)}</td>
@@ -3020,16 +3037,38 @@ export default function AdminTenantDetailPage() {
                               disabled={assignSaving}
                             />
                           </div>
-                          <div>
-                            <label style={labelStyle}>Ende (optional)</label>
-                            <input
-                              type="date"
-                              style={inputStyle}
-                              value={assignRevenueForm.end_date}
-                              onChange={(e) => setAssignRevenueForm((f) => ({ ...f, end_date: e.target.value }))}
-                              disabled={assignSaving}
-                            />
-                          </div>
+                          {normalizeRevenueFrequency(assignRevenueForm.frequency) === "one_time" ? (
+                            <div>
+                              <label style={labelStyle}>Ende (optional)</label>
+                              <input
+                                type="date"
+                                style={inputStyle}
+                                value={assignRevenueForm.end_date}
+                                onChange={(e) => setAssignRevenueForm((f) => ({ ...f, end_date: e.target.value }))}
+                                disabled={assignSaving}
+                              />
+                            </div>
+                          ) : (
+                            <div>
+                              <label style={labelStyle}>Ende (Mietende)</label>
+                              <div
+                                style={{
+                                  ...inputStyle,
+                                  background: "#F8FAFC",
+                                  border: "1px solid #E2E8F0",
+                                  color: "#334155",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {formatDateOnly(
+                                  tenancyDraftDisplayEndIso(assignActualMoveOut, assignTerminationEffective) || ""
+                                )}
+                              </div>
+                              <div style={{ fontSize: "10px", color: "#94A3B8", marginTop: "4px", maxWidth: "220px" }}>
+                                Ende wird automatisch aus Mietende übernommen.
+                              </div>
+                            </div>
+                          )}
                           <div style={{ minWidth: "240px", flex: "1 1 240px" }}>
                             <label style={labelStyle}>Notizen (optional)</label>
                             <input
@@ -3047,13 +3086,11 @@ export default function AdminTenantDetailPage() {
                               const id = `ar-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
                               const freq = normalizeRevenueFrequency(assignRevenueForm.frequency);
                               const mi = dateOnlyOrNull(assignMoveIn) || "";
-                              const mo =
-                                tenancyDraftDisplayEndIso(assignActualMoveOut, assignTerminationEffective) || "";
                               let sd = assignRevenueForm.start_date;
                               let ed = assignRevenueForm.end_date;
                               if (freq === "monthly" || freq === "yearly") {
                                 if (!dateOnlyOrNull(sd)) sd = mi;
-                                if (!dateOnlyOrNull(ed) && mo) ed = mo;
+                                ed = "";
                               }
                               const row = {
                                 id,
