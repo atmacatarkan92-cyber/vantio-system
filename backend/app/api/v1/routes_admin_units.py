@@ -257,6 +257,7 @@ def _unit_to_dict(
 
 ALLOWED_ROOM_STATUS = frozenset({"Frei", "Belegt", "Reserviert"})
 ALLOWED_LANDLORD_DEPOSIT_TYPES = frozenset({"bank", "insurance", "cash", "none"})
+ALLOWED_UNIT_COST_FREQUENCIES = frozenset({"monthly", "yearly", "one_time"})
 
 
 def _room_to_dict(r: Room) -> dict:
@@ -416,6 +417,7 @@ def _unit_cost_to_dict(c: UnitCost) -> dict:
         "unit_id": str(c.unit_id),
         "cost_type": c.cost_type,
         "amount_chf": float(c.amount_chf or 0),
+        "frequency": getattr(c, "frequency", None) or "monthly",
         "created_at": ca.isoformat() if ca is not None and hasattr(ca, "isoformat") else None,
     }
 
@@ -423,6 +425,7 @@ def _unit_cost_to_dict(c: UnitCost) -> dict:
 class UnitCostCreateBody(BaseModel):
     cost_type: str
     amount_chf: float = Field(gt=0)
+    frequency: Optional[str] = None
 
     @field_validator("cost_type", mode="before")
     @classmethod
@@ -434,15 +437,26 @@ class UnitCostCreateBody(BaseModel):
             raise ValueError("cost_type must not be empty")
         return s
 
+    @field_validator("frequency", mode="before")
+    @classmethod
+    def _normalize_frequency_create(cls, v):
+        if v is None or v == "":
+            return None
+        s = str(v).strip().lower()
+        if s not in ALLOWED_UNIT_COST_FREQUENCIES:
+            raise ValueError("frequency must be one of: monthly, yearly, one_time")
+        return s
+
 
 class UnitCostPatchBody(BaseModel):
     cost_type: Optional[str] = None
     amount_chf: Optional[float] = None
+    frequency: Optional[str] = None
 
     @model_validator(mode="after")
     def _at_least_one_field(self) -> "UnitCostPatchBody":
-        if self.cost_type is None and self.amount_chf is None:
-            raise ValueError("At least one of cost_type or amount_chf is required")
+        if self.cost_type is None and self.amount_chf is None and self.frequency is None:
+            raise ValueError("At least one of cost_type, amount_chf or frequency is required")
         return self
 
     @field_validator("cost_type", mode="before")
@@ -453,6 +467,18 @@ class UnitCostPatchBody(BaseModel):
         s = str(v).strip()
         if not s:
             raise ValueError("cost_type must not be empty")
+        return s
+
+    @field_validator("frequency", mode="before")
+    @classmethod
+    def _normalize_frequency_patch(cls, v):
+        if v is None:
+            return None
+        s = str(v).strip().lower()
+        if not s:
+            return None
+        if s not in ALLOWED_UNIT_COST_FREQUENCIES:
+            raise ValueError("frequency must be one of: monthly, yearly, one_time")
         return s
 
     @field_validator("amount_chf")
@@ -837,6 +863,7 @@ def admin_create_unit_cost(
         unit_id=unit_id,
         cost_type=body.cost_type,
         amount_chf=float(body.amount_chf),
+        frequency=(body.frequency or "monthly"),
     )
     session.add(row)
     _touch_unit_updated_at(session, unit_id)
@@ -867,6 +894,8 @@ def admin_patch_unit_cost(
         row.cost_type = data["cost_type"]
     if "amount_chf" in data:
         row.amount_chf = float(data["amount_chf"])
+    if "frequency" in data:
+        row.frequency = data["frequency"] or "monthly"
     session.add(row)
     _touch_unit_updated_at(session, unit_id)
     session.commit()

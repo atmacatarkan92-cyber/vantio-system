@@ -503,6 +503,7 @@ class UnitCost(SQLModel, table=True):
     unit_id: str = Field(foreign_key="unit.id", index=True)
     cost_type: str = Field(max_length=100)  # e.g. "rent", "utilities", "cleaning"
     amount_chf: float = Field(default=0)
+    frequency: str = Field(default="monthly", max_length=32)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

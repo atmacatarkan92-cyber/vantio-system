@@ -51,6 +51,7 @@ import {
 import {
   getUnitCostsTotal,
   landlordDepositInsuranceMonthly,
+  getUnitMonthlyRunningCosts,
 } from "../../utils/adminUnitRunningCosts";
 
 const UNIT_AUDIT_FIELD_LABELS = {
@@ -836,6 +837,7 @@ function AdminUnitDetailPage() {
     cost_type: "",
     custom_type: "",
     amount_chf: "",
+    frequency: "monthly",
   });
   const [costLoading, setCostLoading] = useState(false);
   const [costError, setCostError] = useState("");
@@ -1187,7 +1189,7 @@ function AdminUnitDetailPage() {
       unitTenancies
     );
     const tenancyRevenueKpi = activeRentSum;
-    const runningCosts = getUnitCostsTotal(unitCosts);
+    const runningCosts = getUnitMonthlyRunningCosts(safeUnit, unitCosts);
 
     if (isApt) {
       const occupied = activeUnitTenancies.length > 0;
@@ -1574,6 +1576,11 @@ function AdminUnitDetailPage() {
       setCostError("Bitte einen gültigen Betrag grösser als 0 eingeben.");
       return;
     }
+    const freq = String(costForm.frequency || "monthly").trim().toLowerCase() || "monthly";
+    if (!["monthly", "yearly", "one_time"].includes(freq)) {
+      setCostError("Bitte eine gültige Frequenz wählen.");
+      return;
+    }
     const cost_type = resolveBackendCostTypeFromForm(costForm);
     if (!cost_type) {
       setCostError("Bitte Kostenart angeben.");
@@ -1585,13 +1592,14 @@ function AdminUnitDetailPage() {
         await updateAdminUnitCost(unitId, editingCostId, {
           cost_type,
           amount_chf: amt,
+          frequency: freq,
         });
       } else {
-        await createAdminUnitCost(unitId, { cost_type, amount_chf: amt });
+        await createAdminUnitCost(unitId, { cost_type, amount_chf: amt, frequency: freq });
       }
       await reloadUnitCosts();
       await reloadUnitSnapshot();
-      setCostForm({ cost_type: "", custom_type: "", amount_chf: "" });
+      setCostForm({ cost_type: "", custom_type: "", amount_chf: "", frequency: "monthly" });
       setEditingCostId(null);
     } catch (err) {
       setCostError(err.message || "Speichern fehlgeschlagen.");
@@ -1603,17 +1611,20 @@ function AdminUnitDetailPage() {
   function handleUnitCostEdit(row) {
     if (!row || !row.id) return;
     const ct = String(row.cost_type || "");
+    const freq = String(row.frequency || "monthly").trim().toLowerCase() || "monthly";
     if (UNIT_COST_FIXED_SET.has(ct)) {
       setCostForm({
         cost_type: ct,
         custom_type: "",
         amount_chf: String(row.amount_chf ?? ""),
+        frequency: freq,
       });
     } else {
       setCostForm({
         cost_type: "Sonstiges",
         custom_type: ct,
         amount_chf: String(row.amount_chf ?? ""),
+        frequency: freq,
       });
     }
     setEditingCostId(String(row.id));
@@ -1621,7 +1632,7 @@ function AdminUnitDetailPage() {
   }
 
   function handleUnitCostCancel() {
-    setCostForm({ cost_type: "", custom_type: "", amount_chf: "" });
+    setCostForm({ cost_type: "", custom_type: "", amount_chf: "", frequency: "monthly" });
     setEditingCostId(null);
     setCostError("");
   }
@@ -1646,9 +1657,27 @@ function AdminUnitDetailPage() {
     }
   }
 
-  const unitCostsTotalMonthly = unitCosts.reduce(
-    (sum, r) => sum + Number(r.amount_chf || 0),
-    0
+  const recurringUnitCosts = useMemo(
+    () =>
+      Array.isArray(unitCosts)
+        ? unitCosts.filter(
+            (r) => String(r?.frequency || "monthly").trim().toLowerCase() !== "one_time"
+          )
+        : [],
+    [unitCosts]
+  );
+  const oneTimeUnitCosts = useMemo(
+    () =>
+      Array.isArray(unitCosts)
+        ? unitCosts.filter(
+            (r) => String(r?.frequency || "monthly").trim().toLowerCase() === "one_time"
+          )
+        : [],
+    [unitCosts]
+  );
+  const unitCostsTotalMonthly = useMemo(
+    () => getUnitCostsTotal(recurringUnitCosts),
+    [recurringUnitCosts]
   );
 
   const landlordDepositTypeKey = String(unit.landlordDepositType || "")
@@ -1914,8 +1943,8 @@ function AdminUnitDetailPage() {
                 value={formatChfOrDash(metrics.runningCosts)}
                 hint={
                   landlordDepositInsuranceMonthly(unit) > 0
-                    ? "Summe aller Kostenpositionen + Anteil Kautionsversicherung (Jahresprämie / 12)"
-                    : "Summe aller Kostenpositionen"
+                    ? "Monatlich (voll) + jährlich (/12) + Kautionsversicherung (/12). Einmalige Kosten werden nicht berücksichtigt."
+                    : "Monatlich (voll) + jährlich (/12). Einmalige Kosten werden nicht berücksichtigt."
                 }
                 accent="slate"
               />
@@ -1931,7 +1960,7 @@ function AdminUnitDetailPage() {
           <div className="xl:col-span-2">
             <SectionCard
               title="Zusätzliche Kosten"
-              subtitle="Weitere monatliche Posten (unit_costs)"
+              subtitle="Kostenpositionen aus unit_costs (Monatlich/Jährlich; Einmalig separat)"
             >
               {costError ? (
                 <p className="text-sm text-red-600 mb-3">{costError}</p>
@@ -1941,12 +1970,12 @@ function AdminUnitDetailPage() {
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-500">
                       <th className="py-2 pr-4 font-medium">Kostenart</th>
-                      <th className="py-2 pr-4 font-medium">Betrag CHF/Mt</th>
+                      <th className="py-2 pr-4 font-medium">Betrag (CHF)</th>
                       <th className="py-2 pr-4 font-medium">Aktionen</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {unitCosts.length === 0 ? (
+                    {recurringUnitCosts.length === 0 ? (
                       <tr>
                         <td
                           colSpan={3}
@@ -1954,11 +1983,11 @@ function AdminUnitDetailPage() {
                         >
                           {costLoading && !costError
                             ? "Lade …"
-                            : "Keine zusätzlichen Kosten erfasst."}
+                            : "Keine laufenden Kosten erfasst."}
                         </td>
                       </tr>
                     ) : (
-                      unitCosts.map((row) => (
+                      recurringUnitCosts.map((row) => (
                         <tr
                           key={String(row.id)}
                           className="border-b border-slate-100"
@@ -1973,6 +2002,11 @@ function AdminUnitDetailPage() {
                                   maximumFractionDigits: 2,
                                 })}`
                               : "—"}
+                            <span className="ml-2 text-xs text-slate-500">
+                              {String(row.frequency || "monthly").trim().toLowerCase() === "yearly"
+                                ? "(jährlich)"
+                                : "(monatlich)"}
+                            </span>
                           </td>
                           <td className="py-2 pr-4">
                             <div className="flex flex-wrap items-center gap-3">
@@ -2055,7 +2089,7 @@ function AdminUnitDetailPage() {
                     </label>
                   ) : null}
                   <label className="flex flex-col gap-1 text-sm text-slate-600">
-                    <span>Betrag (CHF / Monat)</span>
+                    <span>Betrag (CHF)</span>
                     <input
                       type="text"
                       inputMode="decimal"
@@ -2069,6 +2103,21 @@ function AdminUnitDetailPage() {
                       disabled={costLoading}
                       className="text-sm border border-slate-300 rounded-lg px-2 py-1.5 bg-white text-slate-800 disabled:opacity-50 w-40"
                     />
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm text-slate-600">
+                    <span>Frequenz</span>
+                    <select
+                      value={costForm.frequency || "monthly"}
+                      onChange={(e) =>
+                        setCostForm((f) => ({ ...f, frequency: e.target.value }))
+                      }
+                      disabled={costLoading}
+                      className="text-sm border border-slate-300 rounded-lg px-2 py-1.5 bg-white text-slate-800 disabled:opacity-50 min-w-[160px]"
+                    >
+                      <option value="monthly">Monatlich</option>
+                      <option value="yearly">Jährlich</option>
+                      <option value="one_time">Einmalig</option>
+                    </select>
                   </label>
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -2094,6 +2143,69 @@ function AdminUnitDetailPage() {
                   </p>
                 ) : null}
               </form>
+            </SectionCard>
+          </div>
+
+          <div className="xl:col-span-2">
+            <SectionCard
+              title="Einmalige Kosten"
+              subtitle="unit_costs mit Frequenz „Einmalig“ (nicht in laufenden Kosten enthalten)"
+            >
+              {oneTimeUnitCosts.length === 0 ? (
+                <p className="text-sm text-slate-500">Keine einmaligen Kosten erfasst.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm text-slate-700">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-500">
+                        <th className="py-2 pr-4 font-medium">Kostenart</th>
+                        <th className="py-2 pr-4 font-medium">Betrag CHF</th>
+                        <th className="py-2 pr-4 font-medium">Aktionen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {oneTimeUnitCosts.map((row) => (
+                        <tr
+                          key={String(row.id)}
+                          className="border-b border-slate-100"
+                        >
+                          <td className="py-2 pr-4 font-medium">
+                            {row.cost_type || "—"}
+                          </td>
+                          <td className="py-2 pr-4">
+                            {Number.isFinite(Number(row.amount_chf))
+                              ? `CHF ${Number(row.amount_chf).toLocaleString("de-CH", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}`
+                              : "—"}
+                          </td>
+                          <td className="py-2 pr-4">
+                            <div className="flex flex-wrap items-center gap-3">
+                              <button
+                                type="button"
+                                disabled={costLoading}
+                                onClick={() => handleUnitCostEdit(row)}
+                                className="text-orange-600 hover:underline text-sm font-medium disabled:opacity-50"
+                              >
+                                Bearbeiten
+                              </button>
+                              <button
+                                type="button"
+                                disabled={costLoading}
+                                onClick={() => handleUnitCostDelete(row)}
+                                className="text-red-600 hover:underline text-sm font-medium disabled:opacity-50"
+                              >
+                                Löschen
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </SectionCard>
           </div>
         </div>

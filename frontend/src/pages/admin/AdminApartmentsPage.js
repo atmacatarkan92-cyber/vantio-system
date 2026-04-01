@@ -13,6 +13,7 @@ import {
   fetchAdminUnitCosts,
   createAdminUnitCost,
   deleteAdminUnitCost,
+  verifyAdminAddress,
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
@@ -28,7 +29,10 @@ import {
   getCoLivingMetrics,
   getRoomsForUnit,
 } from "../../utils/adminUnitCoLivingMetrics";
-import { getUnitCostsTotal } from "../../utils/adminUnitRunningCosts";
+import { getUnitMonthlyRunningCosts, getUnitCostsTotal } from "../../utils/adminUnitRunningCosts";
+import { lookupSwissPlz } from "../../data/swissPlzLookup";
+import { SWISS_CANTON_CODES } from "../../constants/swissCantons";
+import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
 
 function landlordSelectLabel(l) {
   const c = String(l.company_name || "").trim();
@@ -49,6 +53,7 @@ const emptyForm = {
   place: "",
   zip: "",
   address: "",
+  canton: "",
   type: "Apartment",
   rooms: "",
   occupiedRooms: 0,
@@ -183,9 +188,9 @@ function newModalCostRowId() {
 
 function makeDefaultModalCostRows() {
   return [
-    { id: newModalCostRowId(), cost_type: "Miete", custom_type: "", amount_chf: "" },
-    { id: newModalCostRowId(), cost_type: "Nebenkosten", custom_type: "", amount_chf: "" },
-    { id: newModalCostRowId(), cost_type: "Reinigung", custom_type: "", amount_chf: "" },
+    { id: newModalCostRowId(), cost_type: "Miete", custom_type: "", amount_chf: "", frequency: "monthly" },
+    { id: newModalCostRowId(), cost_type: "Nebenkosten", custom_type: "", amount_chf: "", frequency: "monthly" },
+    { id: newModalCostRowId(), cost_type: "Reinigung", custom_type: "", amount_chf: "", frequency: "monthly" },
   ];
 }
 
@@ -193,12 +198,14 @@ function modalRowsFromApiCosts(rows) {
   if (!Array.isArray(rows) || rows.length === 0) return makeDefaultModalCostRows();
   return rows.map((r) => {
     const ct = String(r.cost_type || "");
+    const freq = String(r.frequency || "monthly").trim().toLowerCase() || "monthly";
     if (MODAL_COST_FIXED_SET.has(ct)) {
       return {
         id: r.id,
         cost_type: ct,
         custom_type: "",
         amount_chf: String(r.amount_chf ?? ""),
+        frequency: freq,
       };
     }
     return {
@@ -206,6 +213,7 @@ function modalRowsFromApiCosts(rows) {
       cost_type: "Sonstiges",
       custom_type: ct,
       amount_chf: String(r.amount_chf ?? ""),
+      frequency: freq,
     };
   });
 }
@@ -230,14 +238,16 @@ function buildValidModalCostRows(rows) {
     if (!ct) continue;
     const amt = parseModalCostAmount(row.amount_chf);
     if (amt == null) continue;
-    out.push({ cost_type: ct, amount_chf: amt });
+    const freq = String(row.frequency || "monthly").trim().toLowerCase() || "monthly";
+    if (!["monthly", "yearly", "one_time"].includes(freq)) continue;
+    out.push({ cost_type: ct, amount_chf: amt, frequency: freq });
   }
   return out;
 }
 
 function runningMonthlyCostsForUnit(unit, unitCostsRows) {
   if (!isLandlordContractLeaseStarted(unit)) return 0;
-  return getUnitCostsTotal(unitCostsRows);
+  return getUnitMonthlyRunningCosts(unit, unitCostsRows);
 }
 
 function calculateApartmentProfit(unit, unitCostsRows) {
@@ -638,6 +648,10 @@ function AdminApartmentsPage() {
   const [formData, setFormData] = useState(emptyForm);
   const [modalCostRows, setModalCostRows] = useState([]);
   const [coLivingRoomRows, setCoLivingRoomRows] = useState([]);
+  const [unitAddrBusy, setUnitAddrBusy] = useState(false);
+  const [unitCantonHint, setUnitCantonHint] = useState("");
+  const [unitCantonLockedByPlz, setUnitCantonLockedByPlz] = useState(false);
+  const [unitPlzNotFound, setUnitPlzNotFound] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -793,6 +807,10 @@ function AdminApartmentsPage() {
     setCoLivingRoomRows([]);
     setLandlordFilter("");
     setPropertyManagerFilter("");
+    setUnitAddrBusy(false);
+    setUnitCantonHint("");
+    setUnitCantonLockedByPlz(false);
+    setUnitPlzNotFound(false);
     setIsModalOpen(true);
   }
 
@@ -804,6 +822,7 @@ function AdminApartmentsPage() {
       place: unit.place,
       zip: unit.zip != null && unit.zip !== "" ? String(unit.zip) : "",
       address: unit.address,
+      canton: "",
       type: unit.type,
       rooms: unit.rooms,
       occupiedRooms: unit.occupiedRooms || 0,
@@ -834,6 +853,10 @@ function AdminApartmentsPage() {
       leaseNotes: unit.leaseNotes != null ? String(unit.leaseNotes) : "",
     });
     setSaveError("");
+    setUnitAddrBusy(false);
+    setUnitCantonHint("");
+    setUnitCantonLockedByPlz(false);
+    setUnitPlzNotFound(false);
     let costRows = makeDefaultModalCostRows();
     try {
       const costs = await fetchAdminUnitCosts(unit.id);
@@ -867,6 +890,10 @@ function AdminApartmentsPage() {
     setCoLivingRoomRows([]);
     setLandlordFilter("");
     setPropertyManagerFilter("");
+    setUnitAddrBusy(false);
+    setUnitCantonHint("");
+    setUnitCantonLockedByPlz(false);
+    setUnitPlzNotFound(false);
   }
 
   function addModalCostRow() {
@@ -877,9 +904,36 @@ function AdminApartmentsPage() {
         cost_type: "",
         custom_type: "",
         amount_chf: "",
+        frequency: "monthly",
       },
     ]);
   }
+
+  const handleUnitPostalCodeChange = (e) => {
+    const next = e.target.value;
+    const plz = next.trim();
+    if (!/^\d{4}$/.test(plz)) {
+      setUnitCantonLockedByPlz(false);
+      setUnitPlzNotFound(false);
+      setFormData((f) => ({ ...f, zip: next }));
+      return;
+    }
+    const hit = lookupSwissPlz(plz);
+    if (hit) {
+      setFormData((f) => ({
+        ...f,
+        zip: next,
+        place: hit.city,
+        canton: hit.canton,
+      }));
+      setUnitCantonLockedByPlz(true);
+      setUnitPlzNotFound(false);
+    } else {
+      setFormData((f) => ({ ...f, zip: next }));
+      setUnitCantonLockedByPlz(false);
+      setUnitPlzNotFound(true);
+    }
+  };
 
   function removeModalCostRow(rowId) {
     setModalCostRows((prev) => prev.filter((r) => r.id !== rowId));
@@ -965,7 +1019,7 @@ function AdminApartmentsPage() {
     const validCostRows = buildValidModalCostRows(modalCostRows);
     if (validCostRows.length === 0) {
       setSaveError(
-        "Mindestens eine Monatskosten-Zeile mit Kostenart und gültigem Betrag ist erforderlich."
+        "Mindestens eine Kosten-Zeile mit Kostenart, Frequenz und gültigem Betrag ist erforderlich."
       );
       return;
     }
@@ -1106,6 +1160,7 @@ function AdminApartmentsPage() {
           await createAdminUnitCost(editingId, {
             cost_type: row.cost_type,
             amount_chf: row.amount_chf,
+            frequency: row.frequency,
           });
         }
       } else {
@@ -1118,6 +1173,7 @@ function AdminApartmentsPage() {
           await createAdminUnitCost(newId, {
             cost_type: row.cost_type,
             amount_chf: row.amount_chf,
+            frequency: row.frequency,
           });
         }
       }
@@ -1410,10 +1466,13 @@ function AdminApartmentsPage() {
                     type="text"
                     name="zip"
                     value={formData.zip}
-                    onChange={handleChange}
+                    onChange={handleUnitPostalCodeChange}
                     required
                     className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
                   />
+                  {unitPlzNotFound ? (
+                    <p className="mt-1 text-xs text-slate-400">PLZ nicht gefunden</p>
+                  ) : null}
                 </div>
 
                 <div className="md:col-span-2">
@@ -1428,6 +1487,90 @@ function AdminApartmentsPage() {
                     required
                     className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
                   />
+                </div>
+
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+                  <div className="md:col-span-1">
+                    <label className="block text-sm text-slate-600 mb-2">
+                      Kanton (optional)
+                    </label>
+                    <select
+                      name="canton"
+                      value={formData.canton || ""}
+                      onChange={(e) =>
+                        setFormData((f) => ({ ...f, canton: e.target.value }))
+                      }
+                      disabled={saving || unitCantonLockedByPlz}
+                      className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 bg-white disabled:opacity-50"
+                    >
+                      <option value="">—</option>
+                      {formData.canton && !SWISS_CANTON_CODES.includes(formData.canton) ? (
+                        <option value={formData.canton}>{formData.canton}</option>
+                      ) : null}
+                      {SWISS_CANTON_CODES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-2 flex flex-col gap-1.5 pt-7">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.open(
+                          buildGoogleMapsSearchUrl(
+                            formData.address,
+                            formData.zip,
+                            formData.place
+                          ),
+                          "_blank",
+                          "noopener,noreferrer"
+                        );
+                        setUnitAddrBusy(true);
+                        setUnitCantonHint("Kanton wird ermittelt …");
+                        verifyAdminAddress({
+                          address_line1: formData.address,
+                          postal_code: formData.zip,
+                          city: formData.place,
+                        })
+                          .then((res) => {
+                            const c = res?.normalized?.canton;
+                            if (res?.valid && c != null && String(c).trim() !== "") {
+                              const code = String(c).trim().toUpperCase();
+                              setFormData((f) => ({ ...f, canton: code }));
+                              setUnitCantonHint("Kanton automatisch erkannt.");
+                            } else {
+                              setUnitCantonHint(
+                                "Kein Kanton automatisch ermittelbar. Bitte bei Bedarf manuell wählen."
+                              );
+                            }
+                          })
+                          .catch(() =>
+                            setUnitCantonHint("Kanton konnte nicht automatisch ermittelt werden.")
+                          )
+                          .finally(() => setUnitAddrBusy(false));
+                      }}
+                      disabled={
+                        saving ||
+                        unitAddrBusy ||
+                        !(String(formData.address || "").trim()) ||
+                        !(String(formData.zip || "").trim()) ||
+                        !(String(formData.place || "").trim())
+                      }
+                      className="self-start rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {unitAddrBusy ? "…" : "Adresse prüfen"}
+                    </button>
+                    <p className="text-xs text-slate-500">
+                      Öffnet Google Maps in einem neuen Tab. Der Kanton wird im Hintergrund ergänzt, wenn die
+                      Abfrage einen Wert liefert.
+                    </p>
+                    {unitCantonHint ? (
+                      <p className="text-xs text-slate-500">{unitCantonHint}</p>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div>
@@ -1691,14 +1834,15 @@ function AdminApartmentsPage() {
 
                 <div className="md:col-span-2 border border-slate-200 rounded-xl p-4 bg-slate-50/90">
                   <p className="text-sm font-semibold text-slate-800 mb-3">
-                    Monatliche Kosten
+                    Kostenpositionen
                   </p>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm text-slate-700">
                       <thead>
                         <tr className="border-b border-slate-200 text-slate-500">
                           <th className="py-2 pr-4 font-medium">Kostenart</th>
-                          <th className="py-2 pr-4 font-medium">Betrag CHF/Mt</th>
+                          <th className="py-2 pr-4 font-medium">Frequenz</th>
+                          <th className="py-2 pr-4 font-medium">Betrag (CHF)</th>
                           <th className="py-2 pr-4 font-medium w-24"> </th>
                         </tr>
                       </thead>
@@ -1739,6 +1883,20 @@ function AdminApartmentsPage() {
                                   className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 mt-2 disabled:opacity-50"
                                 />
                               ) : null}
+                            </td>
+                            <td className="py-2 pr-4">
+                              <select
+                                value={row.frequency || "monthly"}
+                                onChange={(e) =>
+                                  updateModalCostRow(row.id, { frequency: e.target.value })
+                                }
+                                disabled={saving}
+                                className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500 bg-white disabled:opacity-50"
+                              >
+                                <option value="monthly">Monatlich</option>
+                                <option value="yearly">Jährlich</option>
+                                <option value="one_time">Einmalig</option>
+                              </select>
                             </td>
                             <td className="py-2 pr-4">
                               <input

@@ -76,7 +76,7 @@ def compute_kpis(
             "total_rooms": rev["total_rooms"],
             "occupied_rooms": rev["occupied_rooms"],
             "vacant_rooms": rev["vacant_rooms"],
-            "methodology": "revenue from tenancies overlapping month; costs from unit_costs (monthly).",
+            "methodology": "revenue from tenancies overlapping month; costs from unit_costs (monthly + yearly/12; one_time excluded) plus insurance/12 when applicable.",
         })
 
     # --- Average revenue per room ---
@@ -105,14 +105,14 @@ def compute_kpis(
             "unit_title": by_profit[0]["unit_title"],
             "metric": "profit",
             "value": by_profit[0]["profit"],
-            "methodology": "lowest profit this month (revenue - unit_costs).",
+            "methodology": "lowest profit this month (revenue - monthly costs derived from unit_costs + insurance/12).",
         }
         best_unit = {
             "unit_id": by_profit[-1]["unit_id"],
             "unit_title": by_profit[-1]["unit_title"],
             "metric": "profit",
             "value": by_profit[-1]["profit"],
-            "methodology": "highest profit this month (revenue - unit_costs).",
+            "methodology": "highest profit this month (revenue - monthly costs derived from unit_costs + insurance/12).",
         }
 
     # --- Vacant days per month (estimated: free room-days) ---
@@ -138,7 +138,7 @@ def compute_kpis(
                 "costs": cost,
                 "revenue": rev,
                 "status": status,
-                "note": "Break-even when revenue >= costs (unit_costs).",
+                "note": "Break-even when revenue >= costs (monthly costs derived from unit_costs + insurance/12).",
             })
         else:
             break_even.append({
@@ -147,7 +147,7 @@ def compute_kpis(
                 "costs": 0,
                 "revenue": rev,
                 "status": "no_costs",
-                "note": "No unit_costs; profit = revenue.",
+                "note": "No unit_costs; profit = revenue (except insurance/12 if applicable).",
             })
 
     # --- Forecast next month (simple: use current month as proxy) ---
@@ -174,7 +174,7 @@ def compute_kpis(
         "revenue_diff_pct": round(revenue_pct, 1) if revenue_pct is not None else None,
         "profit_diff": round(profit_diff, 2),
         "profit_diff_pct": round(profit_pct, 1) if profit_pct is not None else None,
-        "methodology": "Compare current month vs previous month (revenue and profit from tenancies and unit_costs).",
+        "methodology": "Compare current month vs previous month (revenue from tenancies; profit uses unit_costs frequency + insurance/12).",
     }
 
     # --- Warnings: units with costs but no/little occupancy, or free rooms ---
@@ -209,10 +209,10 @@ def compute_kpis(
 
     assumptions = [
         "Revenue: from tenancies overlapping the selected month (active/reserved).",
-        "Costs: sum of unit_costs per unit (treated as monthly).",
+        "Costs: monthly costs derived from unit_costs (monthly + yearly/12; one_time excluded) plus insurance/12 when applicable.",
         "Vacant days: estimated as free_rooms × days_in_month (no day-level vacancy log).",
         "Forecast: current month revenue used as next-month proxy; no trend or seasonality.",
-        "Break-even: revenue >= unit_costs; no one-off or variable cost split.",
+        "Break-even: revenue >= monthly costs; one_time costs excluded from monthly profit by design.",
     ]
 
     return {
@@ -233,7 +233,7 @@ def compute_kpis(
                 "value": avg_profit_per_unit,
                 "currency": "CHF",
                 "note": avg_profit_per_unit_note,
-                "methodology": "Total profit (revenue - unit_costs) / number of units.",
+                "methodology": "Total profit (revenue - monthly costs derived from unit_costs + insurance/12) / number of units.",
             },
             "weakest_unit": weakest_unit,
             "best_unit": best_unit,
