@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   fetchAdminUnits,
   fetchAdminRevenueForecast,
@@ -51,8 +52,20 @@ function AdminForecastPage() {
     const rows = unitRows.map((rec) => {
       const u = units.find((x) => String(x.id) === String(rec.unit_id));
       const p = profitByUnit.get(String(rec.unit_id));
+      const unitDetailId = u?.id ?? u?.unitId ?? rec.unit_id ?? null;
+      const addressPrimary =
+        String(u?.address ?? "")
+          .trim() ||
+        String(u?.street ?? "")
+          .trim() ||
+        String(u?.place ?? "")
+          .trim() ||
+        "";
+      const displayId = u?.unitId || rec.unit_id;
       return {
-        id: u?.unitId || rec.unit_id,
+        id: displayId,
+        unitDetailId,
+        addressPrimary,
         city: u?.place ?? "-",
         revenue: rec.expected_revenue != null ? rec.expected_revenue : null,
         costs: p != null && p.costs != null ? p.costs : null,
@@ -73,7 +86,7 @@ function AdminForecastPage() {
   return (
     <div
       className="min-h-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
-      style={{ display: "grid", gap: "24px" }}
+      style={{ display: "grid", gap: "14px" }}
     >
 
       <div>
@@ -82,7 +95,7 @@ function AdminForecastPage() {
             fontSize: "12px",
             color: "#fb923c",
             fontWeight: 700,
-            marginBottom: "8px",
+            marginBottom: "6px",
           }}
         >
           Vantio
@@ -99,7 +112,7 @@ function AdminForecastPage() {
         </h2>
 
         <p
-          className="mt-[10px] text-[12px] text-[#64748b] dark:text-[#6b7a9a]"
+          className="mt-1.5 text-[12px] text-[#64748b] dark:text-[#6b7a9a]"
         >
           Erwarteter Umsatz und Gewinn für den nächsten Monat.
         </p>
@@ -113,24 +126,24 @@ function AdminForecastPage() {
         }}
       >
 
-        <div className={kpiShellClassName} style={{ borderTop: "4px solid #4ade80" }}>
+        <div className={kpiShellClassName} style={{ borderTop: "4px solid #cbd5e1" }}>
           <h4
             className="mb-2 mt-0 text-[11px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
           >
             Erwarteter Umsatz
           </h4>
-          <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#4ade80", margin: 0 }}>
+          <h2 className="m-0 text-[24px] font-bold text-slate-900 dark:text-[#eef2ff]">
             {formatCurrencyMaybe(forecast.totalRevenue)}
           </h2>
         </div>
 
-        <div className={kpiShellClassName} style={{ borderTop: "4px solid #7aaeff" }}>
+        <div className={kpiShellClassName} style={{ borderTop: "4px solid #059669" }}>
           <h4
             className="mb-2 mt-0 text-[11px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
           >
             Erwarteter Gewinn
           </h4>
-          <h2 className="m-0 text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
+          <h2 className="m-0 text-[24px] font-bold text-emerald-700 dark:text-emerald-400">
             {formatCurrencyMaybe(forecast.totalProfit)}
           </h2>
         </div>
@@ -176,26 +189,33 @@ function AdminForecastPage() {
                   key={row.id}
                   className="border-b border-black/10 dark:border-white/[0.05]"
                 >
-                  <td
-                    className="p-[10px] text-[13px] font-bold text-[#0f172a] dark:text-[#eef2ff]"
-                  >
-                    {row.id}
+                  <td className="p-[10px] text-[13px]">
+                    {row.unitDetailId ? (
+                      <Link
+                        to={`/admin/units/${encodeURIComponent(row.unitDetailId)}`}
+                        className="block font-medium text-sky-700 hover:text-sky-800 hover:underline dark:text-sky-400 dark:hover:text-sky-300"
+                      >
+                        {row.addressPrimary || row.id}
+                      </Link>
+                    ) : (
+                      <span className="block font-medium text-[#0f172a] dark:text-[#eef2ff]">
+                        {row.addressPrimary || row.id}
+                      </span>
+                    )}
+                    {row.addressPrimary && row.id ? (
+                      <span className="mt-0.5 block break-all font-mono text-[10px] font-normal text-slate-600 dark:text-[#6b7a9a]">
+                        {row.id}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="p-[10px] text-[13px] text-[#0f172a] dark:text-[#eef2ff]">{row.city}</td>
-                  <td
-                    style={{
-                      padding: "10px",
-                      color: "#4ade80",
-                      fontSize: "13px",
-                      fontWeight: 500,
-                    }}
-                  >
+                  <td className="p-[10px] text-[13px] font-medium text-slate-900 dark:text-[#eef2ff]">
                     {formatCurrencyMaybe(row.revenue)}
                   </td>
                   <td className="p-[10px] text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                     {formatCurrencyMaybe(row.costs)}
                   </td>
-                  <td className="p-[10px] text-[13px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
+                  <td className="p-[10px] text-[13px] font-bold text-emerald-700 dark:text-emerald-400">
                     {formatCurrencyMaybe(row.profit)}
                   </td>
                   <td className="p-[10px] text-[13px] font-bold text-[#64748b] dark:text-[#6b7a9a]">
