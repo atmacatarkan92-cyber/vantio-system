@@ -42,19 +42,22 @@ function unitTypeBadgeClasses(type) {
   const raw = String(type ?? "").trim();
   const normalized = normalizeUnitTypeLabel(raw);
   if (normalized === "Co-Living") {
-    return "border-sky-500/20 bg-sky-500/10 text-sky-300";
+    return "border-sky-300 bg-sky-100 text-sky-800 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300";
   }
   if (raw === "Business Apartment") {
-    return "border-purple-500/20 bg-purple-500/10 text-purple-300";
+    return "border-purple-300 bg-purple-100 text-purple-800 dark:border-purple-500/20 dark:bg-purple-500/10 dark:text-purple-300";
   }
   return "border-black/10 bg-slate-100 text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]";
 }
 
 function unitStatusBadgeClasses(status) {
   const s = String(status ?? "").trim().toLowerCase();
-  if (s === "frei" || s === "") return "border-green-500/20 bg-green-500/10 text-green-400";
-  if (s === "belegt" || s === "occupied") return "border-blue-500/20 bg-blue-500/10 text-blue-300";
-  if (s === "reserviert" || s === "reserved") return "border-amber-500/20 bg-amber-500/10 text-amber-400";
+  if (s === "frei" || s === "")
+    return "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400";
+  if (s === "belegt" || s === "occupied")
+    return "border-blue-300 bg-blue-100 text-blue-800 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300";
+  if (s === "reserviert" || s === "reserved")
+    return "border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400";
   return "border-black/10 bg-slate-100 text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]";
 }
 
@@ -157,42 +160,6 @@ function formatLandlordAuditDisplayValue(field, value, userNameById) {
   if (value == null || value === "") return "—";
   return String(value);
 }
-
-const thCell = {
-  textAlign: "left",
-  padding: "10px 12px",
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
-  background: "#111520",
-  color: "#6b7a9a",
-  fontSize: "9px",
-  fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: "0.8px",
-};
-
-const tdCell = {
-  padding: "10px 12px",
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
-  verticalAlign: "top",
-  color: "#eef2ff",
-};
-
-const sectionCard = {
-  background: "#141824",
-  border: "1px solid rgba(255,255,255,0.07)",
-  borderRadius: "14px",
-  padding: "16px",
-  marginBottom: "12px",
-};
-
-const sectionTitle = {
-  fontSize: "9px",
-  fontWeight: 700,
-  color: "#6b7a9a",
-  textTransform: "uppercase",
-  letterSpacing: "1px",
-  margin: "0 0 10px 0",
-};
 
 function AdminLandlordDetailPage() {
   const { id } = useParams();
@@ -625,7 +592,7 @@ function AdminLandlordDetailPage() {
       <p className="mb-4">
         <Link
           to="/admin/landlords"
-          className="text-sm font-semibold text-[#7aaeff] hover:underline"
+          className="text-sm font-semibold text-blue-700 hover:underline dark:text-blue-400"
         >
           ← Verwaltungen
         </Link>
@@ -648,7 +615,7 @@ function AdminLandlordDetailPage() {
               className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${
                 isInactive
                   ? "border border-black/10 bg-slate-100 text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]"
-                  : "border border-green-500/20 bg-green-500/10 text-green-400"
+                  : "border border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400"
               }`}
             >
               {statusLabel}
@@ -666,7 +633,7 @@ function AdminLandlordDetailPage() {
               <button
                 type="button"
                 onClick={() => setRestoreModalOpen(true)}
-                className="inline-flex items-center rounded-[8px] border border-green-500/20 bg-green-500/10 px-3 py-1.5 text-sm font-semibold text-green-400 transition-colors hover:bg-green-500/15"
+                className="inline-flex items-center rounded-[8px] border border-emerald-300 bg-emerald-100 px-3 py-1.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-200/80 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/15"
               >
                 Reaktivieren
               </button>
@@ -745,13 +712,13 @@ function AdminLandlordDetailPage() {
         </section>
 
         <section className="rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
-          <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+          <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
             Weitere Angaben
           </h2>
           <div className="space-y-4">
             <div>
-              <p className="text-[10px] text-[#6b7a9a]">Website</p>
-              <div className="mt-1 text-[13px] font-medium text-[#eef2ff]">
+              <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Website</p>
+              <div className="mt-1 text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                 {row.website?.trim() ? (
                   <a
                     href={
@@ -761,7 +728,7 @@ function AdminLandlordDetailPage() {
                     }
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#7aaeff] hover:underline"
+                    className="text-blue-700 hover:underline dark:text-blue-400"
                   >
                     {row.website.trim()}
                   </a>
@@ -771,8 +738,8 @@ function AdminLandlordDetailPage() {
               </div>
             </div>
             <div>
-              <p className="text-[10px] text-[#6b7a9a]">Allgemeine Notizen</p>
-              <p className="mt-1 whitespace-pre-wrap text-[13px] font-medium text-[#eef2ff]">
+              <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Allgemeine Notizen</p>
+              <p className="mt-1 whitespace-pre-wrap text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
                 {dash(row.notes)}
               </p>
             </div>
@@ -780,7 +747,7 @@ function AdminLandlordDetailPage() {
         </section>
 
         <section className="rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
-          <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Notizen</h2>
+          <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Notizen</h2>
           {!isArchived ? (
             <form
               className="mb-6"
@@ -791,7 +758,7 @@ function AdminLandlordDetailPage() {
             >
               <label
                 htmlFor="landlord-new-note"
-                className="mb-1.5 block text-[10px] text-[#6b7a9a]"
+                className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]"
               >
                 Neue Notiz
               </label>
@@ -825,9 +792,9 @@ function AdminLandlordDetailPage() {
             </form>
           ) : null}
           <div className={!isArchived ? "border-t border-black/10 pt-5 dark:border-white/[0.05]" : ""}>
-            <p className="mb-3 text-[10px] text-[#6b7a9a]">Alle Notizen</p>
+            <p className="mb-3 text-[10px] text-[#64748b] dark:text-[#6b7a9a]">Alle Notizen</p>
             {!notes.length ? (
-              <p className="text-sm text-[#6b7a9a]">Noch keine Notizen</p>
+              <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">Noch keine Notizen</p>
             ) : (
               <ul className="space-y-4">
                 {notes.map((n) => (
@@ -870,11 +837,11 @@ function AdminLandlordDetailPage() {
                     ) : (
                       <div className="rounded-[10px] bg-slate-100 p-3 dark:bg-[#111520]">
                         <p className="whitespace-pre-wrap text-sm text-[#0f172a] dark:text-[#eef2ff]">{n.content}</p>
-                        <p className="mt-2 text-xs text-[#6b7a9a]">
+                        <p className="mt-2 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                           {formatDateTime(n.created_at)} · {n.author_name || "—"}
                         </p>
                         {n.updated_at ? (
-                          <p className="mt-1 text-xs text-[#6b7a9a]">
+                          <p className="mt-1 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                             Bearbeitet {formatDateTime(n.updated_at)} · {n.editor_name || "—"}
                           </p>
                         ) : null}
@@ -882,7 +849,7 @@ function AdminLandlordDetailPage() {
                           <button
                             type="button"
                             onClick={() => startEditNote(n)}
-                            className="mt-2 text-sm font-semibold text-[#7aaeff] underline-offset-2 hover:underline"
+                            className="mt-2 text-sm font-semibold text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
                           >
                             Bearbeiten
                           </button>
@@ -896,49 +863,19 @@ function AdminLandlordDetailPage() {
           </div>
         </section>
 
-        <div style={sectionCard}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              justifyContent: "space-between",
-              gap: "12px",
-              marginBottom: "10px",
-            }}
-          >
-            <div style={sectionTitle}>Dokumente</div>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                gap: "10px",
-                justifyContent: "flex-end",
-              }}
-            >
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  fontSize: "10px",
-                  color: "#6b7a9a",
-                }}
-              >
+        <section className="rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
+          <div className="mb-2.5 flex flex-wrap items-start justify-between gap-3">
+            <h2 className="m-0 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
+              Dokumente
+            </h2>
+            <div className="flex flex-wrap items-center justify-end gap-2.5">
+              <label className="flex items-center gap-2 text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                 <span>Kategorie</span>
                 <select
                   value={landlordDocCategory}
                   onChange={(e) => setLandlordDocCategory(e.target.value)}
                   disabled={landlordDocUploading || !id}
-                  style={{
-                    fontSize: "13px",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: "8px",
-                    padding: "6px 8px",
-                    color: "#eef2ff",
-                    background: landlordDocUploading || !id ? "#0d1118" : "#111520",
-                    opacity: landlordDocUploading || !id ? 0.7 : 1,
-                  }}
+                  className="rounded-[8px] border border-black/10 bg-slate-100 px-2 py-1.5 text-[13px] text-[#0f172a] disabled:opacity-70 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 >
                   <option value="">—</option>
                   <option value="rent_contract">Mietvertrag</option>
@@ -951,112 +888,84 @@ function AdminLandlordDetailPage() {
               <input
                 ref={landlordDocFileInputRef}
                 type="file"
-                style={{ display: "none" }}
+                className="hidden"
                 onChange={handleLandlordDocSelected}
               />
               <button
                 type="button"
                 onClick={handleLandlordDocPick}
                 disabled={landlordDocUploading || !id}
-                style={{
-                  fontSize: "13px",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  background: "transparent",
-                  color: "#8090b0",
-                  padding: "8px 12px",
-                  borderRadius: "8px",
-                  fontWeight: 600,
-                  cursor: landlordDocUploading || !id ? "not-allowed" : "pointer",
-                  opacity: landlordDocUploading || !id ? 0.7 : 1,
-                }}
+                className="rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] disabled:cursor-not-allowed disabled:opacity-70 dark:border-white/[0.1] dark:text-[#8090b0]"
               >
                 {landlordDocUploading ? "Wird hochgeladen …" : "Hochladen"}
               </button>
             </div>
           </div>
           {landlordDocUploadError ? (
-            <p style={{ margin: "0 0 8px 0", fontSize: "13px", color: "#f87171" }}>
-              {landlordDocUploadError}
-            </p>
+            <p className="mb-2 text-[13px] text-[#f87171]">{landlordDocUploadError}</p>
           ) : null}
           {landlordDocsLoading ? (
-            <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7a9a" }}>Lade Dokumente …</p>
+            <p className="m-0 text-sm text-[#64748b] dark:text-[#6b7a9a]">Lade Dokumente …</p>
           ) : landlordDocuments.length === 0 ? (
-            <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7a9a" }}>
-              Keine Dokumente vorhanden
-            </p>
+            <p className="m-0 text-sm text-[#64748b] dark:text-[#6b7a9a]">Keine Dokumente vorhanden</p>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  fontSize: "14px",
-                  color: "#eef2ff",
-                }}
-              >
-                <thead>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm text-[#0f172a] dark:text-[#eef2ff]">
+                <thead className="bg-slate-100 dark:bg-[#111520]">
                   <tr>
-                    <th style={thCell}>Datei</th>
-                    <th style={thCell}>Typ</th>
-                    <th style={thCell}>Kategorie</th>
-                    <th style={thCell}>Datum</th>
-                    <th style={thCell}>Von</th>
-                    <th style={thCell}>Aktionen</th>
+                    <th className="px-3 py-2.5 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
+                      Datei
+                    </th>
+                    <th className="px-3 py-2.5 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
+                      Typ
+                    </th>
+                    <th className="px-3 py-2.5 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
+                      Kategorie
+                    </th>
+                    <th className="px-3 py-2.5 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
+                      Datum
+                    </th>
+                    <th className="px-3 py-2.5 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
+                      Von
+                    </th>
+                    <th className="px-3 py-2.5 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
+                      Aktionen
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {landlordDocuments.map((doc) => (
-                    <tr key={String(doc.id)}>
-                      <td style={{ ...tdCell, fontWeight: 600 }}>{doc.file_name || "—"}</td>
-                      <td style={{ ...tdCell, color: "#6b7a9a" }}>{formatLandlordDocumentType(doc)}</td>
-                      <td style={{ ...tdCell, color: "#6b7a9a" }}>
+                    <tr key={String(doc.id)} className="border-b border-black/10 dark:border-white/[0.05]">
+                      <td className="px-3 py-2.5 align-top text-[13px] font-semibold text-[#0f172a] dark:text-[#eef2ff]">
+                        {doc.file_name || "—"}
+                      </td>
+                      <td className="px-3 py-2.5 align-top text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
+                        {formatLandlordDocumentType(doc)}
+                      </td>
+                      <td className="px-3 py-2.5 align-top text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
                         {formatLandlordDocumentCategoryLabel(doc.category)}
                       </td>
-                      <td style={{ ...tdCell, color: "#6b7a9a" }}>
+                      <td className="px-3 py-2.5 align-top text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
                         {formatLandlordDocumentDate(doc.created_at)}
                       </td>
-                      <td style={{ ...tdCell, color: "#6b7a9a" }}>
+                      <td className="px-3 py-2.5 align-top text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
                         {doc.uploaded_by_name != null && doc.uploaded_by_name !== ""
                           ? doc.uploaded_by_name
                           : "—"}
                       </td>
-                      <td style={tdCell}>
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            alignItems: "center",
-                            gap: "12px",
-                          }}
-                        >
+                      <td className="px-3 py-2.5 align-top text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
+                        <div className="flex flex-wrap items-center gap-3">
                           <button
                             type="button"
                             onClick={() => handleOpenLandlordDocument(doc.id)}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              padding: 0,
-                              color: "#7aaeff",
-                              fontWeight: 600,
-                              cursor: "pointer",
-                              textDecoration: "underline",
-                            }}
+                            className="border-none bg-transparent p-0 text-[13px] font-semibold text-blue-700 underline dark:text-blue-400"
                           >
                             Öffnen
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteLandlordDocument(doc.id)}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              padding: 0,
-                              color: "#f87171",
-                              fontSize: "13px",
-                              cursor: "pointer",
-                              textDecoration: "underline",
-                            }}
+                            className="border-none bg-transparent p-0 text-[13px] text-[#f87171] underline"
                           >
                             Löschen
                           </button>
@@ -1068,24 +977,24 @@ function AdminLandlordDetailPage() {
               </table>
             </div>
           )}
-        </div>
+        </section>
 
         <section className="rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
-          <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+          <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
             Zugeordnete Units
           </h2>
           {assignedUnitsLoading ? (
             <div className="space-y-2" aria-busy="true">
-              <p className="text-sm text-[#6b7a9a]">Lade Units …</p>
-              <div className="h-2 w-full max-w-xs animate-pulse rounded bg-[#111520]" />
-              <div className="h-2 w-full max-w-[14rem] animate-pulse rounded bg-[#111520]" />
+              <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">Lade Units …</p>
+              <div className="h-2 w-full max-w-xs animate-pulse rounded bg-slate-200 dark:bg-[#111520]" />
+              <div className="h-2 w-full max-w-[14rem] animate-pulse rounded bg-slate-200 dark:bg-[#111520]" />
             </div>
           ) : assignedUnitsError ? (
             <p className="text-sm text-[#f87171]">{assignedUnitsError}</p>
           ) : assignedUnits.length === 0 ? (
             <div className="rounded-[10px] border border-dashed border-black/10 bg-slate-100 px-5 py-8 text-center dark:border-white/[0.07] dark:bg-[#111520]">
               <p className="text-sm font-semibold text-[#0f172a] dark:text-[#eef2ff]">Keine Units zugeordnet</p>
-              <p className="mx-auto mt-2 max-w-md text-sm text-[#6b7a9a]">
+              <p className="mx-auto mt-2 max-w-md text-sm text-[#64748b] dark:text-[#6b7a9a]">
                 Dieser Verwaltung sind aktuell noch keine Units zugewiesen.
               </p>
             </div>
@@ -1109,26 +1018,26 @@ function AdminLandlordDetailPage() {
                       <div className="min-w-0 flex-1">
                         <Link
                           to={`/admin/units/${encodeURIComponent(uid)}`}
-                          className="rounded-sm text-base font-semibold text-[#7aaeff] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7aaeff]/40"
+                          className="rounded-sm text-base font-semibold text-blue-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 dark:text-blue-400 dark:focus-visible:ring-[#7aaeff]/40"
                         >
                           {title}
                         </Link>
                         {propTitle ? (
-                          <p className="mt-1 text-xs text-[#6b7a9a]">Liegenschaft: {propTitle}</p>
+                          <p className="mt-1 text-xs text-[#64748b] dark:text-[#6b7a9a]">Liegenschaft: {propTitle}</p>
                         ) : null}
-                        {addr ? <p className="mt-2 text-sm text-[#eef2ff]">{addr}</p> : null}
+                        {addr ? <p className="mt-2 text-sm text-[#0f172a] dark:text-[#eef2ff]">{addr}</p> : null}
                         {zipCity ? (
-                          <p className="text-sm text-[#eef2ff]">{zipCity}</p>
+                          <p className="text-sm text-[#0f172a] dark:text-[#eef2ff]">{zipCity}</p>
                         ) : null}
                       </div>
                       <div className="flex shrink-0 flex-wrap items-center gap-2">
                         <span
-                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold ${unitTypeBadgeClasses(u.type)}`}
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${unitTypeBadgeClasses(u.type)}`}
                         >
                           {typeLabel}
                         </span>
                         <span
-                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold ${unitStatusBadgeClasses(u.status)}`}
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${unitStatusBadgeClasses(u.status)}`}
                         >
                           {u.status || "—"}
                         </span>
@@ -1136,7 +1045,7 @@ function AdminLandlordDetailPage() {
                     </div>
                     <p className="mt-3 border-t border-black/10 pt-3 text-sm text-[#0f172a] dark:border-white/[0.05] dark:text-[#eef2ff]">
                       <span className="text-[#64748b] dark:text-[#6b7a9a]">Miete (Mieter): </span>
-                      <span className="font-semibold tabular-nums text-[#4ade80]">
+                      <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
                         {formatChfMonthly(u.tenantPriceMonthly)}
                       </span>
                     </p>
@@ -1147,43 +1056,43 @@ function AdminLandlordDetailPage() {
           )}
         </section>
 
-        <section className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
-          <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+        <section className="rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
+          <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
             Bewirtschafter
           </h2>
           {propertyManagersLoading ? (
             <div className="space-y-2" aria-busy="true">
-              <p className="text-sm text-[#6b7a9a]">Lade Bewirtschafter …</p>
-              <div className="h-2 w-full max-w-xs animate-pulse rounded bg-[#111520]" />
-              <div className="h-2 w-full max-w-[14rem] animate-pulse rounded bg-[#111520]" />
+              <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">Lade Bewirtschafter …</p>
+              <div className="h-2 w-full max-w-xs animate-pulse rounded bg-slate-200 dark:bg-[#111520]" />
+              <div className="h-2 w-full max-w-[14rem] animate-pulse rounded bg-slate-200 dark:bg-[#111520]" />
             </div>
           ) : propertyManagersError ? (
             <p className="text-sm text-[#f87171]">{propertyManagersError}</p>
           ) : sortedPropertyManagers.length === 0 ? (
             <div className="space-y-3">
-              <p className="text-sm text-[#6b7a9a]">Kein Bewirtschafter zugeordnet</p>
+              <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">Kein Bewirtschafter zugeordnet</p>
               <Link
                 to="/admin/bewirtschafter"
-                className="inline-flex items-center rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-1.5 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                className="inline-flex items-center rounded-[8px] border border-black/10 bg-transparent px-3 py-1.5 text-sm font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
               >
                 Bewirtschafter zuweisen
               </Link>
             </div>
           ) : (
-            <ul className="divide-y divide-white/[0.05] overflow-hidden rounded-[10px] border border-white/[0.05]">
+            <ul className="divide-y divide-black/10 overflow-hidden rounded-[10px] border border-black/10 dark:divide-white/[0.05] dark:border-white/[0.05]">
               {sortedPropertyManagers.map((pm) => (
-                <li key={pm.id} className="bg-[#111520] px-4 py-3">
+                <li key={pm.id} className="bg-slate-50 px-4 py-3 dark:bg-[#111520]">
                   <Link
                     to={`/admin/bewirtschafter/${encodeURIComponent(pm.id)}`}
-                    className="text-sm font-semibold text-[#7aaeff] underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7aaeff]/40"
+                    className="text-sm font-semibold text-blue-700 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 dark:text-blue-400 dark:focus-visible:ring-[#7aaeff]/40"
                   >
                     {propertyManagerDisplayName(pm)}
                   </Link>
                   {pm.email != null && String(pm.email).trim() !== "" ? (
-                    <p className="mt-1 text-xs text-[#6b7a9a]">{String(pm.email).trim()}</p>
+                    <p className="mt-1 text-xs text-[#64748b] dark:text-[#6b7a9a]">{String(pm.email).trim()}</p>
                   ) : null}
                   {pm.phone != null && String(pm.phone).trim() !== "" ? (
-                    <p className="mt-0.5 text-xs text-[#6b7a9a]">{String(pm.phone).trim()}</p>
+                    <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">{String(pm.phone).trim()}</p>
                   ) : null}
                 </li>
               ))}
@@ -1191,19 +1100,19 @@ function AdminLandlordDetailPage() {
           )}
         </section>
 
-        <section className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-5 md:p-6">
-          <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">
+        <section className="rounded-[14px] border border-black/10 bg-white p-5 md:p-6 dark:border-white/[0.07] dark:bg-[#141824]">
+          <h2 className="mb-4 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
             Historie
           </h2>
-          <p className="mb-3 text-[10px] text-[#6b7a9a]">
+          <p className="mb-3 text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
             Änderungen an Stammdaten (wer, wann, welches Feld).
           </p>
           {auditLoading ? (
-            <p className="text-sm text-[#6b7a9a]">Lade Verlauf …</p>
+            <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">Lade Verlauf …</p>
           ) : auditError ? (
             <p className="text-sm text-[#f87171]">{auditError}</p>
           ) : auditLogs.length === 0 ? (
-            <p className="text-sm text-[#6b7a9a]">Noch keine Einträge im Audit-Protokoll.</p>
+            <p className="text-sm text-[#64748b] dark:text-[#6b7a9a]">Noch keine Einträge im Audit-Protokoll.</p>
           ) : (
             <ul className="ml-1 space-y-4 border-l-2 border-black/10 pl-4 dark:border-white/[0.08]">
               {auditLogs.map((log) => {
@@ -1216,8 +1125,8 @@ function AdminLandlordDetailPage() {
                 if (log.action === "create") {
                   return (
                     <li key={log.id}>
-                      <p className="text-sm font-medium text-[#eef2ff]">Verwaltung angelegt</p>
-                      <p className="mt-0.5 text-xs text-[#6b7a9a]">
+                      <p className="text-sm font-medium text-[#0f172a] dark:text-[#eef2ff]">Verwaltung angelegt</p>
+                      <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                         {formatDateTime(log.created_at)}
                         {actorSuffix}
                       </p>
@@ -1232,8 +1141,8 @@ function AdminLandlordDetailPage() {
                 if (!field) {
                   return (
                     <li key={log.id}>
-                      <p className="text-sm text-[#eef2ff]">Eintrag</p>
-                      <p className="mt-0.5 text-xs text-[#6b7a9a]">
+                      <p className="text-sm text-[#0f172a] dark:text-[#eef2ff]">Eintrag</p>
+                      <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                         {formatDateTime(log.created_at)}
                         {actorSuffix}
                       </p>
@@ -1245,13 +1154,13 @@ function AdminLandlordDetailPage() {
                 const newD = formatLandlordAuditDisplayValue(field, nv[field], userNameById);
                 return (
                   <li key={log.id}>
-                    <p className="text-sm text-[#eef2ff]">
+                    <p className="text-sm text-[#0f172a] dark:text-[#eef2ff]">
                       <span className="font-semibold">{label} geändert:</span>{" "}
                       <span className="font-medium tabular-nums">{oldD}</span>
-                      <span className="mx-1 text-[#6b7a9a]">→</span>
+                      <span className="mx-1 text-[#64748b] dark:text-[#6b7a9a]">→</span>
                       <span className="font-medium tabular-nums">{newD}</span>
                     </p>
-                    <p className="mt-0.5 text-xs text-[#6b7a9a]">
+                    <p className="mt-0.5 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                       {formatDateTime(log.created_at)}
                       {actorSuffix}
                     </p>
@@ -1270,18 +1179,18 @@ function AdminLandlordDetailPage() {
           role="presentation"
         >
           <div
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[14px] border border-white/[0.07] bg-[#141824] p-6 shadow-lg"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[14px] border border-black/10 bg-white p-6 shadow-lg dark:border-white/[0.07] dark:bg-[#141824]"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="landlord-edit-title"
           >
-            <h2 id="landlord-edit-title" className="mb-4 text-lg font-semibold text-[#eef2ff]">
+            <h2 id="landlord-edit-title" className="mb-4 text-lg font-semibold text-[#0f172a] dark:text-[#eef2ff]">
               Verwaltung bearbeiten
             </h2>
             <div className="space-y-4">
               <div>
-                <label htmlFor="ll-edit-company" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="ll-edit-company" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   Firma (optional)
                 </label>
                 <input
@@ -1292,11 +1201,11 @@ function AdminLandlordDetailPage() {
                     setLandlordEditForm((f) => ({ ...f, company_name: e.target.value }))
                   }
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </div>
               <div>
-                <label htmlFor="ll-edit-contact" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="ll-edit-contact" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   Kontaktperson (optional)
                 </label>
                 <input
@@ -1307,11 +1216,11 @@ function AdminLandlordDetailPage() {
                     setLandlordEditForm((f) => ({ ...f, contact_name: e.target.value }))
                   }
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </div>
               <div>
-                <label htmlFor="ll-edit-email" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="ll-edit-email" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   E-Mail *
                 </label>
                 <input
@@ -1320,11 +1229,11 @@ function AdminLandlordDetailPage() {
                   value={landlordEditForm.email}
                   onChange={(e) => setLandlordEditForm((f) => ({ ...f, email: e.target.value }))}
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </div>
               <div>
-                <label htmlFor="ll-edit-phone" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="ll-edit-phone" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   Telefon (optional)
                 </label>
                 <input
@@ -1333,11 +1242,11 @@ function AdminLandlordDetailPage() {
                   value={landlordEditForm.phone}
                   onChange={(e) => setLandlordEditForm((f) => ({ ...f, phone: e.target.value }))}
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </div>
               <div>
-                <label htmlFor="ll-edit-addr" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="ll-edit-addr" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   Adresse *
                 </label>
                 <input
@@ -1349,11 +1258,11 @@ function AdminLandlordDetailPage() {
                   }
                   disabled={landlordEditSaving}
                   placeholder="Strasse Nr."
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </div>
               <div>
-                <label htmlFor="ll-edit-plz" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="ll-edit-plz" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   PLZ *
                 </label>
                 <input
@@ -1362,14 +1271,14 @@ function AdminLandlordDetailPage() {
                   value={landlordEditForm.postal_code}
                   onChange={handleLandlordEditPostalCodeChange}
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
                 {landlordEditPlzNotFound ? (
-                  <p className="mt-1 text-xs text-[#6b7a9a]">PLZ nicht gefunden</p>
+                  <p className="mt-1 text-xs text-[#64748b] dark:text-[#6b7a9a]">PLZ nicht gefunden</p>
                 ) : null}
               </div>
               <div>
-                <label htmlFor="ll-edit-city" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="ll-edit-city" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   Ort *
                 </label>
                 <input
@@ -1378,7 +1287,7 @@ function AdminLandlordDetailPage() {
                   value={landlordEditForm.city}
                   onChange={(e) => setLandlordEditForm((f) => ({ ...f, city: e.target.value }))}
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -1425,23 +1334,23 @@ function AdminLandlordDetailPage() {
                     !(landlordEditForm.postal_code || "").trim() ||
                     !(landlordEditForm.city || "").trim()
                   }
-                  className="self-start rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-xs font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="self-start rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-xs font-semibold text-[#64748b] hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
                 >
                   {landlordEditAddrBusy ? "…" : "Adresse prüfen"}
                 </button>
-                <p className="text-xs text-[#6b7a9a]">
+                <p className="text-xs text-[#64748b] dark:text-[#6b7a9a]">
                   Öffnet Google Maps in einem neuen Tab. Der Kanton wird im Hintergrund ergänzt, wenn die
                   Abfrage einen Wert liefert.
                 </p>
                 {landlordEditCantonHint ? (
-                  <p className="text-xs text-[#6b7a9a]">{landlordEditCantonHint}</p>
+                  <p className="text-xs text-[#64748b] dark:text-[#6b7a9a]">{landlordEditCantonHint}</p>
                 ) : null}
               </div>
               <div>
-                <label htmlFor="ll-edit-canton" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="ll-edit-canton" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   Kanton
                 </label>
-                <p className="mb-1 text-xs text-[#6b7a9a]">
+                <p className="mb-1 text-xs text-[#64748b] dark:text-[#6b7a9a]">
                   Optional — oft nach «Adresse prüfen» gesetzt; manuelle Auswahl möglich.
                 </p>
                 <select
@@ -1451,7 +1360,7 @@ function AdminLandlordDetailPage() {
                     setLandlordEditForm((f) => ({ ...f, canton: e.target.value }))
                   }
                   disabled={landlordEditSaving || landlordEditCantonLockedByPlz}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 >
                   <option value="">—</option>
                   {landlordEditForm.canton && !SWISS_CANTON_CODES.includes(landlordEditForm.canton) ? (
@@ -1465,7 +1374,7 @@ function AdminLandlordDetailPage() {
                 </select>
               </div>
               <div>
-                <label htmlFor="ll-edit-website" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="ll-edit-website" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   Website (optional)
                 </label>
                 <input
@@ -1476,11 +1385,11 @@ function AdminLandlordDetailPage() {
                     setLandlordEditForm((f) => ({ ...f, website: e.target.value }))
                   }
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </div>
               <div>
-                <label htmlFor="ll-edit-notes" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="ll-edit-notes" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   Allgemeine Notizen (optional)
                 </label>
                 <textarea
@@ -1491,11 +1400,11 @@ function AdminLandlordDetailPage() {
                   }
                   disabled={landlordEditSaving}
                   rows={3}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 />
               </div>
               <div>
-                <label htmlFor="ll-edit-status" className="mb-1 block text-[10px] text-[#6b7a9a]">
+                <label htmlFor="ll-edit-status" className="mb-1 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   Status
                 </label>
                 <select
@@ -1505,7 +1414,7 @@ function AdminLandlordDetailPage() {
                     setLandlordEditForm((f) => ({ ...f, status: e.target.value }))
                   }
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-white/[0.08] bg-[#111520] px-3 py-2 text-sm text-[#eef2ff] disabled:opacity-60"
+                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 >
                   <option value="active">Aktiv</option>
                   <option value="inactive">Inaktiv</option>
@@ -1525,7 +1434,7 @@ function AdminLandlordDetailPage() {
                   type="button"
                   disabled={landlordEditSaving}
                   onClick={() => setLandlordEditOpen(false)}
-                  className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04]"
+                  className="rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-sm font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
                 >
                   Abbrechen
                 </button>
@@ -1542,16 +1451,16 @@ function AdminLandlordDetailPage() {
           role="presentation"
         >
           <div
-            className="w-full max-w-md rounded-[14px] border border-white/[0.07] bg-[#141824] p-6 shadow-lg"
+            className="w-full max-w-md rounded-[14px] border border-black/10 bg-white p-6 shadow-lg dark:border-white/[0.07] dark:bg-[#141824]"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="restore-landlord-title"
           >
-            <h2 id="restore-landlord-title" className="mb-3 text-lg font-semibold text-[#eef2ff]">
+            <h2 id="restore-landlord-title" className="mb-3 text-lg font-semibold text-[#0f172a] dark:text-[#eef2ff]">
               Verwaltung reaktivieren?
             </h2>
-            <p className="mb-6 text-sm text-[#6b7a9a]">
+            <p className="mb-6 text-sm text-[#64748b] dark:text-[#6b7a9a]">
               Die Verwaltung wird wieder aktiv und erscheint in der normalen Verwaltungsliste unter «Aktiv».
             </p>
             <div className="flex flex-wrap justify-end gap-2">
@@ -1559,7 +1468,7 @@ function AdminLandlordDetailPage() {
                 type="button"
                 disabled={restoring}
                 onClick={() => setRestoreModalOpen(false)}
-                className="rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:opacity-50"
+                className="rounded-[8px] border border-black/10 bg-transparent px-4 py-2 text-sm font-semibold text-[#64748b] hover:bg-slate-100 disabled:opacity-50 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
               >
                 Abbrechen
               </button>
@@ -1581,7 +1490,7 @@ function AdminLandlordDetailPage() {
                     })
                     .finally(() => setRestoring(false));
                 }}
-                className="rounded-[8px] border border-green-500/20 bg-green-500/10 px-4 py-2 text-sm font-semibold text-green-400 hover:bg-green-500/15 disabled:opacity-50"
+                className="rounded-[8px] border border-emerald-300 bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-200/80 disabled:opacity-50 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/15"
               >
                 {restoring ? "…" : "Jetzt reaktivieren"}
               </button>
@@ -1597,16 +1506,16 @@ function AdminLandlordDetailPage() {
           role="presentation"
         >
           <div
-            className="w-full max-w-md rounded-[14px] border border-white/[0.07] bg-[#141824] p-6 shadow-lg"
+            className="w-full max-w-md rounded-[14px] border border-black/10 bg-white p-6 shadow-lg dark:border-white/[0.07] dark:bg-[#141824]"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="archive-landlord-title"
           >
-            <h2 id="archive-landlord-title" className="mb-3 text-lg font-semibold text-[#eef2ff]">
+            <h2 id="archive-landlord-title" className="mb-3 text-lg font-semibold text-[#0f172a] dark:text-[#eef2ff]">
               Verwaltung archivieren?
             </h2>
-            <p className="mb-6 text-sm text-[#6b7a9a]">
+            <p className="mb-6 text-sm text-[#64748b] dark:text-[#6b7a9a]">
               Die Verwaltung wird archiviert. Sie erscheint nicht mehr in der normalen Verwaltungsliste.
             </p>
             <div className="flex flex-wrap justify-end gap-2">
@@ -1614,7 +1523,7 @@ function AdminLandlordDetailPage() {
                 type="button"
                 disabled={archiving}
                 onClick={() => setArchiveModalOpen(false)}
-                className="rounded-[8px] border border-white/[0.1] bg-transparent px-4 py-2 text-sm font-semibold text-[#8090b0] hover:bg-white/[0.04] disabled:opacity-50"
+                className="rounded-[8px] border border-black/10 bg-transparent px-4 py-2 text-sm font-semibold text-[#64748b] hover:bg-slate-100 disabled:opacity-50 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
               >
                 Abbrechen
               </button>
@@ -1634,7 +1543,7 @@ function AdminLandlordDetailPage() {
                     })
                     .finally(() => setArchiving(false));
                 }}
-                className="rounded-[8px] border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-semibold text-[#f87171] hover:bg-red-500/15 disabled:opacity-50"
+                className="rounded-[8px] border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 dark:border-red-500/20 dark:bg-red-500/10 dark:text-[#f87171] dark:hover:bg-red-500/15"
               >
                 {archiving ? "…" : "Jetzt archivieren"}
               </button>
