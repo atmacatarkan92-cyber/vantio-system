@@ -18,7 +18,7 @@ function StatCard({ label, value, hint, color = "slate" }) {
     rose: "border-t-red-500",
   };
   const val = {
-    slate: "text-[#eef2ff]",
+    slate: "text-[#0f172a] dark:text-[#eef2ff]",
     green: "text-[#4ade80]",
     amber: "text-[#fbbf24]",
     rose: "text-[#f87171]",
@@ -26,21 +26,21 @@ function StatCard({ label, value, hint, color = "slate" }) {
 
   return (
     <div
-      className={`relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 bg-[#141824] p-5 ${top[color]}`}
+      className={`relative overflow-hidden rounded-[14px] border border-black/10 bg-white border-t-4 dark:border-white/[0.07] dark:bg-[#141824] p-5 ${top[color]}`}
     >
-      <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">{label}</p>
+      <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">{label}</p>
       <p className={`mt-2 text-[24px] font-bold ${val[color]}`}>{value}</p>
-      {hint ? <p className="mt-2 text-[11px] text-[#6b7a9a]">{hint}</p> : null}
+      {hint ? <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">{hint}</p> : null}
     </div>
   );
 }
 
 function SectionCard({ title, subtitle, children }) {
   return (
-    <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+    <div className="rounded-[14px] border border-black/10 bg-white dark:border-white/[0.07] dark:bg-[#141824] p-6">
       <div className="mb-5">
-        <h3 className="text-[16px] font-bold text-[#eef2ff]">{title}</h3>
-        {subtitle ? <p className="mt-1 text-[12px] text-[#6b7a9a]">{subtitle}</p> : null}
+        <h3 className="text-[16px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{title}</h3>
+        {subtitle ? <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">{subtitle}</p> : null}
       </div>
       {children}
     </div>
@@ -95,11 +95,11 @@ function AdminRoomsPage() {
   }, [coLivingRooms, tenancies]);
 
   return (
-    <div className="min-h-screen bg-[#07090f] text-[#eef2ff]">
+    <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
       <div className="mx-auto max-w-[min(1400px,100%)] space-y-6 p-6">
         <div>
-          <h2 className="text-[22px] font-bold text-[#eef2ff]">Co-Living-Zimmer</h2>
-          <p className="mt-1 text-[12px] text-[#6b7a9a]">
+          <h2 className="text-[22px] font-bold text-[#0f172a] dark:text-[#eef2ff]">Co-Living-Zimmer</h2>
+          <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
             Übersicht über alle Co-Living-Zimmer, deren Belegung und Verfügbarkeit.
           </p>
         </div>
@@ -146,7 +146,7 @@ function AdminRoomsPage() {
             ))}
 
             {coLivingUnits.length === 0 && (
-              <p className="text-[13px] text-[#6b7a9a]">Keine Co-Living Units gefunden.</p>
+              <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Keine Co-Living Units gefunden.</p>
             )}
           </div>
         </SectionCard>
@@ -166,7 +166,7 @@ function AdminRoomsPage() {
             ))}
 
             {coLivingUnits.length === 0 && (
-              <p className="text-[13px] text-[#6b7a9a]">Keine Co-Living Units gefunden.</p>
+              <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Keine Co-Living Units gefunden.</p>
             )}
           </div>
         </SectionCard>

@@ -27,7 +27,7 @@ function StatCard({ label, value, hint, color = "slate" }) {
     blue: "border-t-blue-500",
   };
   const val = {
-    slate: "text-[#eef2ff]",
+    slate: "text-[#0f172a] dark:text-[#eef2ff]",
     green: "text-[#4ade80]",
     amber: "text-[#fbbf24]",
     rose: "text-[#f87171]",
@@ -36,21 +36,21 @@ function StatCard({ label, value, hint, color = "slate" }) {
 
   return (
     <div
-      className={`relative overflow-hidden rounded-[14px] border border-white/[0.07] border-t-4 bg-[#141824] p-5 ${top[color]}`}
+      className={`relative overflow-hidden rounded-[14px] border border-black/10 bg-white border-t-4 dark:border-white/[0.07] dark:bg-[#141824] p-5 ${top[color]}`}
     >
-      <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">{label}</p>
+      <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">{label}</p>
       <p className={`mt-2 text-[24px] font-bold ${val[color]}`}>{value}</p>
-      {hint ? <p className="mt-2 text-[11px] text-[#6b7a9a]">{hint}</p> : null}
+      {hint ? <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">{hint}</p> : null}
     </div>
   );
 }
 
 function SectionCard({ title, subtitle, children }) {
   return (
-    <div className="rounded-[14px] border border-white/[0.07] bg-[#141824] p-6">
+    <div className="rounded-[14px] border border-black/10 bg-white dark:border-white/[0.07] dark:bg-[#141824] p-6">
       <div className="mb-5">
-        <h3 className="text-[16px] font-bold text-[#eef2ff]">{title}</h3>
-        {subtitle ? <p className="mt-1 text-[12px] text-[#6b7a9a]">{subtitle}</p> : null}
+        <h3 className="text-[16px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{title}</h3>
+        {subtitle ? <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">{subtitle}</p> : null}
       </div>
       {children}
     </div>
@@ -63,7 +63,7 @@ function Badge({ children, type = "neutral" }) {
     warning: "border-amber-500/20 bg-amber-500/10 text-amber-400",
     danger: "border-red-500/20 bg-red-500/10 text-red-400",
     info: "border-blue-500/20 bg-blue-500/10 text-[#7aaeff]",
-    neutral: "border-white/[0.1] bg-white/[0.06] text-[#6b7a9a]",
+    neutral: "border-black/10 bg-slate-100 text-[#64748b] dark:border-white/[0.1] dark:bg-white/[0.06] dark:text-[#6b7a9a]",
   };
 
   return (
@@ -248,12 +248,12 @@ function AdminOccupancyPage() {
   }, [occupancyRows]);
 
   return (
-    <div className="min-h-screen bg-[#07090f] text-[#eef2ff]">
+    <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
       <div className="mx-auto max-w-[min(1400px,100%)] space-y-6 p-6">
       <div>
-        <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#6b7a9a]">Vantio</p>
-        <h2 className="mt-1 text-[22px] font-bold text-[#eef2ff]">Belegung</h2>
-        <p className="mt-1 text-[12px] text-[#6b7a9a]">
+        <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Vantio</p>
+        <h2 className="mt-1 text-[22px] font-bold text-[#0f172a] dark:text-[#eef2ff]">Belegung</h2>
+        <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
           Übersicht über Auslastung, freie Zimmer, Reservierungen und Belegungsquote
           für Apartments und Co-Living Units.
         </p>
@@ -303,37 +303,37 @@ function AdminOccupancyPage() {
         subtitle="Hier siehst du sofort, welche Units stark laufen und wo Leerstand besteht."
       >
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left">
-            <thead className="bg-[#111520]">
+          <table className="w-full border-collapse text-left text-[#0f172a] dark:text-[#eef2ff]">
+            <thead className="bg-slate-100 dark:bg-[#111520]">
               <tr>
-                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                   Unit
                 </th>
-                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                   Ort
                 </th>
-                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                   Adresse
                 </th>
-                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                   Rooms gesamt
                 </th>
-                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                   Belegt
                 </th>
-                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                   Reserviert
                 </th>
-                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                   Frei
                 </th>
-                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                   Belegt %
                 </th>
-                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                   Reserviert %
                 </th>
-                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#6b7a9a]">
+                <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
                   Status
                 </th>
               </tr>
@@ -342,7 +342,7 @@ function AdminOccupancyPage() {
               {occupancyRows.map((row) => (
                 <tr
                   key={row.unitId}
-                  className="border-b border-white/[0.05] text-[13px] text-[#eef2ff]"
+                  className="border-b border-black/10 dark:border-white/[0.05] text-[13px] text-[#0f172a] dark:text-[#eef2ff]"
                 >
                   <td className="py-4 pr-4 font-semibold">
                     <Link
@@ -354,7 +354,7 @@ function AdminOccupancyPage() {
                       )}
                     </Link>
                     {row.unitId ? (
-                      <p className="mt-0.5 break-all font-mono text-[10px] text-[#6b7a9a]">
+                      <p className="mt-0.5 break-all font-mono text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                         {row.unitId}
                       </p>
                     ) : null}
@@ -381,7 +381,7 @@ function AdminOccupancyPage() {
 
               {occupancyRows.length === 0 && (
                 <tr>
-                  <td colSpan="10" className="py-8 text-center text-[13px] text-[#6b7a9a]">
+                  <td colSpan="10" className="py-8 text-center text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
                     Keine Belegungsdaten gefunden.
                   </td>
                 </tr>
@@ -405,7 +405,7 @@ function AdminOccupancyPage() {
             />
           ))}
           {coLivingUnits.length === 0 && (
-            <p className="text-[13px] text-[#6b7a9a]">Keine Co-Living Units. Räume werden pro Unit geladen.</p>
+            <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Keine Co-Living Units. Räume werden pro Unit geladen.</p>
           )}
         </div>
       </SectionCard>
@@ -418,30 +418,30 @@ function AdminOccupancyPage() {
           {weakestUnits.map((row) => (
             <div
               key={row.unitId}
-              className="rounded-[10px] border border-white/[0.08] bg-[#111520] p-4"
+              className="rounded-[10px] border border-black/10 bg-slate-100 dark:border-white/[0.08] dark:bg-[#111520] p-4"
             >
-              <p className="text-[10px] text-[#6b7a9a]">{row.place}</p>
+              <p className="text-[10px] text-[#64748b] dark:text-[#6b7a9a]">{row.place}</p>
               <p className="mt-1 text-[15px] font-bold text-[#7aaeff]">
                 {getUnitDisplayLabel(
                   row.unit || { unitId: row.unitId, id: row.unitId }
                 )}
               </p>
               {row.unitId ? (
-                <p className="mt-0.5 break-all font-mono text-[10px] text-[#6b7a9a]">
+                <p className="mt-0.5 break-all font-mono text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
                   {row.unitId}
                 </p>
               ) : null}
               <p className="mt-3 text-[24px] font-bold text-[#f87171]">
                 {formatPercent(row.occupancyRate)}
               </p>
-              <p className="mt-2 text-[11px] text-[#6b7a9a]">
+              <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">
                 {row.occupiedCount} von {row.totalRooms} Rooms belegt
               </p>
             </div>
           ))}
 
           {weakestUnits.length === 0 && (
-            <p className="text-[13px] text-[#6b7a9a]">Keine Daten vorhanden.</p>
+            <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Keine Daten vorhanden.</p>
           )}
         </div>
       </SectionCard>
