@@ -1002,6 +1002,8 @@ export default function AdminTenantDetailPage() {
       shouldRefreshTenantList ? { state: { refreshTenants: true } } : undefined
     );
 
+  const cancelTenantStammdatenEdit = () => navigate(-1);
+
   useEffect(() => {
     if (
       !(
@@ -1559,7 +1561,7 @@ export default function AdminTenantDetailPage() {
               type="button"
               onClick={() => {
                 if (editing) {
-                  navigate(-1);
+                  cancelTenantStammdatenEdit();
                   return;
                 }
                 goToTenantList();
@@ -1567,7 +1569,7 @@ export default function AdminTenantDetailPage() {
               className="rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
               style={{ cursor: "pointer" }}
             >
-              ← Zurück
+              {editing ? "Abbrechen" : "← Zurück"}
             </button>
             <div style={{ minWidth: 0 }}>
               <div className="text-[10px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Mieter</div>
@@ -1933,17 +1935,6 @@ export default function AdminTenantDetailPage() {
                         style={{ border: "none" }}
                       >
                         {saving ? "Speichern …" : "Speichern"}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={saving}
-                        onClick={() => {
-                          navigate(-1);
-                        }}
-                        className="rounded-[8px] border border-black/10 bg-transparent px-3.5 py-2 text-sm font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04] disabled:cursor-default"
-                        style={{ cursor: saving ? "default" : "pointer" }}
-                      >
-                        Abbrechen
                       </button>
                     </div>
                   </div>
