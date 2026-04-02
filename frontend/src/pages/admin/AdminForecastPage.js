@@ -86,7 +86,7 @@ function AdminForecastPage() {
   return (
     <div
       className="min-h-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
-      style={{ display: "grid", gap: "14px" }}
+      style={{ display: "grid", gap: "10px" }}
     >
 
       <div>
@@ -95,7 +95,7 @@ function AdminForecastPage() {
             fontSize: "12px",
             color: "#fb923c",
             fontWeight: 700,
-            marginBottom: "6px",
+            marginBottom: "4px",
           }}
         >
           Vantio
@@ -112,7 +112,7 @@ function AdminForecastPage() {
         </h2>
 
         <p
-          className="mt-1.5 text-[12px] text-[#64748b] dark:text-[#6b7a9a]"
+          className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]"
         >
           Erwarteter Umsatz und Gewinn für den nächsten Monat.
         </p>
@@ -126,24 +126,24 @@ function AdminForecastPage() {
         }}
       >
 
-        <div className={kpiShellClassName} style={{ borderTop: "4px solid #cbd5e1" }}>
-          <h4
-            className="mb-2 mt-0 text-[11px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
-          >
+        <div
+          className={`${kpiShellClassName} border-t border-slate-200 dark:border-white/10`}
+        >
+          <h4 className="mb-1 mt-0 text-[11px] font-bold uppercase tracking-[1px] text-slate-500 dark:text-[#94a3b8]">
             Erwarteter Umsatz
           </h4>
-          <h2 className="m-0 text-[24px] font-bold text-slate-900 dark:text-[#eef2ff]">
+          <h2 className="m-0 text-[24px] font-semibold text-slate-900 dark:text-[#eef2ff]">
             {formatCurrencyMaybe(forecast.totalRevenue)}
           </h2>
         </div>
 
-        <div className={kpiShellClassName} style={{ borderTop: "4px solid #059669" }}>
-          <h4
-            className="mb-2 mt-0 text-[11px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
-          >
+        <div
+          className={`${kpiShellClassName} border-t-[3px] border-t-[#059669]`}
+        >
+          <h4 className="mb-1 mt-0 text-[11px] font-bold uppercase tracking-[1px] text-slate-500 dark:text-[#94a3b8]">
             Erwarteter Gewinn
           </h4>
-          <h2 className="m-0 text-[24px] font-bold text-emerald-700 dark:text-emerald-400">
+          <h2 className="m-0 text-[24px] font-extrabold text-emerald-700 dark:text-emerald-400">
             {formatCurrencyMaybe(forecast.totalProfit)}
           </h2>
         </div>
