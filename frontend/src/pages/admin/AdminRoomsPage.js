@@ -19,17 +19,23 @@ function StatCard({ label, value, hint, color = "slate" }) {
   };
   const val = {
     slate: "text-[#0f172a] dark:text-[#eef2ff]",
-    green: "text-[#4ade80]",
-    amber: "text-[#fbbf24]",
-    rose: "text-[#f87171]",
+    green: "text-emerald-700 dark:text-[#4ade80]",
+    amber: "text-amber-700 dark:text-[#fbbf24]",
+    rose: "text-rose-700 dark:text-[#f87171]",
+  };
+  const shell = {
+    slate: "",
+    green: "bg-emerald-100 border-emerald-300",
+    amber: "bg-amber-100 border-amber-300",
+    rose: "bg-rose-100 border-rose-300",
   };
 
   return (
     <div
-      className={`relative overflow-hidden rounded-[14px] border border-black/10 bg-white border-t-4 dark:border-white/[0.07] dark:bg-[#141824] p-5 ${top[color]}`}
+      className={`relative overflow-hidden rounded-[14px] border border-black/10 bg-white border-t-4 dark:border-white/[0.07] dark:bg-[#141824] p-5 ${top[color]} ${shell[color] || ""}`}
     >
       <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">{label}</p>
-      <p className={`mt-2 text-[24px] font-bold ${val[color]}`}>{value}</p>
+      <p className={`mt-2 text-[24px] font-semibold ${val[color]}`}>{value}</p>
       {hint ? <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">{hint}</p> : null}
     </div>
   );
