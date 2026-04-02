@@ -420,6 +420,21 @@ export async function fetchAdminTenanciesAll(params = {}) {
   return all;
 }
 
+/**
+ * Create a tenancy (POST /api/admin/tenancies). Optional `participants` for multi-person contracts.
+ */
+export async function createAdminTenancy(body) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/tenancies`, {
+    method: "POST",
+    headers: getApiHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}
+
 export async function patchAdminTenancy(tenancyId, body) {
   const res = await fetch(
     `${API_BASE_URL}/api/admin/tenancies/${encodeURIComponent(tenancyId)}`,

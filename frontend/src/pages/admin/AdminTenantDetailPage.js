@@ -2,12 +2,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   fetchAdminTenant,
+  fetchAdminTenants,
   updateAdminTenant,
   fetchAdminTenantNotes,
   createAdminTenantNote,
   fetchAdminTenantEvents,
   fetchAdminInvoices,
   fetchAdminTenancies,
+  createAdminTenancy,
   patchAdminTenancy,
   fetchAdminTenancyRevenue,
   createAdminTenancyRevenue,
@@ -23,7 +25,6 @@ import {
   normalizeUnit,
   normalizeRoom,
 } from "../../api/adminData";
-import { API_BASE_URL, getApiHeaders } from "../../config";
 import { tenantDisplayName } from "../../utils/tenantDisplayName";
 import { getDisplayUnitId } from "../../utils/unitDisplayId";
 import {
@@ -552,6 +553,19 @@ function tenancyDateRangeLabel(tn) {
   return `${formatDateOnly(mi)} – ${formatDateOnly(mo)}`;
 }
 
+/** Short German line when API returns participants with co_tenant / solidarhafter. */
+function secondParticipantZweitmieterLine(participants) {
+  if (!Array.isArray(participants) || participants.length === 0) return null;
+  const sec = participants.find(
+    (p) => p && (p.role === "co_tenant" || p.role === "solidarhafter")
+  );
+  if (!sec) return null;
+  const name = tenantDisplayName(sec.tenant) || String(sec.tenant_id || "").trim();
+  if (!name) return null;
+  const roleDe = sec.role === "co_tenant" ? "Co-Mieter" : "Solidarhafter";
+  return `Zweitmieter: ${name} (${roleDe})`;
+}
+
 function getStatusMeta(status) {
   const normalized = String(status || "").toLowerCase();
   if (
@@ -849,6 +863,11 @@ export default function AdminTenantDetailPage() {
   const [assignTenantDepositAmount, setAssignTenantDepositAmount] = useState("");
   const [assignTenantDepositProvider, setAssignTenantDepositProvider] = useState("");
   const [assignErr, setAssignErr] = useState(null);
+  const [assignSecondTenantId, setAssignSecondTenantId] = useState("");
+  const [assignSecondTenantRole, setAssignSecondTenantRole] = useState("");
+  const [assignTenantList, setAssignTenantList] = useState([]);
+  const [assignTenantListLoading, setAssignTenantListLoading] = useState(false);
+  const [assignTenantListErr, setAssignTenantListErr] = useState(null);
   const [assignSaving, setAssignSaving] = useState(false);
   const [assignRevenueRows, setAssignRevenueRows] = useState([]);
   const [assignRevenueForm, setAssignRevenueForm] = useState({
@@ -1330,6 +1349,19 @@ export default function AdminTenantDetailPage() {
   }, [assignOpen, tenantId]);
 
   useEffect(() => {
+    if (!assignOpen || !tenantId) return;
+    setAssignTenantListErr(null);
+    setAssignTenantListLoading(true);
+    fetchAdminTenants({ limit: 500 })
+      .then((items) => setAssignTenantList(Array.isArray(items) ? items : []))
+      .catch((e) => {
+        setAssignTenantListErr(e?.message ?? "Mieterliste konnte nicht geladen werden.");
+        setAssignTenantList([]);
+      })
+      .finally(() => setAssignTenantListLoading(false));
+  }, [assignOpen, tenantId]);
+
+  useEffect(() => {
     if (!assignUnitId) {
       setAssignRooms([]);
       setAssignRoomId("");
@@ -1425,6 +1457,16 @@ export default function AdminTenantDetailPage() {
     return getStatusMeta(deriveTenantOperationalStatus(mine, todayIso));
   }, [tenancies, tenantId]);
 
+  const assignSecondTenantOptions = useMemo(() => {
+    const list = Array.isArray(assignTenantList) ? assignTenantList : [];
+    return list
+      .filter((t) => t && String(t.id) !== String(tenantId))
+      .slice()
+      .sort((a, b) =>
+        tenantDisplayName(a).localeCompare(tenantDisplayName(b), "de", { sensitivity: "base" })
+      );
+  }, [assignTenantList, tenantId]);
+
   const applyUpdate = (updated) => {
     setTenant(updated);
     setForm(tenantToForm(updated));
@@ -1457,6 +1499,8 @@ export default function AdminTenantDetailPage() {
     setAssignTenantDepositType("");
     setAssignTenantDepositAmount("");
     setAssignTenantDepositProvider("");
+    setAssignSecondTenantId("");
+    setAssignSecondTenantRole("");
     setAssignErr(null);
     setAssignRevenueRows([]);
     setAssignRevenueForm({
@@ -1513,6 +1557,15 @@ export default function AdminTenantDetailPage() {
       setAssignErr(UNIT_LANDLORD_LEASE_ENDED_TENANCY_MESSAGE);
       return;
     }
+    const secId = String(assignSecondTenantId || "").trim();
+    if (secId && secId === String(tenantId)) {
+      setAssignErr("Zweitmieter darf nicht derselbe Mieter wie auf dieser Seite sein.");
+      return;
+    }
+    if (secId && !String(assignSecondTenantRole || "").trim()) {
+      setAssignErr("Bitte Rolle für den Zweitmieter wählen.");
+      return;
+    }
     const preview = deriveTenancyLifecyclePreviewForAssign(
       assignMoveIn.trim(),
       assignTerminationEffective,
@@ -1537,15 +1590,13 @@ export default function AdminTenantDetailPage() {
     if (tda !== null) body.tenant_deposit_amount = tda;
     const tprov = String(assignTenantDepositProvider || "").trim().toLowerCase();
     if (tdt === "insurance" && tprov) body.tenant_deposit_provider = tprov;
-    fetch(`${API_BASE_URL}/api/admin/tenancies`, {
-      method: "POST",
-      headers: getApiHeaders(),
-      body: JSON.stringify(body),
-    })
-      .then(async (res) => {
-        if (!res.ok) throw new Error(await parseAdminErrorFromResponse(res));
-        return res.json();
-      })
+    if (secId && String(assignSecondTenantRole || "").trim()) {
+      body.participants = [
+        { tenant_id: String(tenantId), role: "primary_tenant" },
+        { tenant_id: secId, role: String(assignSecondTenantRole).trim() },
+      ];
+    }
+    createAdminTenancy(body)
       .then(async (createdTenancy) => {
         const tid = createdTenancy?.id != null ? String(createdTenancy.id) : "";
         if (!tid) return createdTenancy;
@@ -2091,6 +2142,14 @@ export default function AdminTenantDetailPage() {
                                     <p className="text-[11px] leading-snug text-[#64748b]/90 dark:text-[#7f8daa]/90">
                                       {tenancyDateRangeLabel(tn)}
                                     </p>
+                                    {(() => {
+                                      const zmLine = secondParticipantZweitmieterLine(tn.participants);
+                                      return zmLine ? (
+                                        <p className="m-0 text-[11px] leading-snug text-[#64748b] dark:text-[#7f8daa]">
+                                          {zmLine}
+                                        </p>
+                                      ) : null;
+                                    })()}
                                   </div>
                                   <div className="flex shrink-0 flex-wrap justify-end gap-2">
                                     <button
@@ -2910,6 +2969,11 @@ export default function AdminTenantDetailPage() {
                         {assignErr}
                       </p>
                     ) : null}
+                    {assignTenantListErr ? (
+                      <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#f87171" }}>
+                        {assignTenantListErr}
+                      </p>
+                    ) : null}
                     <div style={gridTwoCol}>
                       <div>
                         <label htmlFor="assign-unit" className={labelClass}>
@@ -3062,6 +3126,58 @@ export default function AdminTenantDetailPage() {
                           <option value="other">Sonstiges</option>
                         </select>
                       </div>
+                      <div>
+                        <label htmlFor="assign-second-tenant" className={labelClass}>
+                          Zweitmieter (optional)
+                        </label>
+                        <select
+                          id="assign-second-tenant"
+                          className={inputClass}
+                          style={{ cursor: assignSaving ? "default" : "pointer" }}
+                          value={assignSecondTenantId}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setAssignSecondTenantId(v);
+                            if (!v) setAssignSecondTenantRole("");
+                          }}
+                          disabled={assignSaving || assignTenantListLoading}
+                        >
+                          <option value="">
+                            {assignTenantListLoading ? "Lade Mieter …" : "— kein Zweitmieter"}
+                          </option>
+                          {assignSecondTenantOptions.map((t) => {
+                            const id = String(t.id);
+                            const em = String(t.email || "").trim();
+                            const fullName = tenantDisplayName(t) || id;
+                            const label = `${fullName}${em ? ` — ${em}` : ""}`;
+                            return (
+                              <option key={id} value={id}>
+                                {label}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                      {assignSecondTenantId ? (
+                        <div>
+                          <label htmlFor="assign-second-role" className={labelClass}>
+                            Rolle des Zweitmieters *
+                          </label>
+                          <select
+                            id="assign-second-role"
+                            className={inputClass}
+                            style={{ cursor: assignSaving ? "default" : "pointer" }}
+                            value={assignSecondTenantRole}
+                            onChange={(e) => setAssignSecondTenantRole(e.target.value)}
+                            disabled={assignSaving}
+                            required
+                          >
+                            <option value="">— Rolle wählen</option>
+                            <option value="co_tenant">Co-Mieter</option>
+                            <option value="solidarhafter">Solidarhafter</option>
+                          </select>
+                        </div>
+                      ) : null}
                       <div>
                         <label className={labelClass}>Einnahmen / Monat</label>
                         <div className={inputClass}>
