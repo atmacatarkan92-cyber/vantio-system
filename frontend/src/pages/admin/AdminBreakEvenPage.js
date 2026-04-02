@@ -201,84 +201,6 @@ function AdminBreakEvenPage() {
         </p>
       </div>
 
-      <div className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
-        <h3 className="m-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#64748b] dark:text-[#6b7a9a]">
-          Portfolio-Überblick
-        </h3>
-        <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
-          Umsatz und Kosten pro Unit — direkter Vergleich je Adresse.
-        </p>
-        <div className="mt-4 w-full min-w-0">
-          <div className="min-h-[200px] w-full">
-            {rows.length === 0 ? (
-              <p className="py-12 text-center text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
-                Keine Units geladen.
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart
-                  data={barChartData}
-                  margin={{ top: 4, right: 12, left: 4, bottom: 8 }}
-                  barCategoryGap="22%"
-                  barGap={0}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.35)" />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 10, fill: "currentColor" }}
-                    className="text-slate-500 dark:text-[#6b7a9a]"
-                    interval={0}
-                    tickMargin={6}
-                    height={36}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: "currentColor" }}
-                    className="text-slate-500 dark:text-[#6b7a9a]"
-                    tickFormatter={(v) =>
-                      v >= 1000 ? `${(v / 1000).toLocaleString("de-CH", { maximumFractionDigits: 1 })}k` : String(v)
-                    }
-                    width={44}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: 10,
-                      border: "1px solid rgba(148,163,184,0.35)",
-                      fontSize: 12,
-                    }}
-                    labelStyle={{ fontWeight: 600 }}
-                    formatter={(value, name, item) => {
-                      const payload = item?.payload;
-                      const missing =
-                        name === "Umsatz" ? payload?.revenueMissing : payload?.costsMissing;
-                      if (missing) return ["—", name];
-                      return [`CHF ${Number(value).toLocaleString("de-CH")}`, name];
-                    }}
-                  />
-                  <Legend
-                    wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
-                    wrapperClassName="text-slate-600 dark:text-[#94a3b8]"
-                  />
-                  <Bar
-                    dataKey="revenue"
-                    name="Umsatz"
-                    fill="#059669"
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={40}
-                  />
-                  <Bar
-                    dataKey="costs"
-                    name="Kosten"
-                    fill="#f87171"
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={40}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-      </div>
-
       <div
         className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]"
       >
@@ -489,6 +411,83 @@ function AdminBreakEvenPage() {
 
         </table>
 
+      </div>
+
+      <div className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+        <h3 className="m-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#64748b] dark:text-[#6b7a9a]">
+          Portfolio-Überblick
+        </h3>
+        <p className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
+          Umsatz und Kosten pro Unit — direkter Vergleich je Adresse.
+        </p>
+        <div className="mt-4 w-full min-w-0">
+          <div className="min-h-[200px] w-full">
+            {rows.length === 0 ? (
+              <p className="py-12 text-center text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
+                Keine Units geladen.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart
+                  data={barChartData}
+                  margin={{ top: 4, right: 12, left: 4, bottom: 8 }}
+                  barCategoryGap="35%"
+                  barGap={0}
+                  barSize={28}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.35)" />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fill: "currentColor" }}
+                    className="text-slate-500 dark:text-[#6b7a9a]"
+                    interval={0}
+                    tickMargin={6}
+                    height={36}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "currentColor" }}
+                    className="text-slate-500 dark:text-[#6b7a9a]"
+                    tickFormatter={(v) =>
+                      v >= 1000 ? `${(v / 1000).toLocaleString("de-CH", { maximumFractionDigits: 1 })}k` : String(v)
+                    }
+                    width={44}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: 10,
+                      border: "1px solid rgba(148,163,184,0.35)",
+                      fontSize: 12,
+                    }}
+                    labelStyle={{ fontWeight: 600 }}
+                    formatter={(value, name, item) => {
+                      const payload = item?.payload;
+                      const missing =
+                        name === "Umsatz" ? payload?.revenueMissing : payload?.costsMissing;
+                      if (missing) return ["—", name];
+                      return [`CHF ${Number(value).toLocaleString("de-CH")}`, name];
+                    }}
+                  />
+                  <Legend
+                    wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+                    wrapperClassName="text-slate-600 dark:text-[#94a3b8]"
+                  />
+                  <Bar
+                    dataKey="revenue"
+                    name="Umsatz"
+                    fill="#059669"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="costs"
+                    name="Kosten"
+                    fill="#f87171"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
       </div>
 
     </div>
