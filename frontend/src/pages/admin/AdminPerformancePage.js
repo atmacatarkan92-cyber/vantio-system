@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   fetchAdminUnits,
   fetchAdminRooms,
@@ -198,7 +199,7 @@ function AdminPerformancePage() {
           <h4 className="mb-2 mt-0 text-[11px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
             Gesamt Umsatz
           </h4>
-          <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#4ade80", margin: 0 }}>
+          <h2 className="m-0 text-[24px] font-bold text-slate-900 dark:text-[#eef2ff]">
             {formatCurrency(stats.totalRevenue)}
           </h2>
         </div>
@@ -207,7 +208,7 @@ function AdminPerformancePage() {
           <h4 className="mb-2 mt-0 text-[11px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
             Gesamt Gewinn
           </h4>
-          <h2 className="m-0 text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
+          <h2 className="m-0 text-[24px] font-bold text-emerald-700 dark:text-emerald-400">
             {formatCurrency(stats.totalProfit)}
           </h2>
         </div>
@@ -278,7 +279,12 @@ function AdminPerformancePage() {
                 <td
                   className="p-[10px] text-[13px] font-bold text-[#0f172a] dark:text-[#eef2ff]"
                 >
-                  {getUnitLabel(row.unit, row.listIndex)}
+                  <Link
+                    to={`/admin/units/${encodeURIComponent(row.unit?.unitId ?? row.unit?.id ?? row.id)}`}
+                    className="font-medium text-sky-700 hover:text-sky-800 hover:underline dark:text-sky-400 dark:hover:text-sky-300"
+                  >
+                    {getUnitLabel(row.unit, row.listIndex)}
+                  </Link>
                 </td>
 
                 <td className="p-[10px] text-[13px] text-[#0f172a] dark:text-[#eef2ff]">{row.city}</td>
@@ -288,12 +294,8 @@ function AdminPerformancePage() {
                 </td>
 
                 <td
-                  style={{
-                    padding: "10px",
-                    color: "#4ade80",
-                    fontSize: "13px",
-                    fontWeight: 500,
-                  }}
+                  className="text-[13px] font-medium text-slate-900 dark:text-[#eef2ff]"
+                  style={{ padding: "10px" }}
                 >
                   {formatCurrency(row.revenue)}
                 </td>
@@ -303,12 +305,12 @@ function AdminPerformancePage() {
                 </td>
 
                 <td
-                  style={{
-                    padding: "10px",
-                    fontWeight: 700,
-                    fontSize: "13px",
-                    color: row.profit >= 0 ? "#4ade80" : "#f87171",
-                  }}
+                  className={`text-[13px] font-semibold ${
+                    row.profit >= 0
+                      ? "text-emerald-700 dark:text-emerald-400"
+                      : "text-rose-600 dark:text-rose-400"
+                  }`}
+                  style={{ padding: "10px" }}
                 >
                   {formatCurrency(row.profit)}
                 </td>
