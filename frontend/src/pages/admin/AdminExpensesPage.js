@@ -17,38 +17,21 @@ function formatCurrency(value, currency = "CHF") {
 function SummaryCard({ title, value, hint, accentColor }) {
   return (
     <div
-      style={{
-        background: "#141824",
-        border: "1px solid rgba(255, 255, 255, 0.07)",
-        borderTop: `4px solid ${accentColor}`,
-        borderRadius: "14px",
-        padding: "20px",
-      }}
+      className="relative overflow-hidden rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]"
+      style={{ borderTop: `4px solid ${accentColor}` }}
     >
       <div
-        style={{
-          fontSize: "11px",
-          color: "#6b7a9a",
-          marginBottom: "8px",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "1px",
-        }}
+        className="mb-2 text-[11px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
       >
         {title}
       </div>
       <div
-        style={{
-          fontSize: "24px",
-          fontWeight: 700,
-          color: "#eef2ff",
-          lineHeight: 1.1,
-        }}
+        className="text-[24px] font-bold leading-[1.1] text-[#0f172a] dark:text-[#eef2ff]"
       >
         {value}
       </div>
       {hint ? (
-        <div style={{ marginTop: "8px", color: "#6b7a9a", fontSize: "11px" }}>
+        <div className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">
           {hint}
         </div>
       ) : null}
@@ -130,7 +113,7 @@ function AdminExpensesPage() {
 
   return (
     <div
-      className="bg-[#07090f] text-[#eef2ff] min-h-full"
+      className="min-h-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
       style={{ display: "grid", gap: "24px" }}
     >
       <div>
@@ -149,7 +132,7 @@ function AdminExpensesPage() {
           Ausgaben
         </h2>
 
-        <p style={{ color: "#6b7a9a", marginTop: "10px", fontSize: "12px" }}>
+        <p className="mt-[10px] text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
           Übersicht über laufende Mietkosten, Nebenkosten und Reinigung pro Unit.
         </p>
       </div>
@@ -191,13 +174,7 @@ function AdminExpensesPage() {
       </div>
 
       <div
-        style={{
-          background: "#141824",
-          border: "1px solid rgba(255, 255, 255, 0.07)",
-          borderRadius: "14px",
-          padding: "20px",
-          overflowX: "auto",
-        }}
+        className="overflow-x-auto rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]"
       >
         <div
           style={{
@@ -208,25 +185,18 @@ function AdminExpensesPage() {
           }}
         >
           <h3
-            style={{
-              fontSize: "9px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-              color: "#6b7a9a",
-              margin: 0,
-            }}
+            className="m-0 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
           >
             Ausgaben pro Unit
           </h3>
 
-          <div style={{ fontSize: "12px", color: "#6b7a9a" }}>
+          <div className="text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
             {expenseRows.length} Einträge
           </div>
         </div>
 
         {expenseRows.length === 0 ? (
-          <p style={{ color: "#6b7a9a" }}>Keine Units gefunden.</p>
+          <p className="text-[#64748b] dark:text-[#6b7a9a]">Keine Units gefunden.</p>
         ) : (
           <table
             style={{
@@ -234,18 +204,11 @@ function AdminExpensesPage() {
               borderCollapse: "collapse",
               fontSize: "14px",
             }}
+            className="text-[#0f172a] dark:text-[#eef2ff]"
           >
             <thead>
               <tr
-                style={{
-                  textAlign: "left",
-                  background: "#111520",
-                  color: "#6b7a9a",
-                  fontSize: "9px",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.8px",
-                }}
+                className="text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a] bg-slate-100 dark:bg-[#111520]"
               >
                 <th style={{ padding: "12px" }}>Unit</th>
                 <th style={{ padding: "12px" }}>Ort</th>
@@ -263,44 +226,34 @@ function AdminExpensesPage() {
               {expenseRows.map((row) => (
                 <tr
                   key={row.id}
-                  style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
+                  className="border-b border-black/10 dark:border-white/[0.05]"
                 >
                   <td
-                    style={{
-                      padding: "12px",
-                      fontWeight: 700,
-                      color: "#eef2ff",
-                      fontSize: "13px",
-                    }}
+                    className="p-3 text-[13px] font-bold text-[#0f172a] dark:text-[#eef2ff]"
                   >
                     {row.unitId}
                   </td>
-                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                  <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                     {row.place}
                   </td>
-                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                  <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                     {row.type}
                   </td>
-                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                  <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                     {formatCurrency(row.rent)}
                   </td>
-                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                  <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                     {formatCurrency(row.utilities)}
                   </td>
-                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                  <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                     {formatCurrency(row.cleaning)}
                   </td>
                   <td
-                    style={{
-                      padding: "12px",
-                      fontWeight: 700,
-                      color: "#eef2ff",
-                      fontSize: "13px",
-                    }}
+                    className="p-3 text-[13px] font-bold text-[#0f172a] dark:text-[#eef2ff]"
                   >
                     {formatCurrency(row.total)}
                   </td>
-                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                  <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                     {row.leaseStartDate}
                   </td>
                   <td style={{ padding: "12px" }}>

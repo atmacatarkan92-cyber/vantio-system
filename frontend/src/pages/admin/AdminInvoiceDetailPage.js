@@ -115,33 +115,16 @@ function getStatusButtonStyle(status, currentStatus, updatingStatus) {
 function InfoCard({ label, value, accent = "#7aaeff" }) {
   return (
     <div
-      style={{
-        background: "#141824",
-        border: "1px solid rgba(255, 255, 255, 0.07)",
-        borderTop: `4px solid ${accent}`,
-        borderRadius: "14px",
-        padding: "20px",
-      }}
+      className="relative overflow-hidden rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]"
+      style={{ borderTop: `4px solid ${accent}` }}
     >
       <div
-        style={{
-          fontSize: "11px",
-          color: "#6b7a9a",
-          marginBottom: "8px",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "1px",
-        }}
+        className="mb-2 text-[11px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
       >
         {label}
       </div>
       <div
-        style={{
-          fontSize: "24px",
-          fontWeight: 700,
-          color: "#eef2ff",
-          lineHeight: 1.15,
-        }}
+        className="text-[24px] font-bold leading-[1.15] text-[#0f172a] dark:text-[#eef2ff]"
       >
         {value}
       </div>
@@ -152,8 +135,8 @@ function InfoCard({ label, value, accent = "#7aaeff" }) {
 function DetailRow({ label, value }) {
   return (
     <>
-      <div style={{ color: "#6b7a9a", fontWeight: 600, fontSize: "10px" }}>{label}</div>
-      <div style={{ color: "#eef2ff", fontWeight: 500, fontSize: "13px" }}>{value}</div>
+      <div className="text-[10px] font-semibold text-[#64748b] dark:text-[#6b7a9a]">{label}</div>
+      <div className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{value}</div>
     </>
   );
 }
@@ -278,8 +261,8 @@ function AdminInvoiceDetailPage() {
 
   if (loading) {
     return (
-      <div className="bg-[#07090f] text-[#eef2ff] min-h-full" style={{ padding: "8px 0" }}>
-        <p style={{ margin: 0, color: "#6b7a9a" }}>Rechnung wird geladen...</p>
+      <div className="min-h-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]" style={{ padding: "8px 0" }}>
+        <p className="m-0 text-[#64748b] dark:text-[#6b7a9a]">Rechnung wird geladen...</p>
       </div>
     );
   }
@@ -287,7 +270,7 @@ function AdminInvoiceDetailPage() {
   if (error) {
     return (
       <div
-        className="bg-[#07090f] text-[#eef2ff] min-h-full"
+        className="min-h-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
         style={{ display: "grid", gap: "16px" }}
       >
         <p style={{ color: "#f87171", fontWeight: 600 }}>{error}</p>
@@ -308,7 +291,7 @@ function AdminInvoiceDetailPage() {
 
   return (
     <div
-      className="bg-[#07090f] text-[#eef2ff] min-h-full"
+      className="min-h-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
       style={{ display: "grid", gap: "24px" }}
     >
       <div>
@@ -341,7 +324,7 @@ function AdminInvoiceDetailPage() {
           {invoice.invoice_number}
         </h2>
 
-        <p style={{ color: "#6b7a9a", marginTop: "10px", fontSize: "12px" }}>
+        <p className="mt-[10px] text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
           Detailansicht der Rechnung mit Statusverwaltung und PDF-Download.
         </p>
       </div>
@@ -360,23 +343,11 @@ function AdminInvoiceDetailPage() {
         />
 
         <div
-          style={{
-            background: "#141824",
-            border: "1px solid rgba(255, 255, 255, 0.07)",
-            borderTop: `4px solid ${statusMeta.border}`,
-            borderRadius: "14px",
-            padding: "20px",
-          }}
+          className="relative overflow-hidden rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]"
+          style={{ borderTop: `4px solid ${statusMeta.border}` }}
         >
           <div
-            style={{
-              fontSize: "11px",
-              color: "#6b7a9a",
-              marginBottom: "8px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-            }}
+            className="mb-2 text-[11px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
           >
             Status
           </div>
@@ -412,24 +383,10 @@ function AdminInvoiceDetailPage() {
       </div>
 
       <div
-        style={{
-          background: "#141824",
-          border: "1px solid rgba(255, 255, 255, 0.07)",
-          borderRadius: "14px",
-          padding: "24px",
-          display: "grid",
-          gap: "18px",
-        }}
+        className="grid gap-[18px] rounded-[14px] border border-black/10 bg-white p-6 dark:border-white/[0.07] dark:bg-[#141824]"
       >
         <h3
-          style={{
-            fontSize: "9px",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "1px",
-            color: "#6b7a9a",
-            margin: 0,
-          }}
+          className="m-0 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
         >
           Rechnungsdetails
         </h3>
@@ -466,22 +423,10 @@ function AdminInvoiceDetailPage() {
       </div>
 
       <div
-        style={{
-          background: "#141824",
-          border: "1px solid rgba(255, 255, 255, 0.07)",
-          borderRadius: "14px",
-          padding: "24px",
-        }}
+        className="rounded-[14px] border border-black/10 bg-white p-6 dark:border-white/[0.07] dark:bg-[#141824]"
       >
         <h3
-          style={{
-            fontSize: "9px",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "1px",
-            color: "#6b7a9a",
-            marginTop: 0,
-          }}
+          className="mt-0 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
         >
           Aktionen
         </h3>

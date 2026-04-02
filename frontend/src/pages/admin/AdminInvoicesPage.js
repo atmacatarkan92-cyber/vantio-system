@@ -74,37 +74,20 @@ function isOpenStatus(status) {
 function SummaryCard({ title, count, amount, accentColor }) {
   return (
     <div
-      style={{
-        background: "#141824",
-        border: "1px solid rgba(255, 255, 255, 0.07)",
-        borderTop: `4px solid ${accentColor}`,
-        borderRadius: "14px",
-        padding: "20px",
-      }}
+      className="relative overflow-hidden rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]"
+      style={{ borderTop: `4px solid ${accentColor}` }}
     >
       <div
-        style={{
-          fontSize: "11px",
-          color: "#6b7a9a",
-          marginBottom: "8px",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "1px",
-        }}
+        className="mb-2 text-[11px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
       >
         {title}
       </div>
       <div
-        style={{
-          fontSize: "24px",
-          fontWeight: 700,
-          color: "#eef2ff",
-          lineHeight: 1.1,
-        }}
+        className="text-[24px] font-bold leading-[1.1] text-[#0f172a] dark:text-[#eef2ff]"
       >
         {count}
       </div>
-      <div style={{ marginTop: "8px", color: "#6b7a9a", fontSize: "11px" }}>
+      <div className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">
         {formatCurrency(amount)}
       </div>
     </div>
@@ -329,19 +312,12 @@ function AdminInvoicesPage() {
     return "Rechnungen";
   }, [statusFilter]);
 
-  const inputSelectStyle = {
-    padding: "10px 12px",
-    borderRadius: "8px",
-    border: "1px solid rgba(255, 255, 255, 0.08)",
-    fontSize: "14px",
-    background: "#111520",
-    color: "#eef2ff",
-    minWidth: "100px",
-  };
+  const inputSelectClassName =
+    "h-[44px] rounded-lg border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 text-[14px] text-[#0f172a] dark:text-[#eef2ff]";
 
   return (
     <div
-      className="bg-[#07090f] text-[#eef2ff] min-h-full"
+      className="min-h-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
       style={{ display: "grid", gap: "24px" }}
     >
       <div>
@@ -360,7 +336,7 @@ function AdminInvoicesPage() {
           {pageTitle}
         </h2>
 
-        <p style={{ color: "#6b7a9a", marginTop: "10px", fontSize: "12px" }}>
+        <p className="mt-[10px] text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
           Übersicht über offene, bezahlte, überfällige und stornierte Rechnungen.
         </p>
       </div>
@@ -402,48 +378,36 @@ function AdminInvoicesPage() {
       </div>
 
       <div
-        style={{
-          background: "#141824",
-          border: "1px solid rgba(255, 255, 255, 0.07)",
-          borderRadius: "14px",
-          padding: "20px",
-        }}
+        className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]"
       >
         <h3
-          style={{
-            fontSize: "9px",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "1px",
-            color: "#6b7a9a",
-            margin: "0 0 16px 0",
-          }}
+          className="mb-4 mt-0 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
         >
           Rechnungen aus Tenancies generieren
         </h3>
-        <p style={{ color: "#6b7a9a", marginBottom: "16px", fontSize: "12px" }}>
+        <p className="mb-4 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
           Erzeugt für den gewählten Monat je eine Rechnung pro aktiver Tenancy (Miete anteilig bei Ein-/Auszug).
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center" }}>
-          <label style={{ fontSize: "10px", fontWeight: 600, color: "#6b7a9a" }}>
+          <label className="text-[10px] font-semibold text-[#64748b] dark:text-[#6b7a9a]">
             Jahr
           </label>
           <select
             value={generateYear}
             onChange={(e) => setGenerateYear(Number(e.target.value))}
-            style={inputSelectStyle}
+            className={inputSelectClassName}
           >
             {[now.getFullYear(), now.getFullYear() - 1, now.getFullYear() + 1].map((y) => (
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
-          <label style={{ fontSize: "10px", fontWeight: 600, color: "#6b7a9a", marginLeft: "8px" }}>
+          <label className="ml-2 text-[10px] font-semibold text-[#64748b] dark:text-[#6b7a9a]">
             Monat
           </label>
           <select
             value={generateMonth}
             onChange={(e) => setGenerateMonth(Number(e.target.value))}
-            style={{ ...inputSelectStyle, minWidth: "120px" }}
+            className={`${inputSelectClassName} min-w-[120px]`}
           >
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
               <option key={m} value={m}>
@@ -493,12 +457,7 @@ function AdminInvoicesPage() {
       </div>
 
       <div
-        style={{
-          background: "#141824",
-          border: "1px solid rgba(255, 255, 255, 0.07)",
-          borderRadius: "14px",
-          padding: "20px",
-        }}
+        className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]"
       >
         <div
           style={{
@@ -509,13 +468,7 @@ function AdminInvoicesPage() {
         >
           <div>
             <label
-              style={{
-                display: "block",
-                fontSize: "10px",
-                color: "#6b7a9a",
-                marginBottom: "8px",
-                fontWeight: 600,
-              }}
+              className="mb-2 block text-[10px] font-semibold text-[#64748b] dark:text-[#6b7a9a]"
             >
               Suche
             </label>
@@ -525,29 +478,13 @@ function AdminInvoicesPage() {
               placeholder="Nach Rechnungsnummer, Status oder ID suchen"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: "100%",
-                height: "44px",
-                borderRadius: "8px",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                background: "#111520",
-                color: "#eef2ff",
-                padding: "0 14px",
-                fontSize: "14px",
-                boxSizing: "border-box",
-              }}
+              className="h-[44px] w-full box-border rounded-lg border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-[14px] text-[14px] text-[#0f172a] dark:text-[#eef2ff]"
             />
           </div>
 
           <div>
             <label
-              style={{
-                display: "block",
-                fontSize: "10px",
-                color: "#6b7a9a",
-                marginBottom: "8px",
-                fontWeight: 600,
-              }}
+              className="mb-2 block text-[10px] font-semibold text-[#64748b] dark:text-[#6b7a9a]"
             >
               Status
             </label>
@@ -555,17 +492,7 @@ function AdminInvoicesPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{
-                width: "100%",
-                height: "44px",
-                borderRadius: "8px",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                padding: "0 14px",
-                fontSize: "14px",
-                background: "#111520",
-                color: "#eef2ff",
-                boxSizing: "border-box",
-              }}
+              className={`${inputSelectClassName} w-full px-[14px]`}
             >
               <option value="all">Alle Status</option>
               <option value="open">Offen</option>
@@ -577,13 +504,7 @@ function AdminInvoicesPage() {
 
           <div>
             <label
-              style={{
-                display: "block",
-                fontSize: "10px",
-                color: "#6b7a9a",
-                marginBottom: "8px",
-                fontWeight: 600,
-              }}
+              className="mb-2 block text-[10px] font-semibold text-[#64748b] dark:text-[#6b7a9a]"
             >
               Sortierung
             </label>
@@ -591,17 +512,7 @@ function AdminInvoicesPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              style={{
-                width: "100%",
-                height: "44px",
-                borderRadius: "8px",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                padding: "0 14px",
-                fontSize: "14px",
-                background: "#111520",
-                color: "#eef2ff",
-                boxSizing: "border-box",
-              }}
+              className={`${inputSelectClassName} w-full px-[14px]`}
             >
               <option value="due_date_desc">Fälligkeitsdatum absteigend</option>
               <option value="due_date_asc">Fälligkeitsdatum aufsteigend</option>
@@ -617,13 +528,7 @@ function AdminInvoicesPage() {
       </div>
 
       <div
-        style={{
-          background: "#141824",
-          border: "1px solid rgba(255, 255, 255, 0.07)",
-          borderRadius: "14px",
-          padding: "20px",
-          overflowX: "auto",
-        }}
+        className="overflow-x-auto rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]"
       >
         <div
           style={{
@@ -634,29 +539,22 @@ function AdminInvoicesPage() {
           }}
         >
           <h3
-            style={{
-              fontSize: "9px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-              color: "#6b7a9a",
-              margin: 0,
-            }}
+            className="m-0 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
           >
             Rechnungsliste
           </h3>
 
-          <div style={{ fontSize: "12px", color: "#6b7a9a" }}>
+          <div className="text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
             {filteredInvoices.length} Einträge
           </div>
         </div>
 
-        {loading && <p style={{ color: "#6b7a9a" }}>Rechnungen werden geladen...</p>}
+        {loading && <p className="text-[#64748b] dark:text-[#6b7a9a]">Rechnungen werden geladen...</p>}
 
         {!loading && error && <p style={{ color: "#f87171" }}>{error}</p>}
 
         {!loading && !error && filteredInvoices.length === 0 && (
-          <p style={{ color: "#6b7a9a" }}>Keine Rechnungen gefunden.</p>
+          <p className="text-[#64748b] dark:text-[#6b7a9a]">Keine Rechnungen gefunden.</p>
         )}
 
         {!loading && !error && filteredInvoices.length > 0 && (
@@ -666,18 +564,11 @@ function AdminInvoicesPage() {
               borderCollapse: "collapse",
               fontSize: "14px",
             }}
+            className="text-[#0f172a] dark:text-[#eef2ff]"
           >
             <thead>
               <tr
-                style={{
-                  textAlign: "left",
-                  background: "#111520",
-                  color: "#6b7a9a",
-                  fontSize: "9px",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.8px",
-                }}
+                className="text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a] bg-slate-100 dark:bg-[#111520]"
               >
                 <th style={{ padding: "12px" }}>ID</th>
                 <th style={{ padding: "12px" }}>Rechnungsnummer</th>
@@ -700,26 +591,16 @@ function AdminInvoicesPage() {
                 return (
                   <tr
                     key={invoice.id}
-                    style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
+                    className="border-b border-black/10 dark:border-white/[0.05]"
                   >
                     <td
-                      style={{
-                        padding: "12px",
-                        color: "#eef2ff",
-                        fontWeight: 600,
-                        fontSize: "13px",
-                      }}
+                      className="p-3 text-[13px] font-semibold text-[#0f172a] dark:text-[#eef2ff]"
                     >
                       {invoice.id}
                     </td>
 
                     <td
-                      style={{
-                        padding: "12px",
-                        color: "#eef2ff",
-                        fontWeight: 600,
-                        fontSize: "13px",
-                      }}
+                      className="p-3 text-[13px] font-semibold text-[#0f172a] dark:text-[#eef2ff]"
                     >
                       <Link
                         to={`/admin/invoices/${invoice.id}`}
@@ -734,17 +615,12 @@ function AdminInvoicesPage() {
                     </td>
 
                     <td
-                      style={{
-                        padding: "12px",
-                        color: "#eef2ff",
-                        fontSize: "13px",
-                        fontWeight: 500,
-                      }}
+                      className="p-3 text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]"
                     >
                       {formatCurrency(invoice.amount, invoice.currency)}
                     </td>
 
-                    <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                    <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                       {invoice.currency}
                     </td>
 
@@ -766,15 +642,15 @@ function AdminInvoicesPage() {
                       </span>
                     </td>
 
-                    <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                    <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                       {formatDate(invoice.issue_date)}
                     </td>
 
-                    <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                    <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                       {formatDate(invoice.due_date)}
                     </td>
 
-                    <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                    <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                       {invoice.paid_at
                         ? formatDate(invoice.paid_at)
                         : "–"}
@@ -786,14 +662,8 @@ function AdminInvoicesPage() {
                           type="button"
                           onClick={() => markAsPaid(invoice.id)}
                           disabled={marking}
+                          className="rounded-lg border border-black/10 bg-transparent px-3 py-2 text-[12px] font-semibold text-[#64748b] dark:border-white/[0.1] dark:text-[#8090b0]"
                           style={{
-                            border: "1px solid rgba(255, 255, 255, 0.1)",
-                            background: "transparent",
-                            color: "#8090b0",
-                            borderRadius: "8px",
-                            padding: "8px 12px",
-                            fontSize: "12px",
-                            fontWeight: 600,
                             cursor: marking ? "wait" : "pointer",
                             opacity: marking ? 0.7 : 1,
                           }}

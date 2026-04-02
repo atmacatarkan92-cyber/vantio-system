@@ -27,33 +27,17 @@ function formatDate(dateString) {
 function SummaryCard({ title, value, accent }) {
   return (
     <div
-      style={{
-        background: "#141824",
-        border: "1px solid rgba(255, 255, 255, 0.07)",
-        borderTop: `4px solid ${accent}`,
-        borderRadius: "14px",
-        padding: "20px",
-      }}
+      className="relative overflow-hidden rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]"
+      style={{ borderTop: `4px solid ${accent}` }}
     >
       <div
-        style={{
-          fontSize: "11px",
-          color: "#6b7a9a",
-          marginBottom: "8px",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "1px",
-        }}
+        className="mb-2 text-[11px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
       >
         {title}
       </div>
 
       <div
-        style={{
-          fontSize: "24px",
-          fontWeight: 700,
-          color: "#eef2ff",
-        }}
+        className="text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]"
       >
         {value}
       </div>
@@ -108,7 +92,7 @@ function AdminRevenuePage() {
 
   return (
     <div
-      className="bg-[#07090f] text-[#eef2ff] min-h-full"
+      className="min-h-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
       style={{ display: "grid", gap: "24px" }}
     >
       <div>
@@ -127,7 +111,7 @@ function AdminRevenuePage() {
           Einnahmen
         </h2>
 
-        <p style={{ color: "#6b7a9a", marginTop: "10px", fontSize: "12px" }}>
+        <p className="mt-[10px] text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
           Übersicht über bezahlte Rechnungen und erwartete Einnahmen.
         </p>
       </div>
@@ -165,28 +149,15 @@ function AdminRevenuePage() {
       </div>
 
       <div
-        style={{
-          background: "#141824",
-          border: "1px solid rgba(255, 255, 255, 0.07)",
-          borderRadius: "14px",
-          padding: "24px",
-        }}
+        className="rounded-[14px] border border-black/10 bg-white p-6 dark:border-white/[0.07] dark:bg-[#141824]"
       >
         <h3
-          style={{
-            fontSize: "9px",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "1px",
-            color: "#6b7a9a",
-            marginTop: 0,
-            marginBottom: "16px",
-          }}
+          className="mb-4 mt-0 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]"
         >
           Letzte Einnahmen
         </h3>
 
-        {loading && <p style={{ color: "#6b7a9a" }}>Daten werden geladen...</p>}
+        {loading && <p className="text-[#64748b] dark:text-[#6b7a9a]">Daten werden geladen...</p>}
 
         {error && <p style={{ color: "#f87171" }}>{error}</p>}
 
@@ -197,18 +168,11 @@ function AdminRevenuePage() {
               borderCollapse: "collapse",
               fontSize: "14px",
             }}
+            className="text-[#0f172a] dark:text-[#eef2ff]"
           >
             <thead>
               <tr
-                style={{
-                  textAlign: "left",
-                  background: "#111520",
-                  color: "#6b7a9a",
-                  fontSize: "9px",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.8px",
-                }}
+                className="text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a] bg-slate-100 dark:bg-[#111520]"
               >
                 <th style={{ padding: "12px" }}>Rechnung</th>
                 <th style={{ padding: "12px" }}>Datum</th>
@@ -221,20 +185,15 @@ function AdminRevenuePage() {
               {invoices.slice(0, 10).map((inv) => (
                 <tr
                   key={inv.id}
-                  style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}
+                  className="border-b border-black/10 dark:border-white/[0.05]"
                 >
                   <td
-                    style={{
-                      padding: "12px",
-                      fontWeight: 600,
-                      color: "#eef2ff",
-                      fontSize: "13px",
-                    }}
+                    className="p-3 text-[13px] font-semibold text-[#0f172a] dark:text-[#eef2ff]"
                   >
                     {inv.invoice_number}
                   </td>
 
-                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                  <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                     {formatDate(inv.issue_date)}
                   </td>
 
@@ -249,7 +208,7 @@ function AdminRevenuePage() {
                     {formatCurrency(inv.amount, inv.currency)}
                   </td>
 
-                  <td style={{ padding: "12px", color: "#eef2ff", fontSize: "13px" }}>
+                  <td className="p-3 text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
                     {inv.status}
                   </td>
                 </tr>
