@@ -862,7 +862,7 @@ function AdminBusinessApartmentsDashboardPage() {
                     className="border-b border-black/10 dark:border-white/[0.05] text-sm text-[#0f172a] dark:text-[#eef2ff]"
                   >
                     <td className="py-4 pr-4 font-semibold">
-                      <span className="block text-[#7aaeff]">{unit.displayLabel}</span>
+                      <span className="block font-medium text-sky-700 dark:text-sky-400">{unit.displayLabel}</span>
                       <span className="mt-0.5 block break-all font-mono text-[10px] font-normal text-[#64748b] dark:text-[#6b7a9a]">
                         {unit.unitId}
                       </span>
@@ -875,7 +875,7 @@ function AdminBusinessApartmentsDashboardPage() {
                         <RankingBadge value="Frei" type="danger" />
                       )}
                     </td>
-                    <td className="py-4 pr-4 font-medium text-[#4ade80]">
+                    <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">
                       {formatChfOrDash(unit.revenue)}
                     </td>
                     <td className="py-4 pr-4 font-medium">
