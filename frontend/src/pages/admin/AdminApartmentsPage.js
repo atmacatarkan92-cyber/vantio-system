@@ -275,8 +275,10 @@ function runningMonthlyCostsForUnit(unit, unitCostsRows) {
 }
 
 function calculateApartmentProfit(unit, unitCostsRows) {
-  const tenantPrice = Number(unit.tenantPriceMonthly || 0);
-  return tenantPrice - runningMonthlyCostsForUnit(unit, unitCostsRows);
+  if (unit.current_revenue_chf == null) return null;
+  const revenue = Number(unit.current_revenue_chf);
+  if (!Number.isFinite(revenue)) return null;
+  return revenue - runningMonthlyCostsForUnit(unit, unitCostsRows);
 }
 
 function SectionCard({ title, subtitle, children }) {
@@ -309,9 +311,9 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
               <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Liegenschaft</th>
               <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Status</th>
               <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Zimmer</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Mieterpreis</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Umsatz (aktuell)</th>
               <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Mietkosten</th>
-              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Mieterpreis − Kosten</th>
+              <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Gewinn</th>
               <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Verfügbar ab</th>
               <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Mietbeginn (Vertrag)</th>
               <th className="py-3 pr-4 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">Aktionen</th>
@@ -385,14 +387,17 @@ function ApartmentTable({ items, rooms, tenancies, unitCostsByUnitId, onEdit, on
                   )}
                 </td>
                 <td className="py-4 pr-4">{unit.rooms}</td>
-                <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(unit.tenantPriceMonthly)}
+                <td className="py-4 pr-4 font-medium text-slate-900 dark:text-[#eef2ff]">
+                  {unit.current_revenue_chf == null ? "—" : formatCurrency(unit.current_revenue_chf)}
                 </td>
                 <td className="py-4 pr-4">
                   {formatCurrency(runningMonthlyCostsForUnit(unit, unitCosts))}
                 </td>
-                <td className="py-4 pr-4 font-medium">
-                  {formatCurrency(calculateApartmentProfit(unit, unitCosts))}
+                <td className="py-4 pr-4 font-semibold text-emerald-700 dark:text-emerald-400">
+                  {(() => {
+                    const p = calculateApartmentProfit(unit, unitCosts);
+                    return p == null ? "—" : formatCurrency(p);
+                  })()}
                 </td>
                 <td className="py-4 pr-4">{unit.availableFrom}</td>
                 <td className="py-4 pr-4">
@@ -2206,7 +2211,7 @@ function AdminApartmentsPage() {
                 {!isCoLivingType ? (
                   <>
                     <div className="rounded-[10px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] p-4">
-                      <p className="text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Mieterpreis − Kosten (Stammdaten)</p>
+                      <p className="text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Ziel-Mietpreis − Kosten (Stammdaten)</p>
                       <p className="mt-1 text-[24px] font-bold text-[#4ade80]">
                         {formatCurrency(currentApartmentProfit)}
                       </p>

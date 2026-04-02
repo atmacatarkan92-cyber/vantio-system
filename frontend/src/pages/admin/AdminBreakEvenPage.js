@@ -58,7 +58,8 @@ function AdminBreakEvenPage() {
 
   const rows = useMemo(() => {
     return units.map((unit) => {
-      const revenue = Number(unit.tenantPriceMonthly || 0);
+      const revenue =
+        unit.current_revenue_chf == null ? null : Number(unit.current_revenue_chf);
       const rowsCosts =
         unitCostsByUnitId[String(unit.id)] ?? unitCostsByUnitId[unit.id] ?? [];
       const costs = getUnitCostsTotal(rowsCosts);
@@ -68,7 +69,7 @@ function AdminBreakEvenPage() {
 
       // Apartment: "Deckungsgrad" = costs / tenantPriceMonthly (lower is better; < 1 means profitable).
       const deckungsgrad01 =
-        unitType === "Apartment" && revenue > 0 ? costs / revenue : null;
+        unitType === "Apartment" && revenue != null && revenue > 0 ? costs / revenue : null;
 
       // Co-Living: derive rooms + per-room price, then compute rooms needed + occupancy needed.
       const totalRooms =
@@ -79,7 +80,10 @@ function AdminBreakEvenPage() {
           : null;
       const occupiedRooms =
         unitType === "Co-Living" ? clampNonNegativeInt(unit?.occupiedRooms) : null;
-      const roomPrice = unitType === "Co-Living" ? toFiniteNumberOrNull(unit?.tenantPriceMonthly) : null;
+      const roomPrice =
+        unitType === "Co-Living" && revenue != null && occupiedRooms != null && occupiedRooms > 0
+          ? toFiniteNumberOrNull(revenue / occupiedRooms)
+          : null;
 
       const breakEvenRooms =
         unitType === "Co-Living" && roomPrice != null && roomPrice > 0
@@ -256,7 +260,7 @@ function AdminBreakEvenPage() {
                   <td
                     className="p-[10px] text-[13px] font-medium text-slate-900 dark:text-[#eef2ff]"
                   >
-                    {formatCurrency(row.revenue)}
+                    {row.revenue == null ? "—" : formatCurrency(row.revenue)}
                   </td>
 
                   <td className="p-[10px] text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
