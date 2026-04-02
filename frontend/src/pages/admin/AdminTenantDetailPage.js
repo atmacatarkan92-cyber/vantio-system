@@ -946,6 +946,15 @@ export default function AdminTenantDetailPage() {
         .catch((err) => setTenancyRevenueErr(err?.message || "Einnahmen konnten nicht geladen werden."))
         .finally(() => setTenancyRevenueLoadingId(null));
     }
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        tenancyEditSectionRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    });
   };
 
   const submitTenancyEdit = () => {
@@ -2285,7 +2294,7 @@ export default function AdminTenantDetailPage() {
                               {String(tenancyEditingId) === String(tn.id) ? (
                                 <div
                                   ref={tenancyEditSectionRef}
-                                  className="mt-4 rounded-[14px] border border-black/10 bg-slate-100 p-5 dark:border-white/[0.07] dark:bg-[#111520]"
+                                  className="mt-4 scroll-mt-6 rounded-[14px] border border-black/10 bg-slate-100 p-5 dark:border-white/[0.07] dark:bg-[#111520]"
                                 >
                                     <div className="mb-2 text-[12px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
                                       Mietverhältnis bearbeiten
