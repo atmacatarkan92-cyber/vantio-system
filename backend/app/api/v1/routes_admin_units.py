@@ -28,6 +28,7 @@ from db.models import (
 )
 from db.audit import create_audit_log, model_snapshot
 from app.core.rate_limit import limiter
+from app.services.revenue_forecast import calculate_monthly_revenue_for_units
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin-units"])
@@ -580,6 +581,21 @@ def admin_list_units(
             )
             for u, p in paged_rows
         ]
+
+        # Add computed revenue snapshot for current month (tenancy/KPI-based; NOT Unit.tenant_price_monthly_chf).
+        # If computation fails, return null rather than a fake 0.
+        try:
+            today = date.today()
+            unit_ids = [str(u.id) for u, _p in paged_rows]
+            rev_map = calculate_monthly_revenue_for_units(session, unit_ids, today.year, today.month)
+        except Exception:
+            rev_map = {}
+
+        for it in items:
+            uid = str(it.get("id") or it.get("unitId") or "")
+            rec = rev_map.get(uid)
+            it["current_revenue_chf"] = rec.get("expected_revenue") if isinstance(rec, dict) else None
+
         return UnitListResponse(
             items=items,
             total=total,
