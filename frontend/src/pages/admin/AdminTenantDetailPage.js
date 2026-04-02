@@ -1352,7 +1352,7 @@ export default function AdminTenantDetailPage() {
     if (!assignOpen || !tenantId) return;
     setAssignTenantListErr(null);
     setAssignTenantListLoading(true);
-    fetchAdminTenants({ limit: 500 })
+    fetchAdminTenants({ limit: 200 })
       .then((items) => setAssignTenantList(Array.isArray(items) ? items : []))
       .catch((e) => {
         setAssignTenantListErr(e?.message ?? "Mieterliste konnte nicht geladen werden.");
