@@ -92,6 +92,44 @@ function getStatusMeta(status) {
   };
 }
 
+/** Tenancies where this tenant is primary (tenant_id) or listed in participants. */
+function tenanciesForTenant(tenancies, tenantId) {
+  const tid = String(tenantId);
+  const seen = new Set();
+  const out = [];
+  for (const tenancy of tenancies || []) {
+    const id = tenancy?.id != null ? String(tenancy.id) : "";
+    if (!id || seen.has(id)) continue;
+    if (String(tenancy.tenant_id) === tid) {
+      seen.add(id);
+      out.push(tenancy);
+      continue;
+    }
+    const parts = tenancy?.participants;
+    if (!Array.isArray(parts)) continue;
+    if (parts.some((p) => p && String(p.tenant_id) === tid)) {
+      seen.add(id);
+      out.push(tenancy);
+    }
+  }
+  return out;
+}
+
+/**
+ * German role label for shared contracts. Co-/Solidarhafter always; Hauptmieter only when
+ * multiple participants (avoids clutter on single-person rows).
+ */
+function tenancyParticipantRoleLabelDe(tenancy, tenantId) {
+  const parts = tenancy?.participants;
+  if (!Array.isArray(parts) || parts.length === 0) return null;
+  const p = parts.find((x) => x && String(x.tenant_id) === String(tenantId));
+  if (!p?.role) return null;
+  if (p.role === "co_tenant") return "Co-Mieter";
+  if (p.role === "solidarhafter") return "Solidarhafter";
+  if (p.role === "primary_tenant" && parts.length > 1) return "Hauptmieter";
+  return null;
+}
+
 function rowMatchesStatusFilter(row, filterKey) {
   if (!filterKey || filterKey === "all") return true;
   const s = String(row.status || "").toLowerCase();
@@ -121,9 +159,7 @@ function rowMatchesStatusFilter(row, filterKey) {
 function buildTenantRows(tenants, tenancies, rooms, units, invoices) {
   const todayIso = getTodayIsoForOccupancy();
   return tenants.map((tenant) => {
-    const tenantTenancies = tenancies.filter(
-      (tenancy) => String(tenancy.tenant_id) === String(tenant.id)
-    );
+    const tenantTenancies = tenanciesForTenant(tenancies, tenant.id);
 
     const activeTenancy = tenantTenancies.find((t) =>
       isTenancyActiveByDates(t, todayIso)
@@ -174,12 +210,17 @@ function buildTenantRows(tenants, tenancies, rooms, units, invoices) {
       0
     );
 
+    const tenancyRoleLabel = currentTenancy
+      ? tenancyParticipantRoleLabelDe(currentTenancy, tenant.id)
+      : null;
+
     return {
       id: tenant.id,
       fullName: tenantDisplayName(tenant) || `Mieter ${tenant.id}`,
       email: tenant.email || "-",
       phone: tenant.phone || tenant.mobile || "-",
       status: rowStatus,
+      tenancyRoleLabel,
       unitId: currentTenancy ? unit?.unitId || unit?.unit_id || "—" : "—",
       unitAddress: currentTenancy ? unit?.address || "—" : "—",
       roomName: currentTenancy
@@ -233,7 +274,7 @@ function AdminTenantsPage() {
       fetchAdminUnits(),
       fetchAdminRooms(),
       fetchAdminTenants({ limit: 200 }),
-      fetchAdminTenancies(),
+      fetchAdminTenancies({ limit: 200 }),
       fetchAdminInvoices(),
     ])
       .then(([unitsData, roomsData, tenantsData, tenanciesData, invoicesData]) => {
@@ -525,6 +566,13 @@ function AdminTenantsPage() {
                     >
                       <td className="px-3 py-3 align-top">
                         <div className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{row.fullName}</div>
+                        {row.tenancyRoleLabel ? (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center rounded-full border border-slate-300/80 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-white/[0.12] dark:bg-white/[0.06] dark:text-[#94a3b8]">
+                              {row.tenancyRoleLabel}
+                            </span>
+                          </div>
+                        ) : null}
                         {row.notes ? (
                           <div className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">{row.notes}</div>
                         ) : null}
