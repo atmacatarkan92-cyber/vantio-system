@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel, Field
-from sqlalchemy import Column, Text
+from sqlalchemy import Column, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime, date
 from enum import Enum
@@ -434,9 +434,20 @@ class TenancyStatus(str, Enum):
     reserved = "reserved"
 
 
+class TenancyParticipantRole(str, Enum):
+    """Role of a person on a tenancy (occupancy contract). Not boolean flags."""
+
+    primary_tenant = "primary_tenant"
+    co_tenant = "co_tenant"
+    solidarhafter = "solidarhafter"
+
+
 class Tenancy(SQLModel, table=True):
     """
     Links a tenant to a room for a period. Used for occupancy and revenue.
+    One tenancy row = one room slot / occupancy contract. People on that contract
+    are modeled in TenancyParticipant; tenant_id remains the primary tenant for
+    invoice and backward compatibility (Phase 1).
     """
 
     __tablename__ = "tenancies"
@@ -459,6 +470,27 @@ class Tenancy(SQLModel, table=True):
     tenant_deposit_annual_premium: Optional[float] = Field(default=None)
     tenant_deposit_provider: Optional[str] = Field(default=None, max_length=32)
     status: TenancyStatus = Field(default=TenancyStatus.active, index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class TenancyParticipant(SQLModel, table=True):
+    """
+    People linked to one tenancy (occupancy contract). One tenancy row = one room slot;
+    participants identify primary tenant, co-tenants, and solidarhafters.
+    Phase 1: tenancy.tenant_id is kept in sync with the primary_tenant participant row
+    for invoices and legacy readers.
+    """
+
+    __tablename__ = "tenancy_participants"
+    __table_args__ = (
+        UniqueConstraint("tenancy_id", "tenant_id", name="uq_tenancy_participant_tenancy_tenant"),
+    )
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
+    tenancy_id: str = Field(foreign_key="tenancies.id", index=True)
+    tenant_id: str = Field(foreign_key="tenant.id", index=True)
+    role: str = Field(max_length=32)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

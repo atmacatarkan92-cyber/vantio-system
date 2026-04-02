@@ -2,19 +2,32 @@
 Admin tenancies: CRUD + list by room.
 Protected by require_roles("admin", "manager").
 Validates tenant/room/unit exist, room belongs to unit, no overlapping tenancies.
+
+Tenancy model: one tenancies row is the occupancy contract for one room slot. TenancyParticipant
+rows link tenant persons to that contract with roles (primary_tenant, co_tenant, solidarhafter).
+Phase 1 keeps tenancies.tenant_id equal to the primary participant for invoices and legacy code.
 """
 
 import json
 from datetime import date, datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, field_validator, model_validator
-from sqlalchemy import func
+from sqlalchemy import delete, func
 from sqlmodel import select
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
-from db.models import Tenancy, TenancyRevenue, TenancyStatus, Tenant, Room, Unit, User
+from db.models import (
+    Tenancy,
+    TenancyParticipant,
+    TenancyRevenue,
+    TenancyStatus,
+    Tenant,
+    Room,
+    Unit,
+    User,
+)
 from db.audit import create_audit_log
 from app.core.rate_limit import limiter
 from app.services.tenancy_lifecycle import (
@@ -34,6 +47,18 @@ ALLOWED_TENANT_DEPOSIT_PROVIDERS = frozenset(
 )
 ALLOWED_TENANCY_REVENUE_FREQUENCIES = frozenset({"monthly", "yearly", "one_time"})
 ALLOWED_TERMINATED_BY = frozenset({"tenant", "landlord", "other"})
+ALLOWED_TENANCY_PARTICIPANT_ROLES = frozenset({"primary_tenant", "co_tenant", "solidarhafter"})
+
+
+def _tenant_summary_dict(t: Tenant) -> dict:
+    """Minimal tenant payload nested under each participant (admin UI / CRM)."""
+    return {
+        "id": str(t.id),
+        "first_name": getattr(t, "first_name", None),
+        "last_name": getattr(t, "last_name", None),
+        "email": getattr(t, "email", None) or "",
+        "name": getattr(t, "name", None) or "",
+    }
 
 
 def _tenancy_to_dict(t: Tenancy) -> dict:
@@ -80,6 +105,59 @@ def _tenancy_to_dict(t: Tenancy) -> dict:
         "status": t.status.value if hasattr(t.status, "value") else str(t.status),
         "created_at": t.created_at.isoformat() if getattr(t, "created_at", None) else None,
     }
+
+
+def _participant_rows_by_tenancy_ids(
+    session, org_id: str, tenancy_ids: list[str]
+) -> Dict[str, list[dict]]:
+    """Load participants + tenant summaries for many tenancies (one query)."""
+    if not tenancy_ids:
+        return {}
+    stmt = (
+        select(TenancyParticipant, Tenant)
+        .where(TenancyParticipant.organization_id == org_id)
+        .where(TenancyParticipant.tenancy_id.in_(tenancy_ids))
+        .join(Tenant, Tenant.id == TenancyParticipant.tenant_id)
+    )
+    pairs = list(session.exec(stmt).all())
+    out: dict[str, list] = {}
+    role_order = {"primary_tenant": 0, "co_tenant": 1, "solidarhafter": 2}
+    for tp, tenant in pairs:
+        tkey = str(tp.tenancy_id)
+        out.setdefault(tkey, []).append(
+            {
+                "tenant_id": str(tp.tenant_id),
+                "role": tp.role,
+                "tenant": _tenant_summary_dict(tenant),
+            }
+        )
+    for tkey in out:
+        out[tkey].sort(key=lambda x: (role_order.get(x["role"], 9), x["tenant_id"]))
+    return out
+
+
+def _tenancy_to_response_dict(
+    session,
+    org_id: str,
+    t: Tenancy,
+    pmap: Optional[Dict[str, list[dict]]] = None,
+) -> dict:
+    """Tenancy JSON including participants (people on this occupancy contract)."""
+    d = _tenancy_to_dict(t)
+    tid = str(t.id)
+    if pmap is not None:
+        d["participants"] = pmap.get(tid, [])
+    else:
+        d["participants"] = _participant_rows_by_tenancy_ids(session, org_id, [tid]).get(tid, [])
+    return d
+
+
+def _validate_tenant_ids_in_org(session, org_id: str, tenant_ids: list[str]) -> None:
+    for raw in tenant_ids:
+        tid = str(raw).strip()
+        ten = session.get(Tenant, tid)
+        if not ten or str(getattr(ten, "organization_id", "")) != org_id:
+            raise HTTPException(status_code=404, detail="Tenant not found")
 
 
 def _tenancy_revenue_to_dict(r: TenancyRevenue) -> dict:
@@ -274,6 +352,31 @@ class TenancyRevenuePatchBody(BaseModel):
         return self
 
 
+class TenancyParticipantInput(BaseModel):
+    """One person on a tenancy with a role (primary_tenant, co_tenant, solidarhafter)."""
+
+    tenant_id: str
+    role: str
+
+    @field_validator("tenant_id", mode="before")
+    @classmethod
+    def _strip_tenant_id(cls, v):
+        s = str(v or "").strip()
+        if not s:
+            raise ValueError("tenant_id must not be empty")
+        return s
+
+    @field_validator("role", mode="before")
+    @classmethod
+    def _normalize_role(cls, v):
+        s = str(v or "").strip().lower()
+        if s not in ALLOWED_TENANCY_PARTICIPANT_ROLES:
+            raise ValueError(
+                "role must be one of: primary_tenant, co_tenant, solidarhafter"
+            )
+        return s
+
+
 class TenancyCreate(BaseModel):
     tenant_id: str
     room_id: str
@@ -291,6 +394,7 @@ class TenancyCreate(BaseModel):
     tenant_deposit_annual_premium: Optional[float] = Field(default=None, ge=0)
     tenant_deposit_provider: Optional[str] = None
     status: TenancyStatus = TenancyStatus.active
+    participants: Optional[List[TenancyParticipantInput]] = Field(default=None)
 
     @field_validator("tenant_deposit_type", mode="before")
     @classmethod
@@ -353,6 +457,22 @@ class TenancyCreate(BaseModel):
             self.tenant_deposit_provider = None
         return self
 
+    @model_validator(mode="after")
+    def _validate_participants_create(self):
+        if self.participants is None:
+            return self
+        if len(self.participants) == 0:
+            raise ValueError("participants, if provided, must not be empty")
+        primaries = [p for p in self.participants if p.role == "primary_tenant"]
+        if len(primaries) != 1:
+            raise ValueError("participants must include exactly one primary_tenant")
+        if primaries[0].tenant_id != str(self.tenant_id).strip():
+            raise ValueError("primary_tenant must match tenant_id")
+        tids = [p.tenant_id for p in self.participants]
+        if len(tids) != len(set(tids)):
+            raise ValueError("duplicate tenant_id in participants")
+        return self
+
 
 class TenancyPatch(BaseModel):
     move_in_date: Optional[date] = None
@@ -368,6 +488,7 @@ class TenancyPatch(BaseModel):
     tenant_deposit_annual_premium: Optional[float] = Field(default=None, ge=0)
     tenant_deposit_provider: Optional[str] = None
     status: Optional[TenancyStatus] = None
+    participants: Optional[List[TenancyParticipantInput]] = None
 
     @field_validator("tenant_deposit_type", mode="before")
     @classmethod
@@ -423,6 +544,20 @@ class TenancyPatch(BaseModel):
             return self
         if str(self.tenant_deposit_type).lower() != "insurance":
             self.tenant_deposit_provider = None
+        return self
+
+    @model_validator(mode="after")
+    def _validate_participants_patch(self):
+        if self.participants is None:
+            return self
+        if len(self.participants) == 0:
+            raise ValueError("participants must not be empty when provided")
+        primaries = [p for p in self.participants if p.role == "primary_tenant"]
+        if len(primaries) != 1:
+            raise ValueError("participants must include exactly one primary_tenant")
+        tids = [p.tenant_id for p in self.participants]
+        if len(tids) != len(set(tids)):
+            raise ValueError("duplicate tenant_id in participants")
         return self
 
 
@@ -565,7 +700,8 @@ def admin_list_tenancies(
     total = int(_total_rows[0]) if _total_rows else 0
     paged_rows = list(session.exec(base_query.offset(skip).limit(limit)).all())
     _batch_attach_monthly_revenue_equivalent(session, paged_rows)
-    items = [_tenancy_to_dict(t) for t in paged_rows]
+    pmap = _participant_rows_by_tenancy_ids(session, org_id, [str(t.id) for t in paged_rows])
+    items = [_tenancy_to_response_dict(session, org_id, t, pmap) for t in paged_rows]
     return TenancyListResponse(items=items, total=total, skip=skip, limit=limit)
 
 
@@ -590,7 +726,8 @@ def admin_list_tenancies_for_room(
     )
     tenancies = list(session.exec(q).all())
     _batch_attach_monthly_revenue_equivalent(session, tenancies)
-    return [_tenancy_to_dict(t) for t in tenancies]
+    pmap = _participant_rows_by_tenancy_ids(session, org_id, [str(t.id) for t in tenancies])
+    return [_tenancy_to_response_dict(session, org_id, t, pmap) for t in tenancies]
 
 
 @router.post("/tenancies", response_model=dict)
@@ -634,6 +771,28 @@ def admin_create_tenancy(
     sync_tenancy_move_out_date(tenancy)
     session.add(tenancy)
     session.flush()
+    if body.participants:
+        pids = [p.tenant_id for p in body.participants]
+        _validate_tenant_ids_in_org(session, org_id, pids)
+        for p in body.participants:
+            session.add(
+                TenancyParticipant(
+                    organization_id=org_id,
+                    tenancy_id=str(tenancy.id),
+                    tenant_id=p.tenant_id,
+                    role=p.role,
+                )
+            )
+    else:
+        session.add(
+            TenancyParticipant(
+                organization_id=org_id,
+                tenancy_id=str(tenancy.id),
+                tenant_id=body.tenant_id,
+                role="primary_tenant",
+            )
+        )
+    session.flush()
     _batch_attach_monthly_revenue_equivalent(session, [tenancy])
     pay = {"tenancy": _tenancy_audit_payload(tenancy)}
     _log_parent_stream_same_change(
@@ -648,7 +807,7 @@ def admin_create_tenancy(
     )
     session.commit()
     session.refresh(tenancy)
-    return _tenancy_to_dict(tenancy)
+    return _tenancy_to_response_dict(session, org_id, tenancy, None)
 
 
 @router.patch("/tenancies/{tenancy_id}", response_model=dict)
@@ -667,6 +826,30 @@ def admin_patch_tenancy(
         raise HTTPException(status_code=404, detail="Tenancy not found")
     old_tenancy_payload = _tenancy_audit_payload(tenancy)
     data = body.model_dump(exclude_unset=True)
+    participants_changed = False
+    if "participants" in data and body.participants is not None:
+        participants_changed = True
+        pids = [p.tenant_id for p in body.participants]
+        _validate_tenant_ids_in_org(session, org_id, pids)
+        session.exec(
+            delete(TenancyParticipant).where(TenancyParticipant.tenancy_id == tenancy_id)
+        )
+        session.flush()
+        primary_tid = None
+        for p in body.participants:
+            session.add(
+                TenancyParticipant(
+                    organization_id=org_id,
+                    tenancy_id=tenancy_id,
+                    tenant_id=p.tenant_id,
+                    role=p.role,
+                )
+            )
+            if p.role == "primary_tenant":
+                primary_tid = p.tenant_id
+        if primary_tid:
+            tenancy.tenant_id = primary_tid
+        data.pop("participants", None)
     if data:
         merged = tenancy.model_dump()
         merged.update(data)
@@ -694,9 +877,10 @@ def admin_patch_tenancy(
     _batch_attach_monthly_revenue_equivalent(session, [tenancy])
     new_tenancy_payload = _tenancy_audit_payload(tenancy)
 
-    if data and not _parent_audit_payloads_equal(
+    tenancy_payload_differs = not _parent_audit_payloads_equal(
         {"tenancy": old_tenancy_payload}, {"tenancy": new_tenancy_payload}
-    ):
+    )
+    if participants_changed or (bool(data) and tenancy_payload_differs):
         _log_parent_stream_same_change(
             session,
             str(current_user.id),
@@ -709,7 +893,7 @@ def admin_patch_tenancy(
         )
     session.commit()
     session.refresh(tenancy)
-    return _tenancy_to_dict(tenancy)
+    return _tenancy_to_response_dict(session, org_id, tenancy, None)
 
 
 @router.delete("/tenancies/{tenancy_id}")

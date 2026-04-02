@@ -5,7 +5,11 @@ from pydantic import ValidationError
 
 from app.api.v1.routes_admin_listings import ListingStatusUpdate
 from app.api.v1.routes_admin_rooms import RoomCreate
-from app.api.v1.routes_admin_tenancies import TenancyCreate
+from app.api.v1.routes_admin_tenancies import (
+    TenancyCreate,
+    TenancyParticipantInput,
+    TenancyPatch,
+)
 from app.api.v1.routes_admin_units import UnitCreate
 from app.api.v1.routes_invoices import InvoiceGenerateBody
 from auth.schemas import LoginRequest
@@ -67,6 +71,108 @@ def test_tenancy_create_rejects_invalid_terminated_by():
             deposit_amount=None,
             terminated_by="invalid",
             status="active",
+        )
+
+
+def test_tenancy_create_rejects_empty_participants_list():
+    with pytest.raises(ValidationError):
+        TenancyCreate(
+            tenant_id="tenant-1",
+            room_id="room-1",
+            unit_id="unit-1",
+            move_in_date=date(2024, 1, 1),
+            monthly_rent=0,
+            deposit_amount=None,
+            status="active",
+            participants=[],
+        )
+
+
+def test_tenancy_create_rejects_participants_without_primary():
+    with pytest.raises(ValidationError):
+        TenancyCreate(
+            tenant_id="tenant-1",
+            room_id="room-1",
+            unit_id="unit-1",
+            move_in_date=date(2024, 1, 1),
+            monthly_rent=0,
+            deposit_amount=None,
+            status="active",
+            participants=[
+                TenancyParticipantInput(tenant_id="tenant-1", role="co_tenant"),
+                TenancyParticipantInput(tenant_id="tenant-2", role="solidarhafter"),
+            ],
+        )
+
+
+def test_tenancy_create_rejects_two_primary_participants():
+    with pytest.raises(ValidationError):
+        TenancyCreate(
+            tenant_id="tenant-1",
+            room_id="room-1",
+            unit_id="unit-1",
+            move_in_date=date(2024, 1, 1),
+            monthly_rent=0,
+            deposit_amount=None,
+            status="active",
+            participants=[
+                TenancyParticipantInput(tenant_id="tenant-1", role="primary_tenant"),
+                TenancyParticipantInput(tenant_id="tenant-2", role="primary_tenant"),
+            ],
+        )
+
+
+def test_tenancy_create_rejects_primary_not_matching_tenant_id():
+    with pytest.raises(ValidationError):
+        TenancyCreate(
+            tenant_id="tenant-1",
+            room_id="room-1",
+            unit_id="unit-1",
+            move_in_date=date(2024, 1, 1),
+            monthly_rent=0,
+            deposit_amount=None,
+            status="active",
+            participants=[
+                TenancyParticipantInput(tenant_id="tenant-2", role="primary_tenant"),
+                TenancyParticipantInput(tenant_id="tenant-1", role="co_tenant"),
+            ],
+        )
+
+
+def test_tenancy_create_rejects_duplicate_tenant_in_participants():
+    with pytest.raises(ValidationError):
+        TenancyCreate(
+            tenant_id="tenant-1",
+            room_id="room-1",
+            unit_id="unit-1",
+            move_in_date=date(2024, 1, 1),
+            monthly_rent=0,
+            deposit_amount=None,
+            status="active",
+            participants=[
+                TenancyParticipantInput(tenant_id="tenant-1", role="primary_tenant"),
+                TenancyParticipantInput(tenant_id="tenant-1", role="co_tenant"),
+            ],
+        )
+
+
+def test_tenancy_participant_input_rejects_invalid_role():
+    with pytest.raises(ValidationError):
+        TenancyParticipantInput(tenant_id="tenant-1", role="not_a_role")
+
+
+def test_tenancy_patch_rejects_empty_participants():
+    with pytest.raises(ValidationError):
+        TenancyPatch(participants=[])
+
+
+def test_tenancy_patch_rejects_two_primary_participants():
+    with pytest.raises(ValidationError):
+        TenancyPatch(
+            participants=[
+                TenancyParticipantInput(tenant_id="a", role="primary_tenant"),
+                TenancyParticipantInput(tenant_id="b", role="primary_tenant"),
+            ]
         )
 
 

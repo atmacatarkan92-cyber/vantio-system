@@ -68,6 +68,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         ("tenant", "org_isolation_tenant"),
         ("room", "org_isolation_room"),
         ("tenancies", "org_isolation_tenancies"),
+        ("tenancy_participants", "org_isolation_tenancy_participants"),
         ("invoices", "org_isolation_invoices"),
         ("properties", "org_isolation_properties"),
         ("landlords", "org_isolation_landlords"),
@@ -140,6 +141,7 @@ def test_rls_environment_validates_database_role_and_policies(engine):
             "refresh_tokens",
             "room",
             "tenancies",
+            "tenancy_participants",
             "tenant",
             "tenant_events",
             "tenant_notes",
@@ -173,7 +175,8 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                 SELECT tablename, policyname
                 FROM pg_policies
                 WHERE tablename IN (
-                    'audit_logs', 'unit', 'tenant', 'room', 'tenancies', 'invoices',
+                    'audit_logs', 'unit', 'tenant', 'room', 'tenancies', 'tenancy_participants',
+                    'invoices',
                     'properties', 'landlords', 'unit_costs',
                     'tenant_notes', 'tenant_events', 'users',
                     'user_credentials', 'refresh_tokens',
