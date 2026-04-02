@@ -13,7 +13,10 @@ import {
   fetchAdminLandlordNotes,
   fetchAdminLandlordPropertyManagers,
   fetchAdminLandlordUnits,
+  fetchAdminRooms,
+  fetchAdminTenanciesAll,
   normalizeUnit,
+  normalizeRoom,
   restoreAdminLandlord,
   updateAdminLandlord,
   updateAdminLandlordNote,
@@ -26,6 +29,11 @@ import { COMMON_AUDIT_FIELD_LABELS } from "../../utils/auditFieldLabels";
 import { resolveAuditFkDisplay } from "../../utils/auditFkDisplay";
 import { buildGoogleMapsSearchUrl } from "../../utils/googleMapsUrl";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
+import {
+  formatOccupancyStatusDe,
+  getUnitOccupancyStatus,
+  occupancyStatusBadgeClassName,
+} from "../../utils/unitOccupancyStatus";
 
 function dash(s) {
   const t = s != null ? String(s).trim() : "";
@@ -47,17 +55,6 @@ function unitTypeBadgeClasses(type) {
   if (raw === "Business Apartment") {
     return "border-purple-300 bg-purple-100 text-purple-800 dark:border-purple-500/20 dark:bg-purple-500/10 dark:text-purple-300";
   }
-  return "border-black/10 bg-slate-100 text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]";
-}
-
-function unitStatusBadgeClasses(status) {
-  const s = String(status ?? "").trim().toLowerCase();
-  if (s === "frei" || s === "")
-    return "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400";
-  if (s === "belegt" || s === "occupied")
-    return "border-blue-300 bg-blue-100 text-blue-800 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300";
-  if (s === "reserviert" || s === "reserved")
-    return "border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400";
   return "border-black/10 bg-slate-100 text-[#64748b] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#6b7a9a]";
 }
 
@@ -175,6 +172,8 @@ function AdminLandlordDetailPage() {
   const [assignedUnits, setAssignedUnits] = useState([]);
   const [assignedUnitsLoading, setAssignedUnitsLoading] = useState(true);
   const [assignedUnitsError, setAssignedUnitsError] = useState(null);
+  const [occupancyRooms, setOccupancyRooms] = useState([]);
+  const [occupancyTenancies, setOccupancyTenancies] = useState(undefined);
   const [propertyManagers, setPropertyManagers] = useState([]);
   const [propertyManagersLoading, setPropertyManagersLoading] = useState(true);
   const [propertyManagersError, setPropertyManagersError] = useState(null);
@@ -315,6 +314,26 @@ function AdminLandlordDetailPage() {
         setAssignedUnitsError(e?.message?.trim() || "Units konnten nicht geladen werden.");
       })
       .finally(() => setAssignedUnitsLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    setOccupancyRooms([]);
+    setOccupancyTenancies(undefined);
+    Promise.all([
+      fetchAdminRooms().catch(() => null),
+      fetchAdminTenanciesAll().catch(() => null),
+    ]).then(([roomsData, tenData]) => {
+      if (cancelled) return;
+      setOccupancyRooms(
+        Array.isArray(roomsData) ? roomsData.map((r) => normalizeRoom(r)) : []
+      );
+      setOccupancyTenancies(Array.isArray(tenData) ? tenData : null);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   useEffect(() => {
@@ -1009,6 +1028,7 @@ function AdminLandlordDetailPage() {
                 const city = String(u.city || "").trim();
                 const zipCity = [zip, city].filter(Boolean).join(" ");
                 const propTitle = String(u.property_title || "").trim();
+                const occKey = getUnitOccupancyStatus(u, occupancyRooms, occupancyTenancies);
                 return (
                   <li
                     key={String(uid)}
@@ -1036,11 +1056,17 @@ function AdminLandlordDetailPage() {
                         >
                           {typeLabel}
                         </span>
-                        <span
-                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${unitStatusBadgeClasses(u.status)}`}
-                        >
-                          {u.status || "—"}
-                        </span>
+                        {occKey == null ? (
+                          <span className="inline-flex items-center rounded-full border border-black/10 px-2.5 py-0.5 text-[10px] font-semibold text-[#64748b] dark:border-white/[0.08] dark:text-[#6b7a9a]">
+                            —
+                          </span>
+                        ) : (
+                          <span
+                            className={`inline-flex items-center rounded-full border border-black/10 px-2.5 py-0.5 text-[10px] font-semibold dark:border-white/[0.08] ${occupancyStatusBadgeClassName(occKey)}`}
+                          >
+                            {formatOccupancyStatusDe(occKey)}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <p className="mt-3 border-t border-black/10 pt-3 text-sm text-[#0f172a] dark:border-white/[0.05] dark:text-[#eef2ff]">
