@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   fetchAdminTenant,
-  fetchAdminTenants,
+  createAdminTenant,
   updateAdminTenant,
   fetchAdminTenantNotes,
   createAdminTenantNote,
@@ -772,6 +772,22 @@ function Row({ label, value }) {
 
 const PERMIT_OPTIONS = new Set(["B", "C", "L", "G", "Other"]);
 
+function initialAssignSecondForm() {
+  return {
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    street: "",
+    postalCode: "",
+    city: "",
+    country: "CH",
+    nationality: "",
+    isSwiss: null,
+    residencePermit: "",
+  };
+}
+
 const emptyForm = {
   firstName: "",
   lastName: "",
@@ -863,11 +879,9 @@ export default function AdminTenantDetailPage() {
   const [assignTenantDepositAmount, setAssignTenantDepositAmount] = useState("");
   const [assignTenantDepositProvider, setAssignTenantDepositProvider] = useState("");
   const [assignErr, setAssignErr] = useState(null);
-  const [assignSecondTenantId, setAssignSecondTenantId] = useState("");
-  const [assignSecondTenantRole, setAssignSecondTenantRole] = useState("");
-  const [assignTenantList, setAssignTenantList] = useState([]);
-  const [assignTenantListLoading, setAssignTenantListLoading] = useState(false);
-  const [assignTenantListErr, setAssignTenantListErr] = useState(null);
+  const [assignSecondInlineOpen, setAssignSecondInlineOpen] = useState(false);
+  const [assignSecondForm, setAssignSecondForm] = useState(initialAssignSecondForm);
+  const [assignSecondRole, setAssignSecondRole] = useState("");
   const [assignSaving, setAssignSaving] = useState(false);
   const [assignRevenueRows, setAssignRevenueRows] = useState([]);
   const [assignRevenueForm, setAssignRevenueForm] = useState({
@@ -1349,19 +1363,6 @@ export default function AdminTenantDetailPage() {
   }, [assignOpen, tenantId]);
 
   useEffect(() => {
-    if (!assignOpen || !tenantId) return;
-    setAssignTenantListErr(null);
-    setAssignTenantListLoading(true);
-    fetchAdminTenants({ limit: 200 })
-      .then((items) => setAssignTenantList(Array.isArray(items) ? items : []))
-      .catch((e) => {
-        setAssignTenantListErr(e?.message ?? "Mieterliste konnte nicht geladen werden.");
-        setAssignTenantList([]);
-      })
-      .finally(() => setAssignTenantListLoading(false));
-  }, [assignOpen, tenantId]);
-
-  useEffect(() => {
     if (!assignUnitId) {
       setAssignRooms([]);
       setAssignRoomId("");
@@ -1457,16 +1458,6 @@ export default function AdminTenantDetailPage() {
     return getStatusMeta(deriveTenantOperationalStatus(mine, todayIso));
   }, [tenancies, tenantId]);
 
-  const assignSecondTenantOptions = useMemo(() => {
-    const list = Array.isArray(assignTenantList) ? assignTenantList : [];
-    return list
-      .filter((t) => t && String(t.id) !== String(tenantId))
-      .slice()
-      .sort((a, b) =>
-        tenantDisplayName(a).localeCompare(tenantDisplayName(b), "de", { sensitivity: "base" })
-      );
-  }, [assignTenantList, tenantId]);
-
   const applyUpdate = (updated) => {
     setTenant(updated);
     setForm(tenantToForm(updated));
@@ -1499,8 +1490,9 @@ export default function AdminTenantDetailPage() {
     setAssignTenantDepositType("");
     setAssignTenantDepositAmount("");
     setAssignTenantDepositProvider("");
-    setAssignSecondTenantId("");
-    setAssignSecondTenantRole("");
+    setAssignSecondInlineOpen(false);
+    setAssignSecondForm(initialAssignSecondForm());
+    setAssignSecondRole("");
     setAssignErr(null);
     setAssignRevenueRows([]);
     setAssignRevenueForm({
@@ -1557,14 +1549,18 @@ export default function AdminTenantDetailPage() {
       setAssignErr(UNIT_LANDLORD_LEASE_ENDED_TENANCY_MESSAGE);
       return;
     }
-    const secId = String(assignSecondTenantId || "").trim();
-    if (secId && secId === String(tenantId)) {
-      setAssignErr("Zweitmieter darf nicht derselbe Mieter wie auf dieser Seite sein.");
-      return;
-    }
-    if (secId && !String(assignSecondTenantRole || "").trim()) {
-      setAssignErr("Bitte Rolle für den Zweitmieter wählen.");
-      return;
+    if (assignSecondInlineOpen) {
+      const fn2 = String(assignSecondForm.firstName || "").trim();
+      const ln2 = String(assignSecondForm.lastName || "").trim();
+      const role2 = String(assignSecondRole || "").trim();
+      if (!fn2 || !ln2) {
+        setAssignErr("Bitte Vor- und Nachnamen für den Zweitmieter angeben.");
+        return;
+      }
+      if (role2 !== "co_tenant" && role2 !== "solidarhafter") {
+        setAssignErr("Bitte Rolle wählen (Zweitmieter oder Solidarhafter).");
+        return;
+      }
     }
     const preview = deriveTenancyLifecyclePreviewForAssign(
       assignMoveIn.trim(),
@@ -1572,9 +1568,8 @@ export default function AdminTenantDetailPage() {
       assignActualMoveOut
     );
     const derivedStatus = storedTenancyStatusForApi(preview);
-    setAssignSaving(true);
     const tdt = String(assignTenantDepositType || "").trim().toLowerCase();
-    const body = {
+    const bodyBase = {
       tenant_id: String(tenantId),
       unit_id: String(assignUnitId),
       room_id: String(assignRoomId),
@@ -1585,49 +1580,84 @@ export default function AdminTenantDetailPage() {
       terminated_by: String(assignTerminatedBy || "").trim().toLowerCase() || null,
       status: derivedStatus || "active",
     };
-    if (tdt) body.tenant_deposit_type = tdt;
+    if (tdt) bodyBase.tenant_deposit_type = tdt;
     const tda = parseOptionalTenantDepositFloat(assignTenantDepositAmount);
-    if (tda !== null) body.tenant_deposit_amount = tda;
+    if (tda !== null) bodyBase.tenant_deposit_amount = tda;
     const tprov = String(assignTenantDepositProvider || "").trim().toLowerCase();
-    if (tdt === "insurance" && tprov) body.tenant_deposit_provider = tprov;
-    if (secId && String(assignSecondTenantRole || "").trim()) {
-      body.participants = [
-        { tenant_id: String(tenantId), role: "primary_tenant" },
-        { tenant_id: secId, role: String(assignSecondTenantRole).trim() },
-      ];
-    }
-    createAdminTenancy(body)
-      .then(async (createdTenancy) => {
-        const tid = createdTenancy?.id != null ? String(createdTenancy.id) : "";
-        if (!tid) return createdTenancy;
-        const rows = Array.isArray(assignRevenueRows) ? assignRevenueRows : [];
-        for (const r of rows) {
-          const fr = normalizeRevenueFrequency(r.frequency);
-          await createAdminTenancyRevenue(tid, {
-            type: String(r.type || "").trim(),
-            amount_chf: Number(String(r.amount_chf).replace(",", ".")),
-            frequency: fr,
-            start_date: dateOnlyOrNull(r.start_date),
-            end_date: fr === "one_time" ? dateOnlyOrNull(r.end_date) : null,
-            notes: String(r.notes || "").trim() || null,
+    if (tdt === "insurance" && tprov) bodyBase.tenant_deposit_provider = tprov;
+
+    setAssignSaving(true);
+    void (async () => {
+      try {
+        let secondTenantId = null;
+        let roleForParticipants = "";
+        if (assignSecondInlineOpen) {
+          const fn2 = String(assignSecondForm.firstName || "").trim();
+          const ln2 = String(assignSecondForm.lastName || "").trim();
+          roleForParticipants = String(assignSecondRole || "").trim();
+          const permit2 =
+            assignSecondForm.isSwiss === true
+              ? undefined
+              : assignSecondForm.residencePermit
+                ? assignSecondForm.residencePermit
+                : undefined;
+          const createdSecond = await createAdminTenant({
+            first_name: fn2,
+            last_name: ln2,
+            email: String(assignSecondForm.email || "").trim() || undefined,
+            phone: String(assignSecondForm.phone || "").trim() || undefined,
+            street: String(assignSecondForm.street || "").trim() || undefined,
+            postal_code: String(assignSecondForm.postalCode || "").trim() || undefined,
+            city: String(assignSecondForm.city || "").trim() || undefined,
+            country: String(assignSecondForm.country || "").trim() || undefined,
+            nationality: String(assignSecondForm.nationality || "").trim() || undefined,
+            ...(assignSecondForm.isSwiss === null ? {} : { is_swiss: assignSecondForm.isSwiss }),
+            residence_permit: permit2,
+            room_id: assignRoomId ? String(assignRoomId) : undefined,
           });
+          secondTenantId =
+            createdSecond?.id != null ? String(createdSecond.id) : "";
+          if (!secondTenantId) {
+            setAssignErr("Zweitmieter konnte nicht angelegt werden.");
+            return;
+          }
         }
-        return createdTenancy;
-      })
-      .then(() =>
-        Promise.all([
+        const body = { ...bodyBase };
+        if (secondTenantId && roleForParticipants) {
+          body.participants = [
+            { tenant_id: String(tenantId), role: "primary_tenant" },
+            { tenant_id: secondTenantId, role: roleForParticipants },
+          ];
+        }
+        const createdTenancy = await createAdminTenancy(body);
+        const tid = createdTenancy?.id != null ? String(createdTenancy.id) : "";
+        if (tid) {
+          for (const r of rows) {
+            const fr = normalizeRevenueFrequency(r.frequency);
+            await createAdminTenancyRevenue(tid, {
+              type: String(r.type || "").trim(),
+              amount_chf: Number(String(r.amount_chf).replace(",", ".")),
+              frequency: fr,
+              start_date: dateOnlyOrNull(r.start_date),
+              end_date: fr === "one_time" ? dateOnlyOrNull(r.end_date) : null,
+              notes: String(r.notes || "").trim() || null,
+            });
+          }
+        }
+        const [, eData] = await Promise.all([
           reloadTenanciesForTenant(),
           fetchAdminTenantEvents(tenantId),
           reloadTenantAuditLogs(),
-        ])
-      )
-      .then(([, eData]) => {
+        ]);
         if (eData?.items) setEvents(eData.items);
         setAssignOpen(false);
         resetAssignForm();
-      })
-      .catch((err) => setAssignErr(err?.message || "Speichern fehlgeschlagen."))
-      .finally(() => setAssignSaving(false));
+      } catch (err) {
+        setAssignErr(err?.message || "Speichern fehlgeschlagen.");
+      } finally {
+        setAssignSaving(false);
+      }
+    })();
   };
 
   const handleSave = (e) => {
@@ -2969,11 +2999,6 @@ export default function AdminTenantDetailPage() {
                         {assignErr}
                       </p>
                     ) : null}
-                    {assignTenantListErr ? (
-                      <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#f87171" }}>
-                        {assignTenantListErr}
-                      </p>
-                    ) : null}
                     <div style={gridTwoCol}>
                       <div>
                         <label htmlFor="assign-unit" className={labelClass}>
@@ -3126,58 +3151,259 @@ export default function AdminTenantDetailPage() {
                           <option value="other">Sonstiges</option>
                         </select>
                       </div>
-                      <div>
-                        <label htmlFor="assign-second-tenant" className={labelClass}>
-                          Zweitmieter (optional)
-                        </label>
-                        <select
-                          id="assign-second-tenant"
-                          className={inputClass}
-                          style={{ cursor: assignSaving ? "default" : "pointer" }}
-                          value={assignSecondTenantId}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setAssignSecondTenantId(v);
-                            if (!v) setAssignSecondTenantRole("");
-                          }}
-                          disabled={assignSaving || assignTenantListLoading}
-                        >
-                          <option value="">
-                            {assignTenantListLoading ? "Lade Mieter …" : "— kein Zweitmieter"}
-                          </option>
-                          {assignSecondTenantOptions.map((t) => {
-                            const id = String(t.id);
-                            const em = String(t.email || "").trim();
-                            const fullName = tenantDisplayName(t) || id;
-                            const label = `${fullName}${em ? ` — ${em}` : ""}`;
-                            return (
-                              <option key={id} value={id}>
-                                {label}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </div>
-                      {assignSecondTenantId ? (
-                        <div>
-                          <label htmlFor="assign-second-role" className={labelClass}>
-                            Rolle des Zweitmieters *
-                          </label>
-                          <select
-                            id="assign-second-role"
-                            className={inputClass}
-                            style={{ cursor: assignSaving ? "default" : "pointer" }}
-                            value={assignSecondTenantRole}
-                            onChange={(e) => setAssignSecondTenantRole(e.target.value)}
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        {!assignSecondInlineOpen ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAssignSecondInlineOpen(true);
+                              setAssignSecondRole("");
+                            }}
                             disabled={assignSaving}
-                            required
+                            className="rounded-[8px] border border-black/10 bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
+                            style={{ cursor: assignSaving ? "default" : "pointer" }}
                           >
-                            <option value="">— Rolle wählen</option>
-                            <option value="co_tenant">Co-Mieter</option>
-                            <option value="solidarhafter">Solidarhafter</option>
-                          </select>
-                        </div>
-                      ) : null}
+                            Zweitmieter hinzufügen
+                          </button>
+                        ) : (
+                          <div className="rounded-[10px] border border-black/10 bg-slate-50 p-3 dark:border-white/[0.07] dark:bg-[#111520]">
+                            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
+                                Zweitperson (optional)
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAssignSecondInlineOpen(false);
+                                  setAssignSecondForm(initialAssignSecondForm());
+                                  setAssignSecondRole("");
+                                }}
+                                disabled={assignSaving}
+                                className="text-[12px] font-semibold text-[#64748b] underline dark:text-[#8090b0]"
+                                style={{ cursor: assignSaving ? "default" : "pointer" }}
+                              >
+                                Entfernen
+                              </button>
+                            </div>
+                            <div style={gridTwoCol}>
+                              <div>
+                                <label htmlFor="assign-second-role-inline" className={labelClass}>
+                                  Rolle *
+                                </label>
+                                <select
+                                  id="assign-second-role-inline"
+                                  className={inputClass}
+                                  style={{ cursor: assignSaving ? "default" : "pointer" }}
+                                  value={assignSecondRole}
+                                  onChange={(e) => setAssignSecondRole(e.target.value)}
+                                  disabled={assignSaving}
+                                >
+                                  <option value="">— wählen</option>
+                                  <option value="co_tenant">Zweitmieter (Co-Mieter)</option>
+                                  <option value="solidarhafter">Solidarhafter</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label htmlFor="assign-s2-fn" className={labelClass}>
+                                  Vorname *
+                                </label>
+                                <input
+                                  id="assign-s2-fn"
+                                  type="text"
+                                  className={inputClass}
+                                  value={assignSecondForm.firstName}
+                                  onChange={(e) =>
+                                    setAssignSecondForm((f) => ({ ...f, firstName: e.target.value }))
+                                  }
+                                  disabled={assignSaving}
+                                  autoComplete="given-name"
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="assign-s2-ln" className={labelClass}>
+                                  Nachname *
+                                </label>
+                                <input
+                                  id="assign-s2-ln"
+                                  type="text"
+                                  className={inputClass}
+                                  value={assignSecondForm.lastName}
+                                  onChange={(e) =>
+                                    setAssignSecondForm((f) => ({ ...f, lastName: e.target.value }))
+                                  }
+                                  disabled={assignSaving}
+                                  autoComplete="family-name"
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="assign-s2-email" className={labelClass}>
+                                  E-Mail
+                                </label>
+                                <input
+                                  id="assign-s2-email"
+                                  type="email"
+                                  className={inputClass}
+                                  value={assignSecondForm.email}
+                                  onChange={(e) =>
+                                    setAssignSecondForm((f) => ({ ...f, email: e.target.value }))
+                                  }
+                                  disabled={assignSaving}
+                                  autoComplete="email"
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="assign-s2-phone" className={labelClass}>
+                                  Telefon
+                                </label>
+                                <input
+                                  id="assign-s2-phone"
+                                  type="text"
+                                  className={inputClass}
+                                  value={assignSecondForm.phone}
+                                  onChange={(e) =>
+                                    setAssignSecondForm((f) => ({ ...f, phone: e.target.value }))
+                                  }
+                                  disabled={assignSaving}
+                                  autoComplete="tel"
+                                />
+                              </div>
+                              <div style={{ gridColumn: "1 / -1" }}>
+                                <label htmlFor="assign-s2-street" className={labelClass}>
+                                  Strasse
+                                </label>
+                                <input
+                                  id="assign-s2-street"
+                                  type="text"
+                                  className={inputClass}
+                                  value={assignSecondForm.street}
+                                  onChange={(e) =>
+                                    setAssignSecondForm((f) => ({ ...f, street: e.target.value }))
+                                  }
+                                  disabled={assignSaving}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="assign-s2-plz" className={labelClass}>
+                                  PLZ
+                                </label>
+                                <input
+                                  id="assign-s2-plz"
+                                  type="text"
+                                  className={inputClass}
+                                  value={assignSecondForm.postalCode}
+                                  onChange={(e) =>
+                                    setAssignSecondForm((f) => ({ ...f, postalCode: e.target.value }))
+                                  }
+                                  disabled={assignSaving}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="assign-s2-city" className={labelClass}>
+                                  Ort
+                                </label>
+                                <input
+                                  id="assign-s2-city"
+                                  type="text"
+                                  className={inputClass}
+                                  value={assignSecondForm.city}
+                                  onChange={(e) =>
+                                    setAssignSecondForm((f) => ({ ...f, city: e.target.value }))
+                                  }
+                                  disabled={assignSaving}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="assign-s2-country" className={labelClass}>
+                                  Land
+                                </label>
+                                <input
+                                  id="assign-s2-country"
+                                  type="text"
+                                  className={inputClass}
+                                  value={assignSecondForm.country}
+                                  onChange={(e) =>
+                                    setAssignSecondForm((f) => ({ ...f, country: e.target.value }))
+                                  }
+                                  disabled={assignSaving}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="assign-s2-nat" className={labelClass}>
+                                  Nationalität
+                                </label>
+                                <input
+                                  id="assign-s2-nat"
+                                  type="text"
+                                  className={inputClass}
+                                  value={assignSecondForm.nationality}
+                                  onChange={(e) =>
+                                    setAssignSecondForm((f) => ({ ...f, nationality: e.target.value }))
+                                  }
+                                  disabled={assignSaving}
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="assign-s2-swiss" className={labelClass}>
+                                  Schweizer/in
+                                </label>
+                                <select
+                                  id="assign-s2-swiss"
+                                  className={inputClass}
+                                  style={{ cursor: assignSaving ? "default" : "pointer" }}
+                                  value={
+                                    assignSecondForm.isSwiss === null
+                                      ? ""
+                                      : assignSecondForm.isSwiss === true
+                                        ? "true"
+                                        : "false"
+                                  }
+                                  onChange={(e) => {
+                                    const raw = e.target.value;
+                                    const v = raw === "" ? null : raw === "true";
+                                    setAssignSecondForm((f) => {
+                                      const next = { ...f, isSwiss: v };
+                                      if (v === true) next.residencePermit = "";
+                                      return next;
+                                    });
+                                  }}
+                                  disabled={assignSaving}
+                                >
+                                  <option value="">Unbekannt</option>
+                                  <option value="true">Ja</option>
+                                  <option value="false">Nein</option>
+                                </select>
+                              </div>
+                              {assignSecondForm.isSwiss !== true ? (
+                                <div>
+                                  <label htmlFor="assign-s2-permit" className={labelClass}>
+                                    Aufenthaltsbewilligung
+                                  </label>
+                                  <select
+                                    id="assign-s2-permit"
+                                    className={inputClass}
+                                    style={{ cursor: assignSaving ? "default" : "pointer" }}
+                                    value={assignSecondForm.residencePermit}
+                                    onChange={(e) =>
+                                      setAssignSecondForm((f) => ({
+                                        ...f,
+                                        residencePermit: e.target.value,
+                                      }))
+                                    }
+                                    disabled={assignSaving}
+                                  >
+                                    <option value="">—</option>
+                                    <option value="B">B</option>
+                                    <option value="C">C</option>
+                                    <option value="L">L</option>
+                                    <option value="G">G</option>
+                                    <option value="Other">Other</option>
+                                  </select>
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <div>
                         <label className={labelClass}>Einnahmen / Monat</label>
                         <div className={inputClass}>
