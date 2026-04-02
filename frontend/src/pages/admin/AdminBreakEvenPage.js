@@ -137,7 +137,7 @@ function AdminBreakEvenPage() {
   return (
     <div
       className="min-h-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
-      style={{ display: "grid", gap: "24px" }}
+      style={{ display: "grid", gap: "14px" }}
     >
 
       <div>
@@ -163,7 +163,7 @@ function AdminBreakEvenPage() {
         </h2>
 
         <p
-          className="mt-[10px] text-[12px] text-[#64748b] dark:text-[#6b7a9a]"
+          className="mt-2 text-[12px] text-[#64748b] dark:text-[#6b7a9a]"
         >
           Zeigt ab welcher Belegung eine Unit profitabel wird.
         </p>
@@ -294,6 +294,15 @@ function AdminBreakEvenPage() {
                         {row.addressPrimary || row.id}
                       </span>
                     )}
+                    {row.unitType === "co-living" ? (
+                      <span className="mt-1 inline-block rounded-full border border-indigo-200 bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400">
+                        Co-Living
+                      </span>
+                    ) : row.unitType === "apartment" ? (
+                      <span className="mt-1 inline-block rounded-full border border-black/10 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:border-white/10 dark:bg-white/10 dark:text-[#cbd5f5]">
+                        Apartment
+                      </span>
+                    ) : null}
                     {row.addressPrimary && row.id ? (
                       <span className="mt-0.5 block break-all font-mono text-[10px] font-normal text-slate-600 dark:text-[#6b7a9a]">
                         {row.id}
