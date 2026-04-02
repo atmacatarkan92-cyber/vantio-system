@@ -95,6 +95,7 @@ def test_admin_create_and_patch_participants_sync_tenant_id(engine):
     s = uuid.uuid4().hex[:12]
     org = f"tp-org-{s}"
     ua = f"tp-ua-{s}"
+    ub = f"tp-ub-{s}"
     ra = f"tp-ra-{s}"
     rb = f"tp-rb-{s}"
     ta = f"tp-ta-{s}"
@@ -108,8 +109,18 @@ def test_admin_create_and_patch_participants_sync_tenant_id(engine):
             Unit(
                 id=ua,
                 organization_id=org,
-                title="TP U",
+                title="TP U A",
                 address="1 St",
+                city="Zurich",
+                rooms=2,
+            )
+        )
+        session.add(
+            Unit(
+                id=ub,
+                organization_id=org,
+                title="TP U B",
+                address="2 St",
                 city="Zurich",
                 rooms=2,
             )
@@ -132,7 +143,7 @@ def test_admin_create_and_patch_participants_sync_tenant_id(engine):
             Room(id=ra, unit_id=ua, name="R A", price=100, is_active=True)
         )
         session.add(
-            Room(id=rb, unit_id=ua, name="R B", price=100, is_active=True)
+            Room(id=rb, unit_id=ub, name="R B", price=100, is_active=True)
         )
         session.add(
             Tenant(
@@ -191,7 +202,7 @@ def test_admin_create_and_patch_participants_sync_tenant_id(engine):
         body2 = TenancyCreate(
             tenant_id=ta,
             room_id=rb,
-            unit_id=ua,
+            unit_id=ub,
             move_in_date=date(2031, 1, 1),
             monthly_rent=100.0,
             deposit_amount=None,
@@ -245,7 +256,7 @@ def test_admin_create_and_patch_participants_sync_tenant_id(engine):
         session.execute(text("DELETE FROM tenancies WHERE organization_id = :oid"), {"oid": org})
         session.execute(text("DELETE FROM tenant WHERE id IN (:a, :b)"), {"a": ta, "b": tb})
         session.execute(text("DELETE FROM room WHERE id IN (:a, :b)"), {"a": ra, "b": rb})
-        session.execute(text("DELETE FROM unit WHERE id = :u"), {"u": ua})
+        session.execute(text("DELETE FROM unit WHERE id IN (:a, :b)"), {"a": ua, "b": ub})
         session.execute(text("DELETE FROM users WHERE id = :u"), {"u": uid})
         session.execute(text("DELETE FROM organization WHERE id = :o"), {"o": org})
         session.commit()

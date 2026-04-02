@@ -120,8 +120,9 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                   AND c.relname IN (
                     'audit_logs', 'inquiries', 'invoices', 'landlords', 'listing_amenities',
                     'listing_images', 'listings', 'password_reset_tokens', 'properties',
-                    'refresh_tokens', 'room', 'tenancies', 'tenant', 'tenant_events',
-                    'tenant_notes', 'unit', 'unit_costs', 'user_credentials', 'users'
+                    'refresh_tokens', 'room', 'tenancies', 'tenancy_participants', 'tenant',
+                    'tenant_events', 'tenant_notes', 'unit', 'unit_costs', 'user_credentials',
+                    'users'
                   )
                 ORDER BY c.relname
                 """
