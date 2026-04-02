@@ -52,7 +52,8 @@ function getStatusMeta(status) {
   ) {
     return {
       label: "Aktiv",
-      pillClass: `${pillBase} border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400`,
+      pillClass:
+        "inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-green-500/20 dark:bg-green-500/10 dark:text-green-400",
     };
   }
 
@@ -539,7 +540,7 @@ function AdminTenantsPage() {
                           <Link
                             to={`/admin/units/${encodeURIComponent(row.unitId)}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="text-[13px] font-medium text-blue-600 hover:underline dark:text-blue-400"
+                            className="text-[13px] font-medium text-sky-700 hover:underline dark:text-sky-400"
                           >
                             {row.unitAddress}
                           </Link>
@@ -562,7 +563,9 @@ function AdminTenantsPage() {
                       </td>
                       <td
                         className={`px-3 py-3 align-top text-[13px] font-semibold ${
-                          row.monthlyRent == null ? "text-[#64748b] dark:text-[#6b7a9a]" : "text-[#4ade80]"
+                          row.monthlyRent == null
+                            ? "text-[#64748b] dark:text-[#6b7a9a]"
+                            : "text-emerald-600 dark:text-emerald-400"
                         }`}
                       >
                         {row.monthlyRent == null ? "—" : formatCurrency(row.monthlyRent)}
@@ -591,7 +594,7 @@ function AdminTenantsPage() {
                           <button
                             type="button"
                             onClick={(e) => handleDeleteTenant(e, row.id)}
-                            className="rounded-[8px] border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-[13px] font-semibold text-[#f87171] hover:bg-red-500/15"
+                            className="rounded-[8px] border border-red-300 bg-red-50 px-3 py-1.5 text-[13px] font-semibold text-red-700 hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-[#f87171] dark:hover:bg-red-500/15"
                           >
                             Löschen
                           </button>

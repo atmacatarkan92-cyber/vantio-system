@@ -315,8 +315,13 @@ function AdminListingsPage() {
 
   return (
     <div
-      className="content-start bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
-      style={{ display: "grid", gap: "24px" }}
+      className="content-start h-min w-full bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
+      style={{
+        display: "grid",
+        gap: "24px",
+        alignContent: "start",
+        gridAutoRows: "min-content",
+      }}
     >
       <div>
         <h2 className="mb-2 text-[22px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
