@@ -64,7 +64,7 @@ function SectionCard({ title, subtitle, children }) {
   );
 }
 
-function Badge({ children, type = "neutral" }) {
+function Badge({ children, type = "neutral", className = "" }) {
   const styles = {
     success: "border-green-500/20 bg-green-500/10 text-green-400",
     warning: "border-amber-500/20 bg-amber-500/10 text-amber-400",
@@ -74,7 +74,7 @@ function Badge({ children, type = "neutral" }) {
   };
 
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${styles[type]}`}>
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${styles[type]} ${className}`}>
       {children}
     </span>
   );
@@ -354,20 +354,20 @@ function AdminOccupancyPage() {
                   <td className="py-4 pr-4 font-semibold">
                     <Link
                       to={`/admin/units/${row.unitId}`}
-                      className="text-[#7aaeff] hover:underline"
+                      className="font-medium text-sky-700 hover:underline dark:text-sky-400"
                     >
                       {getUnitDisplayLabel(
                         row.unit || { unitId: row.unitId, id: row.unitId }
                       )}
                     </Link>
                     {row.unitId ? (
-                      <p className="mt-0.5 break-all font-mono text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
+                      <p className="mt-0.5 break-all font-mono text-[10px] text-slate-600 dark:text-[#6b7a9a]">
                         {row.unitId}
                       </p>
                     ) : null}
                   </td>
                   <td className="py-4 pr-4 font-medium">{row.place}</td>
-                  <td className="py-4 pr-4 font-medium text-[#7aaeff]">{row.address}</td>
+                  <td className="py-4 pr-4 font-medium text-blue-700 dark:text-blue-400">{row.address}</td>
                   <td className="py-4 pr-4">{row.totalRooms}</td>
                   <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">{row.occupiedCount}</td>
                   <td className="py-4 pr-4 font-semibold text-amber-600 dark:text-amber-400">{row.reservedCount}</td>
@@ -379,7 +379,16 @@ function AdminOccupancyPage() {
                     {formatPercent(row.reservedRate)}
                   </td>
                   <td className="py-4 pr-4">
-                    <Badge type={getStatusBadgeType(row.displayStatus)}>
+                    <Badge
+                      type={getStatusBadgeType(row.displayStatus)}
+                      className={
+                        row.displayStatus === "Voll belegt"
+                          ? "bg-emerald-100 border-emerald-300 text-emerald-700 dark:bg-green-500/10 dark:border-green-500/20 dark:text-green-400"
+                          : row.displayStatus === "Teilbelegt"
+                            ? "bg-amber-100 border-amber-300 text-amber-700 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400"
+                            : ""
+                      }
+                    >
                       {row.displayStatus}
                     </Badge>
                   </td>
