@@ -3,6 +3,8 @@
  * Single source of truth for occupancy labels used in admin UI.
  */
 
+import { normalizeUnitTypeLabel } from "./unitDisplayId";
+
 /** Calendar "today" in local timezone (YYYY-MM-DD), for date-only API fields. */
 export function getTodayIsoForOccupancy() {
   const d = new Date();
@@ -99,10 +101,18 @@ export function deriveTenantOperationalStatus(
 
 /** Monthly rent from tenancy row (frontend field variants). */
 export function getTenancyMonthlyRentValue(t) {
-  const v = t?.monthly_revenue_equivalent;
-  if (v == null || v === "") return 0;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
+  if (!t) return 0;
+  const equiv = t.monthly_revenue_equivalent ?? t.monthlyRevenueEquivalent;
+  if (equiv != null && equiv !== "") {
+    const n = Number(equiv);
+    if (Number.isFinite(n)) return n;
+  }
+  const rent = t.monthly_rent ?? t.monthlyRent;
+  if (rent != null && rent !== "") {
+    const n = Number(rent);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
 }
 
 /**
@@ -114,10 +124,10 @@ export function sumActiveTenancyMonthlyRentForUnit(
   todayIso = getTodayIsoForOccupancy()
 ) {
   if (!unit || !Array.isArray(tenancies)) return 0;
-  const uid = String(unit.unitId || unit.id || "");
+  const uid = String(unit.unitId || unit.id || "").trim();
   let sum = 0;
   for (const t of tenancies) {
-    if (String(t.unit_id || t.unitId) !== uid) continue;
+    if (String(t.unit_id || t.unitId || "").trim() !== uid) continue;
     if (!isTenancyActiveByDates(t, todayIso)) continue;
     sum += getTenancyMonthlyRentValue(t);
   }
@@ -184,13 +194,12 @@ export function getUnitOccupancyStatus(unit, rooms, tenancies) {
   if (!unit) return null;
   if (tenancies == null) return null;
   const today = getTodayIsoForOccupancy();
-  const uid = String(unit.unitId || unit.id || "");
+  const uid = String(unit.unitId || unit.id || "").trim();
   const unitTenancies = tenancies.filter(
-    (t) => String(t.unit_id || t.unitId) === uid
+    (t) => String(t.unit_id || t.unitId || "").trim() === uid
   );
 
-  const type = String(unit.type || "").trim();
-  const isCoLiving = type === "Co-Living";
+  const isCoLiving = normalizeUnitTypeLabel(unit.type) === "Co-Living";
 
   if (!isCoLiving) {
     let hasActive = false;
@@ -207,7 +216,7 @@ export function getUnitOccupancyStatus(unit, rooms, tenancies) {
   }
 
   const unitRooms = (rooms || []).filter(
-    (r) => String(r.unitId || r.unit_id) === uid
+    (r) => String(r.unitId || r.unit_id || "").trim() === uid
   );
   const totalRooms =
     Math.floor(Number(unit.rooms) || 0) || unitRooms.length;

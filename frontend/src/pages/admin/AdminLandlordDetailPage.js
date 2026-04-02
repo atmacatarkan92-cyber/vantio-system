@@ -33,6 +33,7 @@ import {
   formatOccupancyStatusDe,
   getUnitOccupancyStatus,
   occupancyStatusBadgeClassName,
+  sumActiveTenancyMonthlyRentForUnit,
 } from "../../utils/unitOccupancyStatus";
 
 function dash(s) {
@@ -1072,7 +1073,12 @@ function AdminLandlordDetailPage() {
                     <p className="mt-3 border-t border-black/10 pt-3 text-sm text-[#0f172a] dark:border-white/[0.05] dark:text-[#eef2ff]">
                       <span className="text-[#64748b] dark:text-[#6b7a9a]">Miete (Mieter): </span>
                       <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-                        {formatChfMonthly(u.tenantPriceMonthly)}
+                        {formatChfMonthly(
+                          sumActiveTenancyMonthlyRentForUnit(
+                            u,
+                            occupancyTenancies ?? []
+                          )
+                        )}
                       </span>
                     </p>
                   </li>
