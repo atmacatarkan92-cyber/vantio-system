@@ -11,23 +11,6 @@ import { SWISS_CANTON_CODES } from "../../constants/swissCantons";
 import { lookupSwissPlz } from "../../data/swissPlzLookup";
 import { buildGoogleMapsSearchUrl, formatLandlordAddressLine } from "../../utils/googleMapsUrl";
 
-const tableStyle = { width: "100%", borderCollapse: "collapse" };
-const thStyle = {
-  textAlign: "left",
-  padding: "12px 8px",
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
-  background: "#111520",
-  color: "#6b7a9a",
-  fontSize: "9px",
-  fontWeight: 700,
-  textTransform: "uppercase",
-  letterSpacing: "0.8px",
-};
-const tdStyle = {
-  padding: "12px 8px",
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
-  color: "#eef2ff",
-};
 const inputStyle = {
   width: "100%",
   padding: "8px 10px",
@@ -74,58 +57,6 @@ function landlordSearchBlob(l) {
     return "";
   }
 }
-
-const toolbarCardStyle = {
-  background: "#141824",
-  border: "1px solid rgba(255,255,255,0.07)",
-  borderRadius: "14px",
-  padding: "20px",
-};
-
-const toolbarFieldLabelStyle = {
-  display: "block",
-  fontSize: "10px",
-  color: "#6b7a9a",
-  marginBottom: "8px",
-  fontWeight: 500,
-};
-
-const toolbarInputStyle = {
-  width: "100%",
-  height: "44px",
-  borderRadius: "8px",
-  border: "1px solid rgba(255,255,255,0.08)",
-  padding: "0 14px",
-  fontSize: "14px",
-  boxSizing: "border-box",
-  background: "#111520",
-  color: "#eef2ff",
-};
-
-const toolbarSelectStyle = {
-  width: "100%",
-  minWidth: "160px",
-  height: "44px",
-  borderRadius: "8px",
-  border: "1px solid rgba(255,255,255,0.08)",
-  padding: "0 12px",
-  fontSize: "14px",
-  boxSizing: "border-box",
-  background: "#111520",
-  color: "#eef2ff",
-};
-
-const toolbarPrimaryButtonStyle = {
-  height: "44px",
-  padding: "0 18px",
-  borderRadius: "8px",
-  border: "none",
-  background: "linear-gradient(to right, #5b8cff, #7c5cfc)",
-  color: "#FFF",
-  fontWeight: 600,
-  fontSize: "14px",
-  cursor: "pointer",
-};
 
 function AdminLandlordsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -384,28 +315,14 @@ function AdminLandlordsPage() {
         <p className="mb-3 text-[14px] text-[#f87171]">{error}</p>
       )}
 
-      <div style={{ ...toolbarCardStyle, marginBottom: "20px" }}>
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "16px",
-            alignItems: "flex-end",
-            justifyContent: "space-between",
-          }}
-        >
-          <div
-            style={{
-              flex: "1 1 280px",
-              minWidth: 0,
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "16px",
-              alignItems: "flex-end",
-            }}
-          >
-            <div style={{ flex: "1 1 220px", minWidth: 0 }}>
-              <label htmlFor="admin-landlords-search" style={toolbarFieldLabelStyle}>
+      <div className="mb-5 rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex min-w-0 flex-[1_1_280px] flex-wrap items-end gap-4">
+            <div className="min-w-0 flex-[1_1_220px]">
+              <label
+                htmlFor="admin-landlords-search"
+                className="mb-2 block text-[10px] font-medium text-[#64748b] dark:text-[#6b7a9a]"
+              >
                 Suche
               </label>
               <input
@@ -415,18 +332,21 @@ function AdminLandlordsPage() {
                 placeholder="Nach Name, E-Mail, Telefon oder Verwaltung suchen"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                style={toolbarInputStyle}
+                className="box-border h-11 w-full rounded-[8px] border border-black/10 bg-slate-100 px-3.5 text-sm text-[#0f172a] placeholder:text-[#64748b] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
               />
             </div>
-            <div style={{ flex: "0 1 180px", minWidth: "min(100%, 160px)" }}>
-              <label htmlFor="admin-landlords-anzeige" style={toolbarFieldLabelStyle}>
+            <div className="min-w-[min(100%,160px)] flex-[0_1_180px]">
+              <label
+                htmlFor="admin-landlords-anzeige"
+                className="mb-2 block text-[10px] font-medium text-[#64748b] dark:text-[#6b7a9a]"
+              >
                 Anzeige
               </label>
               <select
                 id="admin-landlords-anzeige"
                 value={listFilter}
                 onChange={(e) => setListFilter(e.target.value)}
-                style={toolbarSelectStyle}
+                className="box-border h-11 w-full min-w-[160px] rounded-[8px] border border-black/10 bg-slate-100 px-3 text-sm text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
                 aria-label="Anzeige"
               >
                 <option value="active">Aktiv</option>
@@ -435,33 +355,53 @@ function AdminLandlordsPage() {
               </select>
             </div>
           </div>
-          <button type="button" onClick={openCreate} style={toolbarPrimaryButtonStyle}>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="h-11 cursor-pointer rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-[18px] text-sm font-semibold text-white"
+          >
             + Neue Verwaltung
           </button>
         </div>
       </div>
 
       <div className="overflow-hidden rounded-[14px] border border-black/10 bg-white dark:border-white/[0.07] dark:bg-[#141824]">
-        <table style={tableStyle}>
-        <thead>
+        <table className="w-full border-collapse text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
+        <thead className="bg-slate-100 dark:bg-[#111520]">
           <tr>
-            <th style={thStyle}>Firma / Name</th>
-            <th style={thStyle}>Adresse</th>
-            <th style={thStyle}>E-Mail</th>
-            <th style={thStyle}>Status</th>
-            <th style={thStyle}>Aktionen</th>
+            <th className="px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
+              Firma / Name
+            </th>
+            <th className="px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
+              Adresse
+            </th>
+            <th className="px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
+              E-Mail
+            </th>
+            <th className="px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
+              Status
+            </th>
+            <th className="px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
+              Aktionen
+            </th>
           </tr>
         </thead>
         <tbody>
           {filteredLandlords.length === 0 ? (
             <tr>
-              <td colSpan={5} style={{ ...tdStyle, color: "#6b7a9a" }}>
+              <td
+                colSpan={5}
+                className="border-b border-black/10 px-3 py-3 text-[13px] text-[#64748b] dark:border-white/[0.05] dark:text-[#6b7a9a]"
+              >
                 Noch keine Einträge. Erstellen Sie eine neue Verwaltung.
               </td>
             </tr>
           ) : displayLandlords.length === 0 ? (
             <tr>
-              <td colSpan={5} style={{ ...tdStyle, color: "#6b7a9a" }}>
+              <td
+                colSpan={5}
+                className="border-b border-black/10 px-3 py-3 text-[13px] text-[#64748b] dark:border-white/[0.05] dark:text-[#6b7a9a]"
+              >
                 Keine Verwaltungen für diese Suche gefunden.
               </td>
             </tr>
@@ -470,26 +410,18 @@ function AdminLandlordsPage() {
               const addrDisplay = formatLandlordAddressLine(row);
               const canOpenMap = addrDisplay !== "—";
               return (
-                <tr key={row.id}>
-                  <td style={tdStyle}>
+                <tr key={row.id} className="border-b border-black/10 dark:border-white/[0.05]">
+                  <td className="px-3 py-3 align-top">
                     <Link
                       to={`/admin/landlords/${row.id}`}
-                      className="font-semibold text-[#7aaeff] no-underline hover:underline"
+                      className="text-[13px] font-medium text-blue-700 no-underline hover:underline dark:text-blue-400"
                     >
                       {row.company_name?.trim() || row.contact_name?.trim() || "—"}
                     </Link>
                   </td>
-                  <td style={tdStyle}>
-                    <div
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        flexWrap: "wrap",
-                        maxWidth: "100%",
-                      }}
-                    >
-                      <span style={{ minWidth: 0 }}>{addrDisplay}</span>
+                  <td className="px-3 py-3 align-top text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
+                    <div className="inline-flex max-w-full flex-wrap items-center gap-1">
+                      <span className="min-w-0">{addrDisplay}</span>
                       {canOpenMap ? (
                         <button
                           type="button"
@@ -502,20 +434,7 @@ function AdminLandlordsPage() {
                               "noopener,noreferrer"
                             )
                           }
-                          style={{
-                            flexShrink: 0,
-                            padding: "2px",
-                            margin: 0,
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            background: "transparent",
-                            borderRadius: "8px",
-                            cursor: "pointer",
-                            color: "#8090b0",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            verticalAlign: "middle",
-                          }}
+                          className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-[8px] border border-black/10 bg-transparent p-0.5 text-[#64748b] dark:border-white/[0.1] dark:text-[#8090b0]"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -536,14 +455,28 @@ function AdminLandlordsPage() {
                       ) : null}
                     </div>
                   </td>
-                  <td style={tdStyle}>{row.email || "—"}</td>
-                  <td style={tdStyle}>
-                    {row.deleted_at ? "Archiviert" : row.status === "inactive" ? "Inaktiv" : "Aktiv"}
+                  <td className="px-3 py-3 align-top text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
+                    {row.email || "—"}
                   </td>
-                  <td style={tdStyle}>
+                  <td className="px-3 py-3 align-top">
+                    {row.deleted_at ? (
+                      <span className="text-[13px] font-medium text-[#64748b] dark:text-[#6b7a9a]">
+                        Archiviert
+                      </span>
+                    ) : row.status === "inactive" ? (
+                      <span className="text-[13px] font-medium text-[#64748b] dark:text-[#6b7a9a]">
+                        Inaktiv
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
+                        Aktiv
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 align-top">
                     <Link
                       to={`/admin/landlords/${row.id}`}
-                      className="inline-block rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] dark:text-[#8090b0] no-underline hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
+                      className="inline-block rounded-[8px] border border-black/10 bg-transparent px-3 py-1.5 text-[13px] font-semibold text-[#64748b] no-underline hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
                     >
                       Öffnen
                     </Link>
