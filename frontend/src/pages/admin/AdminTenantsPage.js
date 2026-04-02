@@ -53,7 +53,7 @@ function getStatusMeta(status) {
     return {
       label: "Aktiv",
       pillClass:
-        "inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-green-500/20 dark:bg-green-500/10 dark:text-green-400",
+        "inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400",
     };
   }
 
@@ -540,7 +540,7 @@ function AdminTenantsPage() {
                           <Link
                             to={`/admin/units/${encodeURIComponent(row.unitId)}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="text-[13px] font-medium text-sky-700 hover:underline dark:text-sky-400"
+                            className="text-blue-700 dark:text-blue-400 font-medium hover:underline text-[13px]"
                           >
                             {row.unitAddress}
                           </Link>
