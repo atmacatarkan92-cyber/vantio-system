@@ -1174,7 +1174,7 @@ function AdminLandlordDetailPage() {
 
       {landlordEditOpen && (
         <div
-          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"
           onClick={() => !landlordEditSaving && setLandlordEditOpen(false)}
           role="presentation"
         >
@@ -1201,7 +1201,7 @@ function AdminLandlordDetailPage() {
                     setLandlordEditForm((f) => ({ ...f, company_name: e.target.value }))
                   }
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
                 />
               </div>
               <div>
@@ -1216,7 +1216,7 @@ function AdminLandlordDetailPage() {
                     setLandlordEditForm((f) => ({ ...f, contact_name: e.target.value }))
                   }
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
                 />
               </div>
               <div>
@@ -1229,7 +1229,7 @@ function AdminLandlordDetailPage() {
                   value={landlordEditForm.email}
                   onChange={(e) => setLandlordEditForm((f) => ({ ...f, email: e.target.value }))}
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
                 />
               </div>
               <div>
@@ -1242,7 +1242,7 @@ function AdminLandlordDetailPage() {
                   value={landlordEditForm.phone}
                   onChange={(e) => setLandlordEditForm((f) => ({ ...f, phone: e.target.value }))}
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
                 />
               </div>
               <div>
@@ -1258,7 +1258,7 @@ function AdminLandlordDetailPage() {
                   }
                   disabled={landlordEditSaving}
                   placeholder="Strasse Nr."
-                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
                 />
               </div>
               <div>
@@ -1271,7 +1271,7 @@ function AdminLandlordDetailPage() {
                   value={landlordEditForm.postal_code}
                   onChange={handleLandlordEditPostalCodeChange}
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
                 />
                 {landlordEditPlzNotFound ? (
                   <p className="mt-1 text-xs text-[#64748b] dark:text-[#6b7a9a]">PLZ nicht gefunden</p>
@@ -1287,7 +1287,7 @@ function AdminLandlordDetailPage() {
                   value={landlordEditForm.city}
                   onChange={(e) => setLandlordEditForm((f) => ({ ...f, city: e.target.value }))}
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -1360,7 +1360,7 @@ function AdminLandlordDetailPage() {
                     setLandlordEditForm((f) => ({ ...f, canton: e.target.value }))
                   }
                   disabled={landlordEditSaving || landlordEditCantonLockedByPlz}
-                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
                 >
                   <option value="">—</option>
                   {landlordEditForm.canton && !SWISS_CANTON_CODES.includes(landlordEditForm.canton) ? (
@@ -1385,7 +1385,7 @@ function AdminLandlordDetailPage() {
                     setLandlordEditForm((f) => ({ ...f, website: e.target.value }))
                   }
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
                 />
               </div>
               <div>
@@ -1400,7 +1400,7 @@ function AdminLandlordDetailPage() {
                   }
                   disabled={landlordEditSaving}
                   rows={3}
-                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
                 />
               </div>
               <div>
@@ -1414,7 +1414,7 @@ function AdminLandlordDetailPage() {
                     setLandlordEditForm((f) => ({ ...f, status: e.target.value }))
                   }
                   disabled={landlordEditSaving}
-                  className="w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
+                  className="w-full rounded-[8px] border border-black/10 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] disabled:opacity-60 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]"
                 >
                   <option value="active">Aktiv</option>
                   <option value="inactive">Inaktiv</option>
