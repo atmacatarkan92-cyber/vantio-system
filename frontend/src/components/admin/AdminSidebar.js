@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { Building2, Home } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 
@@ -31,10 +32,10 @@ function Bereich({ title, children, defaultOpen = true, theme }) {
   const [open, setOpen] = useState(defaultOpen);
   const titleClass =
     theme === "light"
-      ? "text-[9px] font-bold uppercase tracking-[1.5px] text-[#64748b]"
-      : "text-[9px] font-bold uppercase tracking-[1.5px] text-[#4a5680]";
+      ? "text-[9px] font-extrabold uppercase tracking-[1.5px] text-[#475569]"
+      : "text-[9px] font-extrabold uppercase tracking-[1.5px] text-[#8fa3c4]";
   const chevronClass =
-    theme === "light" ? "text-[11px] text-[#64748b]" : "text-[11px] text-[#6b7a9a]";
+    theme === "light" ? "text-[11px] font-semibold text-[#475569]" : "text-[11px] font-semibold text-[#8fa3c4]";
 
   return (
     <div className="mb-2">
@@ -135,11 +136,17 @@ function AdminSidebar() {
           </NavLink>
 
           <NavLink to="/admin/properties" className={navSubLinkClass}>
-            🚪 Liegenschaften
+            <span className="inline-flex items-center gap-1.5">
+              <Building2 className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
+              Liegenschaften
+            </span>
           </NavLink>
 
           <NavLink to="/admin/apartments" className={navSubLinkClass}>
-            🚪 Apartments / Units
+            <span className="inline-flex items-center gap-1.5">
+              <Home className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
+              Apartments / Units
+            </span>
           </NavLink>
 
           <NavLink to="/admin/rooms" className={navSubLinkClass}>
