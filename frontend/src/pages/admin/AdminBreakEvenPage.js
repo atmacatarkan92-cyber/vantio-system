@@ -188,7 +188,7 @@ function AdminBreakEvenPage() {
       const cst =
         row.costs == null || !Number.isFinite(Number(row.costs)) ? null : Number(row.costs);
       return {
-        label: truncateChartLabel(row.addressPrimary || row.id, 22),
+        label: truncateChartLabel(row.addressPrimary || row.id, 15),
         revenue: rev,
         costs: cst,
         revenueMissing: row.revenue == null,
@@ -220,8 +220,8 @@ function AdminBreakEvenPage() {
   }, [portfolioSummary]);
 
   const donutColors = {
-    ok: "#0d9488",
-    risk: "#f43f5e",
+    ok: "#059669",
+    risk: "#f87171",
     na: "#94a3b8",
   };
 
@@ -268,16 +268,16 @@ function AdminBreakEvenPage() {
           Umsatz und Kosten pro Unit; rechts die Einordnung nach derselben Logik wie die Tabelle.
         </p>
         <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)] lg:items-center">
-          <div className="min-h-[260px] w-full min-w-0">
+          <div className="min-h-[200px] w-full min-w-0">
             {rows.length === 0 ? (
               <p className="py-12 text-center text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
                 Keine Units geladen.
               </p>
             ) : (
-              <ResponsiveContainer width="100%" height={260}>
+              <ResponsiveContainer width="100%" height={200}>
                 <BarChart
                   data={barChartData}
-                  margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
+                  margin={{ top: 4, right: 8, left: 0, bottom: 8 }}
                   barCategoryGap="18%"
                 >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.35)" />
@@ -286,9 +286,8 @@ function AdminBreakEvenPage() {
                     tick={{ fontSize: 10, fill: "currentColor" }}
                     className="text-slate-500 dark:text-[#6b7a9a]"
                     interval={0}
-                    angle={-28}
-                    textAnchor="end"
-                    height={56}
+                    tickMargin={6}
+                    height={36}
                   />
                   <YAxis
                     tick={{ fontSize: 11, fill: "currentColor" }}
@@ -320,16 +319,14 @@ function AdminBreakEvenPage() {
                   <Bar
                     dataKey="revenue"
                     name="Umsatz"
-                    fill="#0d9488"
-                    fillOpacity={0.88}
+                    fill="#059669"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={32}
                   />
                   <Bar
                     dataKey="costs"
                     name="Kosten"
-                    fill="#64748b"
-                    fillOpacity={0.55}
+                    fill="#f87171"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={32}
                   />
@@ -347,7 +344,7 @@ function AdminBreakEvenPage() {
               <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Keine Daten</p>
             ) : (
               <>
-                <div className="h-[140px] w-full max-w-[200px]">
+                <div className="h-[120px] w-full max-w-[180px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -356,16 +353,17 @@ function AdminBreakEvenPage() {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        innerRadius={44}
-                        outerRadius={58}
-                        paddingAngle={2}
-                        strokeWidth={0}
+                        innerRadius="48%"
+                        outerRadius="78%"
+                        startAngle={90}
+                        endAngle={-270}
+                        paddingAngle={donutData.length > 1 ? 2 : 0}
+                        stroke="none"
                       >
-                        {donutData.map((entry) => (
+                        {donutData.map((entry, index) => (
                           <Cell
-                            key={entry.key}
-                            fill={donutColors[entry.key] || "#94a3b8"}
-                            fillOpacity={entry.key === "na" ? 0.65 : 0.9}
+                            key={`${entry.key}-${index}`}
+                            fill={donutColors[entry.key] ?? "#94a3b8"}
                           />
                         ))}
                       </Pie>
