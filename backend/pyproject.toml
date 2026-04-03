@@ -1,0 +1,17 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+# Only enforce critical checks for now
+select = ["F", "I"]
+
+# Avoid noise from legacy code
+ignore = []
+
+# Exclude migrations and generated code
+exclude = [
+    "alembic",
+]
+
+[tool.ruff.format]
+quote-style = "double"
