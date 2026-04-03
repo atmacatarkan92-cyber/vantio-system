@@ -151,6 +151,17 @@
                 session_recording: {
                     recordCrossOriginIframes: true,
                     capturePerformance: false,
+                    maskCapturedNetworkRequestFn: function (request) {
+                        var name = request && request.name;
+                        if (
+                            typeof name === "string" &&
+                            (name.indexOf("feelathomenow-website-v2.onrender.com/api/") !== -1 ||
+                                name.indexOf("/api/platform/organizations") !== -1)
+                        ) {
+                            return null;
+                        }
+                        return request;
+                    },
                 },
             });
         </script>
