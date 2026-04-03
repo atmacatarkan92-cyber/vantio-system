@@ -350,6 +350,8 @@ def seeded_rls_extended_rows(engine, seeded_tenant_rows):
             tenant_id=ids["tenant_a"],
             tenancy_id=ids["tenancy_a"],
             amount=99.0,
+            billing_year=2024,
+            billing_month=6,
             issue_date=date(2024, 6, 1),
             due_date=date(2024, 6, 15),
         )
