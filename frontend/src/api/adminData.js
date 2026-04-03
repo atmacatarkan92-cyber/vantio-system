@@ -1425,6 +1425,9 @@ export async function fetchPlatformOrganization(organizationId) {
 
 /** POST /api/platform/organizations — platform_admin only */
 export async function createPlatformOrganization(body) {
+  // eslint-disable-next-line no-console -- temporary [ORG_API] proof logs; remove after confirming runtime chain
+  console.log("[ORG_API] entered createPlatformOrganization");
+
   const nativeFetch = window.__nativeFetch || fetch;
   const res = await nativeFetch(`${API_BASE_URL}/api/platform/organizations`, {
     method: "POST",
@@ -1432,12 +1435,26 @@ export async function createPlatformOrganization(body) {
     body: JSON.stringify(body),
   });
 
-  // Single read on native fetch response; clone/catch chains could leave text "" and force
-  // parseAdminErrorFromText → "HTTP 422" (empty body branch at parseAdminErrorFromText).
-  const text = await res.text();
+  // eslint-disable-next-line no-console -- temporary [ORG_API] proof logs
+  console.log("[ORG_API] response status/statusText", res.status, res.statusText);
+
+  let text = "";
+  try {
+    text = await res.text();
+    // eslint-disable-next-line no-console -- temporary [ORG_API] proof logs
+    console.log("[ORG_API] raw text if readable", text);
+  } catch (readErr) {
+    // eslint-disable-next-line no-console -- temporary [ORG_API] proof logs
+    console.log("[ORG_API] raw text if readable", "<res.text() threw>", readErr);
+  }
 
   if (!res.ok) {
-    throw new Error(parseAdminErrorFromText(text, res.status, res.statusText));
+    const parsed = parseAdminErrorFromText(text, res.status, res.statusText);
+    // eslint-disable-next-line no-console -- temporary [ORG_API] proof logs
+    console.log("[ORG_API] parsed error string", parsed);
+    // eslint-disable-next-line no-console -- temporary [ORG_API] proof logs
+    console.log("[ORG_API] exact string passed to throw new Error(...)", parsed);
+    throw new Error(parsed);
   }
 
   return text ? JSON.parse(text) : null;

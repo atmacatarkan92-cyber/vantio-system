@@ -42,6 +42,14 @@ function PlatformOrganizationsPage() {
     load(true);
   }, []);
 
+  useEffect(() => {
+    if (!error) return;
+    // eslint-disable-next-line no-console -- temporary [ORG_PAGE] proof logs; remove after confirming runtime chain
+    console.log("[ORG_PAGE] current error state before render", error);
+    // eslint-disable-next-line no-console -- temporary [ORG_PAGE] proof logs
+    console.log("[ORG_PAGE] banner render value", error);
+  }, [error]);
+
   const openCreate = () => {
     setError("");
     setForm({
@@ -83,13 +91,25 @@ function PlatformOrganizationsPage() {
       admin_password: form.create_admin ? String(form.admin_password) : null,
     };
 
+    // eslint-disable-next-line no-console -- temporary [ORG_PAGE] proof logs; remove after confirming runtime chain
+    console.log("[ORG_PAGE] submit clicked");
+
     createPlatformOrganization(body)
       .then(() => {
         setFormOpen(false);
         toast.success("Organisation erstellt.");
         load(false);
       })
-      .catch((err) => setError(err.message || "Speichern fehlgeschlagen."))
+      .catch((err) => {
+        // eslint-disable-next-line no-console -- temporary [ORG_PAGE] proof logs
+        console.log("[ORG_PAGE] caught err", err);
+        // eslint-disable-next-line no-console -- temporary [ORG_PAGE] proof logs
+        console.log("[ORG_PAGE] caught err.message", err?.message);
+        const next = err?.message || "Speichern fehlgeschlagen.";
+        // eslint-disable-next-line no-console -- temporary [ORG_PAGE] proof logs
+        console.log("[ORG_PAGE] value passed to setError(...)", next);
+        setError(next);
+      })
       .finally(() => setSaving(false));
   };
 
