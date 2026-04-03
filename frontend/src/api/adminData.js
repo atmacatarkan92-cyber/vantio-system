@@ -1427,36 +1427,24 @@ export async function createPlatformOrganization(body) {
     headers: getApiHeaders(),
     body: JSON.stringify(body),
   });
-  // Read one branch of the body tee: Sentry's fetch instrumentation may read `res`; using a
-  // synchronous clone then reading only the clone avoids "body stream already read" on the same stream.
-  let bodyRes = res;
-  try {
-    if (typeof res.clone === "function" && !res.bodyUsed) {
-      bodyRes = res.clone();
-    }
-  } catch (_) {
-    bodyRes = res;
-  }
+
   let text;
+
   try {
-    text = await bodyRes.text();
-  } catch (e) {
-    const m = e && e.message;
-    if (typeof m === "string" && m.includes("body stream already read")) {
-      throw new Error(
-        `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`
-      );
+    text = await res.clone().text();
+  } catch {
+    try {
+      text = await res.text();
+    } catch {
+      text = "";
     }
-    throw new Error(String(e?.message ?? e));
   }
+
   if (!res.ok) {
     throw new Error(parseAdminErrorFromText(text, res.status, res.statusText));
   }
-  try {
-    return JSON.parse(text);
-  } catch (_) {
-    throw new Error("Ungültige JSON-Antwort.");
-  }
+
+  return text ? JSON.parse(text) : null;
 }
 
 /** POST /api/platform/impersonate/{organizationId} — platform_admin only; returns new access_token (support mode). */
