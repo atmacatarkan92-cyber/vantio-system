@@ -62,9 +62,19 @@ function parseAdminErrorBodyText(text) {
 }
 
 async function parseAdminErrorResponse(res) {
+  // Read a clone so the body stream is still intact if something else (e.g. tracing, devtools)
+  // already consumed `res`; Network tab still shows the wire body while JS sees bodyUsed / empty read.
+  let bodyRes = res;
+  try {
+    if (typeof res.clone === "function" && !res.bodyUsed) {
+      bodyRes = res.clone();
+    }
+  } catch (_) {
+    bodyRes = res;
+  }
   let text;
   try {
-    text = await res.text();
+    text = await bodyRes.text();
   } catch (e) {
     const m = e && e.message;
     if (typeof m === "string" && m.includes("body stream already read")) {
