@@ -60,22 +60,46 @@ function PlatformSidebar() {
   return (
     <div className={sidebarShell}>
       <div className="mb-6 shrink-0">
-        <h2 className="m-0 text-[20px] font-extrabold tracking-[-0.02em]">
+        <h2 className="m-0 text-[18px] font-extrabold leading-tight tracking-[-0.02em]">
           <span className={logoLight}>Van</span>
           <span className="text-[#7aaeff]">tio</span>
+          <span className={`ml-1.5 text-[13px] font-bold ${logoLight}`}>Platform</span>
         </h2>
-        <p
-          className={
-            theme === "light"
-              ? "mt-2 text-[10px] font-semibold uppercase tracking-wide text-[#64748b]"
-              : "mt-2 text-[10px] font-semibold uppercase tracking-wide text-[#6b7a9a]"
-          }
-        >
-          Plattform
-        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span
+            className={
+              theme === "light"
+                ? "inline-flex rounded-md border border-blue-500/20 bg-blue-500/[0.08] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-800"
+                : "inline-flex rounded-md border border-blue-400/20 bg-blue-500/[0.12] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#93b4ff]"
+            }
+          >
+            Superadmin
+          </span>
+          <p
+            className={
+              theme === "light"
+                ? "m-0 text-[10px] font-semibold uppercase tracking-wide text-[#64748b]"
+                : "m-0 text-[10px] font-semibold uppercase tracking-wide text-[#6b7a9a]"
+            }
+          >
+            Control Plane
+          </p>
+        </div>
       </div>
 
       <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
+        <p
+          className={
+            theme === "light"
+              ? "mb-1 px-1 text-[10px] font-black uppercase tracking-[1.2px] text-[#1e293b]"
+              : "mb-1 px-1 text-[10px] font-black uppercase tracking-[1.2px] text-[#cbd5e1]"
+          }
+        >
+          Navigation
+        </p>
+        <NavLink to="/platform" end className={navLinkClass}>
+          📊 Übersicht
+        </NavLink>
         <NavLink to="/platform/organizations" className={navLinkClass}>
           🏢 Organisationen
         </NavLink>

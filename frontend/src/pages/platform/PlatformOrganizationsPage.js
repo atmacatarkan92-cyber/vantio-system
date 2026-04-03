@@ -125,7 +125,9 @@ function PlatformOrganizationsPage() {
   return (
     <div className="grid min-h-screen gap-6 bg-[#f8fafc] px-4 py-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
       <div>
-        <div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[#fb923c]">Vantio</div>
+        <div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[#fb923c]">
+          Vantio Platform
+        </div>
         <h2 className="text-[22px] font-bold">Organisationen</h2>
         <p className="mt-2 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
           Mandantenübersicht (Plattform-Admin).

@@ -53,7 +53,7 @@ function AdminLoginPage() {
         login(token);
         const me = await getMe();
         if (me?.role === "platform_admin") {
-          navigate("/platform/organizations", { replace: true });
+          navigate("/platform", { replace: true });
         } else {
           navigate("/admin/dashboard", { replace: true });
         }

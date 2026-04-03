@@ -35,6 +35,7 @@ import AdminOwnerDetailPage from "../pages/admin/AdminOwnerDetailPage";
 import AdminListingsPage from "../pages/admin/AdminListingsPage";
 import AdminPropertiesPage from "../pages/admin/AdminPropertiesPage";
 import AdminUsersPage from "../pages/admin/AdminUsersPage";
+import PlatformDashboardPage from "../pages/platform/PlatformDashboardPage";
 import PlatformOrganizationsPage from "../pages/platform/PlatformOrganizationsPage";
 import AdminLoginPage from "../pages/admin/AdminLoginPage";
 import TenantLayout from "../components/tenant/TenantLayout";
@@ -143,7 +144,7 @@ export default function AppRouter() {
             </Route>
 
             <Route path="/platform" element={<PlatformLayout />}>
-              <Route index element={<Navigate to="/platform/organizations" replace />} />
+              <Route index element={<PlatformDashboardPage />} />
               <Route path="organizations" element={<PlatformOrganizationsPage />} />
             </Route>
 

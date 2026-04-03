@@ -47,7 +47,7 @@ function AdminLayout() {
   }
 
   if (user && user.role === "platform_admin") {
-    return <Navigate to="/platform/organizations" replace />;
+    return <Navigate to="/platform" replace />;
   }
 
   if (!isAuthenticated) {
