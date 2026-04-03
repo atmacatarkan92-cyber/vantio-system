@@ -49,6 +49,7 @@ export function AuthProvider({ children }) {
     } catch {
       setToken(null);
       setUser(null);
+      clearAccessToken();
     } finally {
       setLoading(false);
     }
@@ -105,6 +106,7 @@ export function AuthProvider({ children }) {
     } catch {
       setToken(null);
       setUser(null);
+      clearAccessToken();
     } finally {
       setLoading(false);
     }
