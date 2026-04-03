@@ -6,6 +6,8 @@ import App from "@/App";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
+window.__nativeFetch = window.fetch.bind(window);
+
 if (process.env.REACT_APP_SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.REACT_APP_SENTRY_DSN,

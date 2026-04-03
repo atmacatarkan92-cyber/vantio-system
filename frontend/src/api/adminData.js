@@ -1422,7 +1422,8 @@ export async function fetchPlatformOrganization(organizationId) {
 
 /** POST /api/platform/organizations — platform_admin only */
 export async function createPlatformOrganization(body) {
-  const res = await fetch(`${API_BASE_URL}/api/platform/organizations`, {
+  const nativeFetch = window.__nativeFetch || fetch;
+  const res = await nativeFetch(`${API_BASE_URL}/api/platform/organizations`, {
     method: "POST",
     headers: getApiHeaders(),
     body: JSON.stringify(body),
