@@ -22,9 +22,6 @@
         Learn how to configure a non-root public URL by running `npm run build`.
         -->
         <title>Emergent | Fullstack App</title>
-        <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
-        <!-- TEMP: Emergent runtime disabled — was consuming fetch Response bodies before app code; re-enable if needed after fixing API reads. -->
-        <!-- <script src="https://assets.emergent.sh/scripts/emergent-main.js"></script> -->
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
@@ -85,8 +82,6 @@
             </p>
         </a>
         <script>
-            /* TEMP PROOF: entire PostHog block disabled — re-enable after deploy test (duplicate-email 422 / body stream). */
-            if (false) {
             !(function (t, e) {
                 var o, n, p, r;
                 e.__SV ||
@@ -169,7 +164,6 @@
                     },
                 },
             });
-            }
         </script>
     </body>
 </html>
