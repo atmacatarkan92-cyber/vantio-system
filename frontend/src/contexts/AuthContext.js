@@ -1,7 +1,7 @@
 /**
  * Auth state for admin: token (in-memory), user, isAuthenticated, loading.
  * Phase 2: Session restore via POST /auth/refresh (HttpOnly cookie); no primary use of localStorage.
- * Only admin and manager roles are considered authenticated for the admin area.
+ * Admin area: admin, manager, and platform_admin (platform_admin for Plattform routes only).
  */
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { getMe, refresh, logout as apiLogout } from "../api/auth";
@@ -9,7 +9,7 @@ import { getAccessToken } from "../authStore";
 
 const AuthContext = createContext(null);
 
-const ALLOWED_ADMIN_ROLES = ["admin", "manager"];
+const ALLOWED_ADMIN_ROLES = ["admin", "manager", "platform_admin"];
 const TENANT_ROLE = "tenant";
 const LANDLORD_ROLE = "landlord";
 

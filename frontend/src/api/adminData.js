@@ -1349,3 +1349,28 @@ export async function deleteAdminOwnerDocument(documentId) {
   }
   return res.json();
 }
+
+/** GET /api/platform/organizations — platform_admin only */
+export async function fetchPlatformOrganizations() {
+  const res = await fetch(`${API_BASE_URL}/api/platform/organizations`, {
+    headers: getApiHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+/** POST /api/platform/organizations — platform_admin only */
+export async function createPlatformOrganization(body) {
+  const res = await fetch(`${API_BASE_URL}/api/platform/organizations`, {
+    method: "POST",
+    headers: getApiHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(await parseAdminErrorResponse(res));
+  }
+  return res.json();
+}

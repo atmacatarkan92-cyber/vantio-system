@@ -133,6 +133,12 @@ function AdminSidebar() {
             📊 Unternehmensübersicht
           </NavLink>
 
+          {user?.role === "platform_admin" ? (
+            <NavLink to="/admin/organizations" className={navSubLinkClass}>
+              🏢 Organisationen
+            </NavLink>
+          ) : null}
+
           <NavLink to="/admin/operations" className={navSubLinkClass}>
             🏠 Co-Living-Dashboard
           </NavLink>

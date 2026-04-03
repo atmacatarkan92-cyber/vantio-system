@@ -1,0 +1,310 @@
+import React, { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
+import { toast } from "sonner";
+import { useAuth } from "../../contexts/AuthContext";
+import { createPlatformOrganization, fetchPlatformOrganizations } from "../../api/adminData";
+
+const inputClass =
+  "w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2.5 text-[14px] text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]";
+
+function formatCreatedAt(raw) {
+  if (raw == null || raw === "") return "—";
+  try {
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleString("de-CH", { dateStyle: "short", timeStyle: "short" });
+  } catch {
+    return "—";
+  }
+}
+
+function AdminOrganizationsPage() {
+  const { user, loading: authLoading } = useAuth();
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    organization_name: "",
+    organization_slug: "",
+    create_admin: false,
+    admin_email: "",
+    admin_password: "",
+  });
+
+  const load = (showSpinner = true) => {
+    if (showSpinner) setLoading(true);
+    setError("");
+    fetchPlatformOrganizations()
+      .then((data) => setItems(Array.isArray(data) ? data : []))
+      .catch((e) => {
+        setError(e.message || "Fehler beim Laden.");
+        setItems([]);
+      })
+      .finally(() => {
+        if (showSpinner) setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    load(true);
+  }, []);
+
+  const openCreate = () => {
+    setError("");
+    setForm({
+      organization_name: "",
+      organization_slug: "",
+      create_admin: false,
+      admin_email: "",
+      admin_password: "",
+    });
+    setFormOpen(true);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.organization_name.trim()) {
+      setError("Organisationsname ist erforderlich.");
+      return;
+    }
+    if (form.create_admin) {
+      const em = form.admin_email.trim();
+      const pw = form.admin_password;
+      if (!em) {
+        setError("Admin-E-Mail ist erforderlich wenn Admin angelegt wird.");
+        return;
+      }
+      if (!pw || !String(pw).trim()) {
+        setError("Admin-Passwort ist erforderlich wenn Admin angelegt wird.");
+        return;
+      }
+    }
+
+    setSaving(true);
+    setError("");
+    const body = {
+      organization_name: form.organization_name.trim(),
+      organization_slug: form.organization_slug.trim() || null,
+      create_admin: !!form.create_admin,
+      admin_email: form.create_admin ? form.admin_email.trim() : null,
+      admin_password: form.create_admin ? String(form.admin_password) : null,
+    };
+
+    createPlatformOrganization(body)
+      .then(() => {
+        setFormOpen(false);
+        toast.success("Organisation erstellt.");
+        load(false);
+      })
+      .catch((err) => setError(err.message || "Speichern fehlgeschlagen."))
+      .finally(() => setSaving(false));
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-[40vh] bg-[#f8fafc] px-4 py-8 text-[#64748b] [color-scheme:light] dark:bg-[#07090f] dark:text-[#6b7a9a] dark:[color-scheme:dark]">
+        Lade …
+      </div>
+    );
+  }
+
+  if (!user || user.role !== "platform_admin") {
+    return <Navigate to="/admin" replace />;
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-[40vh] bg-[#f8fafc] px-4 py-8 text-[#64748b] [color-scheme:light] dark:bg-[#07090f] dark:text-[#6b7a9a] dark:[color-scheme:dark]">
+        Lade Organisationen …
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid min-h-screen gap-6 bg-[#f8fafc] px-4 py-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
+      <div>
+        <div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[#fb923c]">Vantio</div>
+        <h2 className="text-[22px] font-bold">Organisationen</h2>
+        <p className="mt-2 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
+          Mandantenübersicht (Plattform-Admin).
+        </p>
+      </div>
+
+      {error && (
+        <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[14px] text-[#f87171]">
+          {error}
+        </div>
+      )}
+
+      <div className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "16px",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+          }}
+        >
+          <h3 className="text-[16px] font-bold text-[#0f172a] dark:text-[#eef2ff]">Alle Organisationen</h3>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="h-[44px] cursor-pointer rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-[18px] text-[14px] font-semibold text-white hover:opacity-95"
+          >
+            Neue Organisation
+          </button>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-[16px] font-bold text-[#0f172a] dark:text-[#eef2ff]">Übersicht</h3>
+          <div className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">{items.length} Einträge</div>
+        </div>
+
+        {items.length === 0 ? (
+          <p className="text-[#64748b] dark:text-[#6b7a9a]">Keine Organisationen.</p>
+        ) : (
+          <table className="w-full border-collapse text-[14px]">
+            <thead>
+              <tr className="border-b border-black/10 bg-slate-100 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:border-white/[0.05] dark:bg-[#111520] dark:text-[#6b7a9a]">
+                <th className="px-3 py-3">Name</th>
+                <th className="px-3 py-3">Slug</th>
+                <th className="px-3 py-3">Erstellt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((row) => (
+                <tr
+                  key={row.id}
+                  className="border-b border-black/5 dark:border-white/[0.04]"
+                >
+                  <td className="px-3 py-3 font-medium text-[#0f172a] dark:text-[#eef2ff]">
+                    {row.name || "—"}
+                  </td>
+                  <td className="px-3 py-3 text-[#64748b] dark:text-[#94a3b8]">
+                    {row.slug != null && row.slug !== "" ? row.slug : "—"}
+                  </td>
+                  <td className="px-3 py-3 text-[#64748b] dark:text-[#94a3b8]">
+                    {formatCreatedAt(row.created_at)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {formOpen && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => !saving && setFormOpen(false)}
+        >
+          <div
+            className="w-full max-w-[440px] rounded-[14px] border border-black/10 bg-white p-6 [color-scheme:light] dark:border-white/[0.07] dark:bg-[#141824] dark:[color-scheme:dark]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="mb-4 text-[18px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
+              Neue Organisation
+            </h3>
+            <form onSubmit={handleSubmit} className="grid gap-3.5">
+              <div>
+                <label className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
+                  Organisationsname *
+                </label>
+                <input
+                  type="text"
+                  value={form.organization_name}
+                  onChange={(e) => setForm((f) => ({ ...f, organization_name: e.target.value }))}
+                  required
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
+                  Slug (optional)
+                </label>
+                <input
+                  type="text"
+                  value={form.organization_slug}
+                  onChange={(e) => setForm((f) => ({ ...f, organization_slug: e.target.value }))}
+                  className={inputClass}
+                  placeholder="z. B. acme-corp"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="org-create-admin"
+                  type="checkbox"
+                  checked={form.create_admin}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      create_admin: e.target.checked,
+                      admin_email: e.target.checked ? f.admin_email : "",
+                      admin_password: e.target.checked ? f.admin_password : "",
+                    }))
+                  }
+                  className="h-4 w-4 rounded border-black/20 dark:border-white/20"
+                />
+                <label htmlFor="org-create-admin" className="text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
+                  Ersten Org-Admin anlegen
+                </label>
+              </div>
+              {form.create_admin ? (
+                <>
+                  <div>
+                    <label className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
+                      Admin-E-Mail *
+                    </label>
+                    <input
+                      type="email"
+                      autoComplete="off"
+                      value={form.admin_email}
+                      onChange={(e) => setForm((f) => ({ ...f, admin_email: e.target.value }))}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
+                      Admin-Passwort *
+                    </label>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      value={form.admin_password}
+                      onChange={(e) => setForm((f) => ({ ...f, admin_password: e.target.value }))}
+                      className={inputClass}
+                    />
+                  </div>
+                </>
+              ) : null}
+              <div className="mt-2 flex gap-2.5">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 cursor-pointer rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] py-3 font-semibold text-white hover:opacity-95 disabled:cursor-wait disabled:opacity-70"
+                >
+                  {saving ? "Speichern…" : "Erstellen"}
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => setFormOpen(false)}
+                  className="rounded-[8px] border border-black/10 bg-transparent px-4 py-3 font-semibold text-[#64748b] hover:bg-black/[0.03] dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default AdminOrganizationsPage;

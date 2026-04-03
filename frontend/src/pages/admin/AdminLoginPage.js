@@ -66,7 +66,7 @@ function AdminLoginPage() {
           Admin Anmeldung
         </h2>
         <p style={{ color: "#64748B", margin: "0 0 24px 0", fontSize: "14px" }}>
-          E-Mail und Passwort eingeben. Nur Rollen Admin und Manager haben Zugang.
+          E-Mail und Passwort eingeben. Zugang für Admin, Manager und Plattform-Admin.
         </p>
         <form data-testid="admin-login-form" onSubmit={handleSubmit} style={{ display: "grid", gap: "16px" }}>
           <div>

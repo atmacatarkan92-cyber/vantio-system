@@ -34,6 +34,7 @@ import AdminOwnerDetailPage from "../pages/admin/AdminOwnerDetailPage";
 import AdminListingsPage from "../pages/admin/AdminListingsPage";
 import AdminPropertiesPage from "../pages/admin/AdminPropertiesPage";
 import AdminUsersPage from "../pages/admin/AdminUsersPage";
+import AdminOrganizationsPage from "../pages/admin/AdminOrganizationsPage";
 import AdminLoginPage from "../pages/admin/AdminLoginPage";
 import TenantLayout from "../components/tenant/TenantLayout";
 import TenantLoginPage from "../pages/tenant/TenantLoginPage";
@@ -108,6 +109,7 @@ export default function AppRouter() {
               <Route path="landlords/:id" element={<AdminLandlordDetailPage />} />
               <Route path="landlords" element={<AdminLandlordsPage />} />
             <Route path="users" element={<AdminUsersPage />} />
+              <Route path="organizations" element={<AdminOrganizationsPage />} />
               <Route path="properties" element={<AdminPropertiesPage />} />
               <Route path="bewirtschafter/:id" element={<AdminPropertyManagerDetailPage />} />
               <Route path="bewirtschafter" element={<AdminPropertyManagersPage />} />
