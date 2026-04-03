@@ -13,7 +13,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 # Bump when adding migrations; override with EXPECTED_ALEMBIC_REVISION for staged rollouts.
-_DEFAULT_EXPECTED_REVISION = "061_invoice_integrity_hardening"
+_DEFAULT_EXPECTED_REVISION = "062_organization_slug"
 
 CRITICAL_TABLES: tuple[str, ...] = (
     "password_reset_tokens",
