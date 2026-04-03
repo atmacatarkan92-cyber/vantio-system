@@ -1795,9 +1795,6 @@ export default function AdminTenantDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
-      <div style={{ background: "red", color: "white", padding: 8, fontWeight: "bold" }}>
-        TEST INLINE FLOW BUILD
-      </div>
       <div className={pageWrapClass}>
         <header className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-black/10 bg-[#f8fafc] pb-5 dark:border-white/[0.07] dark:bg-[#07090f]">
           <div className="flex min-w-0 flex-wrap items-start gap-3">
