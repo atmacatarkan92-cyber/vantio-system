@@ -95,9 +95,18 @@ function PlatformOrganizationsPage() {
     console.log("[ORG_PAGE] submit clicked");
 
     createPlatformOrganization(body)
-      .then(() => {
+      .then((data) => {
         setFormOpen(false);
         toast.success("Organisation erstellt.");
+        if (data?.organization?.id) {
+          const o = data.organization;
+          setItems((prev) => {
+            if (prev.some((row) => row.id === o.id)) {
+              return prev.map((row) => (row.id === o.id ? { ...row, ...o } : row));
+            }
+            return [o, ...prev];
+          });
+        }
         load(false);
       })
       .catch((err) => {

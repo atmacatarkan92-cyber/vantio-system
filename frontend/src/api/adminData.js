@@ -1403,6 +1403,7 @@ export async function deleteAdminOwnerDocument(documentId) {
 export async function fetchPlatformOrganizations() {
   const res = await fetch(`${API_BASE_URL}/api/platform/organizations`, {
     headers: getApiHeaders(),
+    cache: "no-store",
   });
   if (!res.ok) {
     throw new Error(await parseAdminErrorResponse(res));
