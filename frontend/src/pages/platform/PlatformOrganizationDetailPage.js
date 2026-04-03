@@ -2,16 +2,25 @@ import React, { useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { fetchPlatformOrganization } from "../../api/adminData";
+import { formatPlatformDateTime } from "../../utils/platformDateTime";
 
-function formatCreatedAt(raw) {
-  if (raw == null || raw === "") return "—";
-  try {
-    const d = new Date(raw);
-    if (Number.isNaN(d.getTime())) return "—";
-    return d.toLocaleString("de-CH", { dateStyle: "short", timeStyle: "short" });
-  } catch {
-    return "—";
-  }
+function roleSortKey(role) {
+  const r = String(role || "").toLowerCase();
+  if (r === "admin") return 0;
+  if (r === "manager") return 1;
+  return 2;
+}
+
+/** Display order: admin → manager → others; within group by created_at ascending. */
+function sortUsersForDisplay(users) {
+  return [...users].sort((a, b) => {
+    const ra = roleSortKey(a.role);
+    const rb = roleSortKey(b.role);
+    if (ra !== rb) return ra - rb;
+    const ta = new Date(a.created_at || 0).getTime();
+    const tb = new Date(b.created_at || 0).getTime();
+    return ta - tb;
+  });
 }
 
 function isOrgAdminRole(role) {
@@ -64,7 +73,7 @@ function PlatformOrganizationDetailPage() {
   }
 
   const name = org?.name || "—";
-  const usersList = Array.isArray(org?.users) ? org.users : null;
+  const usersList = sortUsersForDisplay(Array.isArray(org?.users) ? org.users : []);
 
   return (
     <div className="grid min-h-screen gap-6 bg-[#f8fafc] px-4 py-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
@@ -137,18 +146,20 @@ function PlatformOrganizationDetailPage() {
                 <dt className="text-[10px] font-bold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">
                   Erstellt
                 </dt>
-                <dd className="mt-1 text-[#0f172a] dark:text-[#eef2ff]">{formatCreatedAt(org.created_at)}</dd>
+                <dd className="mt-1 text-[#0f172a] dark:text-[#eef2ff]">
+                  {formatPlatformDateTime(org.created_at)}
+                </dd>
               </div>
             </dl>
           </div>
 
           <div className="overflow-x-auto rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
             <h2 className="mb-4 text-[16px] font-bold text-[#0f172a] dark:text-[#eef2ff]">Benutzer</h2>
-            {usersList && usersList.length > 0 ? (
+            {usersList.length > 0 ? (
               <table className="w-full border-collapse text-[14px]">
                 <thead>
                   <tr className="border-b border-black/10 bg-slate-100 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:border-white/[0.05] dark:bg-[#111520] dark:text-[#6b7a9a]">
-                    <th className="px-3 py-3">Name / E-Mail</th>
+                    <th className="px-3 py-3">E-Mail</th>
                     <th className="px-3 py-3">Rolle</th>
                     <th className="px-3 py-3">Status</th>
                     <th className="px-3 py-3">Erstellt</th>
@@ -156,27 +167,42 @@ function PlatformOrganizationDetailPage() {
                 </thead>
                 <tbody>
                   {usersList.map((u) => {
-                    const label = [u.full_name, u.email].filter(Boolean).join(" · ") || u.email || "—";
+                    const email = u.email || "—";
                     const admin = isOrgAdminRole(u.role);
+                    const active =
+                      u.is_active === undefined || u.is_active === null ? true : !!u.is_active;
                     return (
                       <tr
                         key={u.id || u.email}
                         className="border-b border-black/5 dark:border-white/[0.04]"
                       >
-                        <td className="px-3 py-3 font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                          {label}
-                          {admin ? (
-                            <span className="ml-2 inline-flex rounded-md border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-200">
-                              Admin
-                            </span>
-                          ) : null}
+                        <td className="px-3 py-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium text-[#0f172a] dark:text-[#eef2ff]">{email}</span>
+                            {admin ? (
+                              <span
+                                className="inline-flex shrink-0 items-center rounded-full border border-blue-500/35 bg-blue-500/[0.12] px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-blue-800 shadow-sm dark:border-blue-400/30 dark:bg-blue-500/[0.18] dark:text-[#a8c4ff]"
+                                title="Organisations-Administrator"
+                              >
+                                Admin
+                              </span>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="px-3 py-3 text-[#64748b] dark:text-[#94a3b8]">{u.role ?? "—"}</td>
-                        <td className="px-3 py-3 text-[#64748b] dark:text-[#94a3b8]">
-                          {u.is_active === false ? "Inaktiv" : "Aktiv"}
+                        <td className="px-3 py-3">
+                          <span
+                            className={
+                              active
+                                ? "inline-flex rounded-md border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-emerald-800 dark:border-emerald-400/25 dark:bg-emerald-500/12 dark:text-emerald-200"
+                                : "inline-flex rounded-md border border-slate-400/25 bg-slate-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-600 dark:border-slate-500/30 dark:bg-slate-500/15 dark:text-slate-300"
+                            }
+                          >
+                            {active ? "Aktiv" : "Inaktiv"}
+                          </span>
                         </td>
                         <td className="px-3 py-3 text-[#64748b] dark:text-[#94a3b8]">
-                          {formatCreatedAt(u.created_at)}
+                          {formatPlatformDateTime(u.created_at)}
                         </td>
                       </tr>
                     );
@@ -184,9 +210,7 @@ function PlatformOrganizationDetailPage() {
                 </tbody>
               </table>
             ) : (
-              <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
-                User-Daten werden später ergänzt
-              </p>
+              <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Keine Benutzer vorhanden</p>
             )}
           </div>
         </>

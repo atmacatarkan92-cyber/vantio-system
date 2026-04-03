@@ -46,6 +46,45 @@ def _organization_to_list_item(org: Organization) -> OrganizationListItem:
     )
 
 
+def _user_role_str(user: User) -> str:
+    r = getattr(user, "role", None)
+    if r is None:
+        return ""
+    return getattr(r, "value", r) if not isinstance(r, str) else r
+
+
+class PlatformOrgUserItem(BaseModel):
+    """Read-only org user row for platform detail (no credentials)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    email: str
+    role: str
+    created_at: Optional[datetime] = None
+    is_active: bool = True
+
+
+def _user_to_platform_org_item(u: User) -> PlatformOrgUserItem:
+    return PlatformOrgUserItem(
+        id=str(u.id),
+        email=u.email,
+        role=_user_role_str(u),
+        created_at=getattr(u, "created_at", None),
+        is_active=bool(getattr(u, "is_active", True)),
+    )
+
+
+class OrganizationDetailResponse(BaseModel):
+    """GET /organizations/{id} — org metadata plus users in that org."""
+
+    id: str
+    name: str
+    slug: Optional[str] = None
+    created_at: Optional[datetime] = None
+    users: list[PlatformOrgUserItem]
+
+
 class PlatformCreateOrganizationBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -82,16 +121,27 @@ def list_organizations(
     return [_organization_to_list_item(o) for o in rows]
 
 
-@router.get("/organizations/{organization_id}", response_model=OrganizationListItem)
+@router.get("/organizations/{organization_id}", response_model=OrganizationDetailResponse)
 def get_organization(
     organization_id: str,
     _: User = Depends(require_platform_admin),
     session: Session = Depends(get_db_session),
-) -> OrganizationListItem:
+) -> OrganizationDetailResponse:
     org = session.get(Organization, organization_id)
     if org is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
-    return _organization_to_list_item(org)
+    org_id_str = str(org.id)
+    user_rows = session.exec(
+        select(User).where(User.organization_id == org_id_str).order_by(User.created_at)
+    ).all()
+    users = [_user_to_platform_org_item(u) for u in user_rows]
+    return OrganizationDetailResponse(
+        id=org_id_str,
+        name=org.name,
+        slug=org.slug,
+        created_at=getattr(org, "created_at", None),
+        users=users,
+    )
 
 
 @router.post(
@@ -99,13 +149,6 @@ def get_organization(
     response_model=PlatformCreateOrganizationResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def _user_role_str(user: User) -> str:
-    r = getattr(user, "role", None)
-    if r is None:
-        return ""
-    return getattr(r, "value", r) if not isinstance(r, str) else r
-
-
 def create_organization(
     body: PlatformCreateOrganizationBody,
     current_user: User = Depends(require_platform_admin),

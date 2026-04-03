@@ -3,20 +3,10 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "../../contexts/AuthContext";
 import { createPlatformOrganization, fetchPlatformOrganizations } from "../../api/adminData";
+import { formatPlatformDateTime } from "../../utils/platformDateTime";
 
 const inputClass =
   "w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 py-2.5 text-[14px] text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]";
-
-function formatCreatedAt(raw) {
-  if (raw == null || raw === "") return "—";
-  try {
-    const d = new Date(raw);
-    if (Number.isNaN(d.getTime())) return "—";
-    return d.toLocaleString("de-CH", { dateStyle: "short", timeStyle: "short" });
-  } catch {
-    return "—";
-  }
-}
 
 function PlatformOrganizationsPage() {
   const navigate = useNavigate();
@@ -202,7 +192,7 @@ function PlatformOrganizationsPage() {
                     {row.slug != null && row.slug !== "" ? row.slug : "—"}
                   </td>
                   <td className="px-3 py-3 text-[#64748b] dark:text-[#94a3b8]">
-                    {formatCreatedAt(row.created_at)}
+                    {formatPlatformDateTime(row.created_at)}
                   </td>
                   <td className="px-3 py-3 text-right">
                     <button

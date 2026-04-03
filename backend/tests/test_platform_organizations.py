@@ -46,6 +46,25 @@ def test_organization_to_list_item_serializes_uuid_id_as_str():
     assert isinstance(item.id, str)
 
 
+def test_user_to_platform_org_item_serializes_uuid_id_as_str():
+    import uuid
+    from types import SimpleNamespace
+
+    from app.api.v1.routes_platform import _user_to_platform_org_item
+
+    uid = uuid.uuid4()
+    u = SimpleNamespace(
+        id=uid,
+        email="e@example.com",
+        role=UserRole.manager,
+        created_at=None,
+        is_active=True,
+    )
+    item = _user_to_platform_org_item(u)  # type: ignore[arg-type]
+    assert item.id == str(uid)
+    assert isinstance(item.id, str)
+
+
 def test_onboarding_slug_helpers():
     from app.services.organization_onboarding_service import normalize_slug, validate_slug_format
 
@@ -60,12 +79,14 @@ def test_onboarding_slug_helpers():
 
 
 class _PlatformListSession:
-    """Minimal session: list uses exec().all(); get uses get()."""
+    """Minimal session: list uses exec().all(); get uses get(); detail loads User rows."""
 
-    def __init__(self, orgs: list[Organization]):
+    def __init__(self, orgs: list[Organization], users: list[User] | None = None):
         self._orgs = orgs
+        self._users = users or []
+        self._last_org_id: str | None = None
 
-    def exec(self, _query):
+    def exec(self, query):
         class _R:
             def __init__(self, data):
                 self._data = data
@@ -73,13 +94,23 @@ class _PlatformListSession:
             def all(self):
                 return list(self._data)
 
+        entities = [d.get("entity") for d in (getattr(query, "column_descriptions", None) or []) if d.get("entity")]
+        if User in entities:
+            lid = self._last_org_id
+            if lid is None:
+                return _R([])
+            filtered = [u for u in self._users if str(u.organization_id) == str(lid)]
+            return _R(filtered)
         return _R(self._orgs)
 
     def get(self, model, id_):
         if model is Organization:
             for o in self._orgs:
                 if str(o.id) == str(id_):
+                    self._last_org_id = str(o.id)
                     return o
+            self._last_org_id = None
+            return None
         return None
 
     def close(self) -> None:
@@ -121,6 +152,26 @@ def test_platform_admin_not_granted_org_admin_roles():
 @pytest.fixture
 def platform_list_session() -> _PlatformListSession:
     ts = datetime.utcnow()
+    org_users = [
+        User(
+            id="u-admin-1",
+            organization_id="o1",
+            email="admin@o1.example",
+            full_name="Org Admin",
+            role=UserRole.admin,
+            is_active=True,
+            created_at=ts,
+        ),
+        User(
+            id="u-tenant-1",
+            organization_id="o1",
+            email="tenant@o1.example",
+            full_name="Tenant User",
+            role=UserRole.tenant,
+            is_active=False,
+            created_at=ts,
+        ),
+    ]
     return _PlatformListSession(
         [
             Organization(
@@ -130,7 +181,8 @@ def platform_list_session() -> _PlatformListSession:
                 created_at=ts,
             ),
             Organization(id="o2", name="Other", slug="other", created_at=ts),
-        ]
+        ],
+        users=org_users,
     )
 
 
@@ -212,6 +264,20 @@ class TestPlatformOrganizationsAccess:
             assert body["name"] == "FeelAtHomeNow"
             assert body["id"] == "o1"
             assert isinstance(body["id"], str)
+            assert "users" in body
+            assert isinstance(body["users"], list)
+            assert len(body["users"]) == 2
+            assert {u["email"] for u in body["users"]} == {
+                "admin@o1.example",
+                "tenant@o1.example",
+            }
+            admin_row = next(u for u in body["users"] if u["email"] == "admin@o1.example")
+            assert admin_row["role"] == "admin"
+            assert isinstance(admin_row["id"], str)
+            assert admin_row["id"] == "u-admin-1"
+            r_o2 = client.get("/api/platform/organizations/o2")
+            assert r_o2.status_code == 200
+            assert r_o2.json()["users"] == []
             r2 = client.get("/api/platform/organizations/missing-id")
             assert r2.status_code == 404
         finally:
