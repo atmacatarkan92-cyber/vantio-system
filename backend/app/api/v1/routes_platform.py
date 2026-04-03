@@ -89,9 +89,16 @@ def get_organization(
     response_model=PlatformCreateOrganizationResponse,
     status_code=status.HTTP_201_CREATED,
 )
+def _user_role_str(user: User) -> str:
+    r = getattr(user, "role", None)
+    if r is None:
+        return ""
+    return getattr(r, "value", r) if not isinstance(r, str) else r
+
+
 def create_organization(
     body: PlatformCreateOrganizationBody,
-    _: User = Depends(require_platform_admin),
+    current_user: User = Depends(require_platform_admin),
     session: Session = Depends(get_db_session),
 ) -> PlatformCreateOrganizationResponse:
     try:
@@ -102,6 +109,8 @@ def create_organization(
             create_admin=body.create_admin,
             admin_email=body.admin_email,
             admin_password=body.admin_password,
+            actor_user_id=str(current_user.id),
+            actor_role=_user_role_str(current_user),
         )
     except OrganizationDuplicateError as e:
         raise HTTPException(

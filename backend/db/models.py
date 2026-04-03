@@ -31,7 +31,8 @@ class Organization(SQLModel, table=True):
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     name: str = Field(default="")
-    # Human-stable idempotency key for onboarding (nullable for legacy rows; unique when set).
+    # Human-stable idempotency key for onboarding (nullable for legacy rows). Enforced unique
+    # in DB (see migration 062 ix_organization_slug); duplicate slugs fail at insert.
     slug: Optional[str] = Field(default=None, index=True, unique=True, max_length=128)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

@@ -27,6 +27,11 @@ from tests.org_scoped_cleanup import delete_org_scoped_auth_and_users
 _PLATFORM_ADMIN_TEST_ROLE = getattr(UserRole, "platform_admin", "platform_admin")
 
 
+def test_organization_slug_unique_on_model():
+    """DB also enforces via migration 062 (ix_organization_slug); model stays aligned."""
+    assert Organization.__table__.c.slug.unique
+
+
 def test_onboarding_slug_helpers():
     from app.services.organization_onboarding_service import normalize_slug, validate_slug_format
 

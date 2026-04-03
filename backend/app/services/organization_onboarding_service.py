@@ -12,6 +12,7 @@ consistent with apply_pg_organization_context usage.
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid as uuid_mod
 from dataclasses import dataclass
@@ -25,6 +26,8 @@ from sqlmodel import Session, select
 from auth.security import hash_password, password_meets_policy_for_new_account
 from db.models import Organization, User, UserCredentials, UserRole
 from db.rls import apply_pg_organization_context
+
+logger = logging.getLogger(__name__)
 
 
 class OrganizationDuplicateError(Exception):
@@ -215,6 +218,8 @@ def platform_create_organization_with_optional_admin(
     create_admin: bool,
     admin_email: Optional[str],
     admin_password: Optional[str],
+    actor_user_id: Optional[str] = None,
+    actor_role: Optional[str] = None,
 ) -> PlatformCreateOrganizationResult:
     """
     Platform API path: one logical transaction — new organization row plus optional org
@@ -280,6 +285,20 @@ def platform_create_organization_with_optional_admin(
     parts = [org_msg]
     if admin_line:
         parts.append(admin_line)
+
+    if actor_user_id is not None:
+        logger.info(
+            "platform_admin_created_organization",
+            extra={
+                "actor_user_id": actor_user_id,
+                "actor_role": actor_role or "",
+                "organization_id": str(org.id),
+                "organization_name": org.name,
+                "organization_slug": org.slug,
+                "admin_created": admin_created,
+            },
+        )
+
     return PlatformCreateOrganizationResult(
         organization=org,
         organization_created=organization_created,
