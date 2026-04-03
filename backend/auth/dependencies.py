@@ -1,20 +1,19 @@
 from typing import Tuple
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 from sqlmodel import select
 
-from db.database import get_session as _db_get_session
-from db.models import User, Tenant, Landlord, UserCredentials
 from app.core.request_logging import set_log_user_id
+from auth.security import decode_access_token, password_version_ts
+from db.database import get_session as _db_get_session
+from db.models import Landlord, Tenant, User, UserCredentials, UserRole
 from db.rls import (
     apply_pg_organization_context,
     apply_pg_user_context,
     set_request_organization_id,
 )
-from auth.security import decode_access_token, password_version_ts
-
 
 # HTTPBearer makes Swagger UI show "Authorize" with a Bearer token field
 http_bearer = HTTPBearer(auto_error=True)
@@ -112,11 +111,24 @@ def get_current_organization(current_user: User = Depends(get_current_user)) -> 
 
 
 def require_roles(*roles: str):
-    """Dependency: require current user's role to be one of the given roles (by value)."""
+    """
+    Dependency: require current user's role to be one of the given roles (by value).
+
+    Customer-org roles (admin, manager, landlord, tenant, support) are checked here.
+    UserRole.platform_admin is separate: it does not satisfy org-admin routes unless
+    "platform_admin" is explicitly included in ``roles`` (for rare mixed endpoints).
+    Platform-only APIs should use require_platform_admin() instead.
+    """
 
     def dependency(user: User = Depends(get_current_user)) -> User:
         role_val = _user_role_value(user)
-        if role_val not in roles:
+        if role_val == UserRole.platform_admin.value:
+            if role_val not in roles:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Not enough permissions",
+                )
+        elif role_val not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not enough permissions",
@@ -129,6 +141,23 @@ def require_roles(*roles: str):
 def require_role(role: str):
     """Dependency: require current user to have the given role."""
     return require_roles(role)
+
+
+def require_platform_admin(user: User = Depends(get_current_user)) -> User:
+    """
+    Vantio platform operators only. Not satisfied by customer org admin/manager roles.
+
+    RLS note: get_current_user still sets the request org GUC from the user's row
+    (often the platform shell org). Platform org list/create are intentionally
+    cross-tenant; if RLS is later tightened on ``organization`` or related tables,
+    these paths may need explicit platform-safe session handling (not bypass here).
+    """
+    if _user_role_value(user) != UserRole.platform_admin.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Platform admin access required",
+        )
+    return user
 
 
 def get_current_tenant(
