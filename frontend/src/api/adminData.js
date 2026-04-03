@@ -68,37 +68,40 @@ function parseAdminErrorBodyText(text) {
  * @param {string} [statusText]
  */
 function parseAdminErrorFromText(text, status, statusText = "") {
-  const t = String(text ?? "").replace(/^\uFEFF/, "");
-  if (!t.trim()) {
-    return `HTTP ${status}${statusText ? ` ${statusText}` : ""}`;
+  const st = statusText ? ` ${statusText}` : "";
+  const httpFallback = `HTTP ${status}${st}`;
+  let t = String(text ?? "").replace(/^\uFEFF/, "");
+  t = t.trim();
+  if (!t) {
+    return httpFallback;
   }
 
-  let msg = "";
   try {
     const j = JSON.parse(t);
-    if (typeof j.detail === "string") {
-      msg = j.detail.trim();
-    } else if (Array.isArray(j.detail)) {
-      msg = j.detail
-        .map(detailItemToMessage)
-        .filter(Boolean)
-        .join(" ")
-        .trim();
-    } else if (j.detail != null && typeof j.detail === "object") {
-      msg = detailItemToMessage(j.detail).trim();
-    } else if (j.detail != null && typeof j.detail !== "object") {
-      msg = String(j.detail).trim();
+    if (j != null && typeof j === "object" && !Array.isArray(j)) {
+      const d = j.detail;
+      if (typeof d === "string") {
+        return d.trim();
+      }
+      if (Array.isArray(d)) {
+        const joined = d
+          .map(detailItemToMessage)
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+        if (joined) return joined;
+      } else if (d != null && typeof d === "object") {
+        const m = detailItemToMessage(d).trim();
+        if (m) return m;
+      } else if (d != null && typeof d !== "object") {
+        return String(d).trim();
+      }
     }
   } catch (_) {
     /* not JSON */
   }
-  if (!msg) {
-    msg = parseAdminErrorBodyText(t).trim();
-  }
-  if (!msg || msg === "Die Anfrage ist fehlgeschlagen.") {
-    msg = `HTTP ${status}${statusText ? ` ${statusText}` : ""}`;
-  }
-  return msg;
+
+  return t || httpFallback;
 }
 
 async function parseAdminErrorResponse(res) {
