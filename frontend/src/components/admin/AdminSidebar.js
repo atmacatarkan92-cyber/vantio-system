@@ -14,9 +14,9 @@ function createNavLinkClass(theme) {
       return `${base} font-medium text-[#64748b] hover:bg-black/[0.05]`;
     }
     if (isActive) {
-      return `${base} border border-blue-500/[0.15] bg-blue-500/[0.12] font-semibold text-[#8fb3ff]`;
+      return `${base} bg-violet-600/20 font-semibold text-violet-400`;
     }
-    return `${base} font-medium text-[#6b7a9a] hover:bg-white/[0.04]`;
+    return `${base} font-medium text-slate-400 hover:bg-white/5 hover:text-white`;
   };
 }
 
@@ -32,9 +32,9 @@ function createNavSubLinkClass(theme) {
       return `${base} font-medium text-[#94a3b8] hover:bg-black/[0.05]`;
     }
     if (isActive) {
-      return `${base} border border-blue-500/[0.15] bg-blue-500/[0.12] font-semibold text-[#8fb3ff]`;
+      return `${base} bg-violet-600/20 font-semibold text-violet-400`;
     }
-    return `${base} font-medium text-[#627588] hover:bg-white/[0.04]`;
+    return `${base} font-medium text-slate-400 hover:bg-white/5 hover:text-white`;
   };
 }
 
@@ -43,11 +43,11 @@ function Bereich({ title, children, defaultOpen = true, theme }) {
   const titleClass =
     theme === "light"
       ? "text-[10px] font-black uppercase tracking-[1.5px] text-[#1e293b]"
-      : "text-[10px] font-black uppercase tracking-[1.5px] text-[#cbd5e1]";
+      : "text-[10px] font-black uppercase tracking-[1.5px] text-[#93a4bf]";
   const chevronClass =
     theme === "light"
       ? "text-[12px] font-bold text-[#1e293b]"
-      : "text-[12px] font-bold text-[#cbd5e1]";
+      : "text-[12px] font-bold text-[#93a4bf]";
 
   return (
     <div className="mb-2">
@@ -95,7 +95,7 @@ function AdminSidebar() {
   const sidebarShell =
     theme === "light"
       ? "box-border flex min-h-screen w-[280px] flex-col border-r border-black/[0.08] bg-white px-4 pb-4 pt-6 text-[#0f172a]"
-      : "box-border flex min-h-screen w-[280px] flex-col border-r border-white/[0.07] bg-[#0c1018] px-4 pb-4 pt-6 text-[#eef2ff]";
+      : "box-border flex min-h-screen w-[280px] flex-col border-r border-solid border-white/[0.08] bg-[#0b1220] px-4 pb-4 pt-6 text-[#f8fafc]";
 
   const orgPillClass =
     theme === "light"
@@ -103,22 +103,22 @@ function AdminSidebar() {
       : "mt-3 flex max-w-full items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-[10px] font-semibold text-[#8fb3ff]";
 
   const footerBorder =
-    theme === "light" ? "border-t border-black/[0.08]" : "border-t border-white/[0.07]";
+    theme === "light" ? "border-t border-black/[0.08]" : "border-t border-white/[0.08]";
 
   const secondaryBtn =
     theme === "light"
       ? "w-full cursor-pointer rounded-[8px] border border-black/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-black/[0.04]"
       : "w-full cursor-pointer rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]";
 
-  const logoLight = theme === "light" ? "text-[#0f172a]" : "text-[#eef2ff]";
+  const logoClass =
+    theme === "light"
+      ? "m-0 text-[20px] font-extrabold tracking-[-0.02em] text-[#0f172a]"
+      : "m-0 text-[20px] font-bold tracking-[-0.02em] text-white";
 
   return (
     <div className={sidebarShell}>
       <div className="mb-6 shrink-0">
-        <h2 className="m-0 text-[20px] font-extrabold tracking-[-0.02em]">
-          <span className={logoLight}>Van</span>
-          <span className="text-[#7aaeff]">tio</span>
-        </h2>
+        <h2 className={logoClass}>Vantio</h2>
         {user ? (
           <div className={orgPillClass} title={user.organization_id}>
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-400" aria-hidden />
@@ -240,7 +240,7 @@ function AdminSidebar() {
               className={
                 theme === "light"
                   ? "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/[0.1] bg-[#f1f5f9] text-[11px] font-bold text-[#0f172a]"
-                  : "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.06] text-[11px] font-bold text-[#eef2ff]"
+                  : "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.06] text-[11px] font-bold text-[#f8fafc]"
               }
               aria-hidden
             >
@@ -251,7 +251,7 @@ function AdminSidebar() {
                 className={
                   theme === "light"
                     ? "truncate text-[12px] font-semibold text-[#0f172a]"
-                    : "truncate text-[12px] font-semibold text-[#eef2ff]"
+                    : "truncate text-[12px] font-semibold text-[#f8fafc]"
                 }
               >
                 {user.full_name || "—"}
@@ -260,7 +260,7 @@ function AdminSidebar() {
                 className={
                   theme === "light"
                     ? "truncate text-[10px] text-[#64748b]"
-                    : "truncate text-[10px] text-[#6b7a9a]"
+                    : "truncate text-[10px] text-[#93a4bf]"
                 }
               >
                 {user.email}

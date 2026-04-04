@@ -1,5 +1,27 @@
 /* FeelAtHomeNow - Custom Styles */
 
+body {
+    background: #060b14;
+    color: #f8fafc;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+#root {
+    position: relative;
+    z-index: 1;
+}
+
 /* Smooth Scrolling */
 html {
     scroll-behavior: smooth;
