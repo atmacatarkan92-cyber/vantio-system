@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { fetchPlatformAuditLogs } from "../../api/adminData";
 
-function formatMeta(meta) {
-  if (meta == null || typeof meta !== "object") return "—";
+const METADATA_MAX_LEN = 240;
+
+function formatMetadata(meta) {
+  if (meta == null) return "—";
   try {
-    return JSON.stringify(meta);
+    const s = JSON.stringify(meta);
+    return s.length > METADATA_MAX_LEN ? `${s.slice(0, METADATA_MAX_LEN)}…` : s;
   } catch {
     return "—";
   }
@@ -87,23 +90,23 @@ function PlatformAuditLogsPage() {
                   </td>
                 </tr>
               ) : (
-                rows.map((r) => (
+                rows.map((row) => (
                   <tr
-                    key={r.id}
+                    key={row.id}
                     className="border-b border-black/[0.06] dark:border-white/[0.05]"
                   >
                     <td className="whitespace-nowrap px-3 py-2 align-top text-[11px] text-[#64748b] dark:text-[#94a3b8]">
-                      {r.created_at ? new Date(r.created_at).toLocaleString() : "—"}
+                      {row.created_at ? new Date(row.created_at).toLocaleString() : "—"}
                     </td>
                     <td className="max-w-[180px] px-3 py-2 align-top break-all">
-                      {r.actor_email || r.actor_user_id || "—"}
+                      {row.actor_email || row.actor_user_id || "—"}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 align-top font-medium">{r.action}</td>
+                    <td className="whitespace-nowrap px-3 py-2 align-top font-medium">{row.action}</td>
                     <td className="max-w-[200px] px-3 py-2 align-top break-all">
-                      {r.organization_name || r.organization_id || "—"}
+                      {row.organization_name || row.organization_id || "—"}
                     </td>
                     <td className="max-w-[240px] px-3 py-2 align-top text-[11px] text-[#64748b] dark:text-[#94a3b8]">
-                      {formatMeta(r.metadata)}
+                      {formatMetadata(row.metadata)}
                     </td>
                   </tr>
                 ))
