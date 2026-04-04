@@ -515,48 +515,48 @@ export default function AdminUebersichtPage() {
       className="min-h-screen bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
     >
       <div className="mx-auto grid max-w-[min(1400px,100%)] gap-4 p-6">
-      <div className="flex items-center justify-end gap-3">
-        <span className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">KPI-Zeitraum:</span>
-        <select
-          value={`${kpisPeriod.year}-${kpisPeriod.month}`}
-          onChange={(e) => {
-            const [y, m] = e.target.value.split("-").map(Number);
-            setKpisPeriod({ year: y, month: m });
-          }}
-          className="rounded-lg border border-black/10 dark:border-white/[0.07] bg-slate-100 dark:bg-[#111520] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff]"
-        >
-          {(() => {
-            const d = new Date();
-            const options = [];
-            for (let i = 0; i < 12; i++) {
-              const date = new Date(d.getFullYear(), d.getMonth() - i, 1);
-              const y = date.getFullYear();
-              const m = date.getMonth() + 1;
-              options.push(
-                <option key={`${y}-${m}`} value={`${y}-${m}`}>
-                  {m}/{y}
-                </option>
-              );
-            }
-            return options;
-          })()}
-        </select>
-      </div>
       <div className="rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
-              Vantio
-            </div>
-            <h2 className="m-0 text-[22px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
-              Unternehmensübersicht
-            </h2>
-            <p className="mt-3 max-w-[950px] text-[12px] leading-relaxed text-[#64748b] dark:text-[#6b7a9a]">
-              Zentrale Live-Übersicht über Umsatz, Ausgaben, Gewinn, Belegung,
-              Rechnungen und kritische Bereiche des Unternehmens.
-            </p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
+            VANTIO
           </div>
-          <div className="flex flex-wrap gap-2.5">
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <span className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">KPI-Zeitraum:</span>
+            <select
+              value={`${kpisPeriod.year}-${kpisPeriod.month}`}
+              onChange={(e) => {
+                const [y, m] = e.target.value.split("-").map(Number);
+                setKpisPeriod({ year: y, month: m });
+              }}
+              className="rounded-lg border border-black/10 dark:border-white/[0.07] bg-slate-100 dark:bg-[#111520] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff]"
+            >
+              {(() => {
+                const d = new Date();
+                const options = [];
+                for (let i = 0; i < 12; i++) {
+                  const date = new Date(d.getFullYear(), d.getMonth() - i, 1);
+                  const y = date.getFullYear();
+                  const m = date.getMonth() + 1;
+                  options.push(
+                    <option key={`${y}-${m}`} value={`${y}-${m}`}>
+                      {m}/{y}
+                    </option>
+                  );
+                }
+                return options;
+              })()}
+            </select>
+          </div>
+        </div>
+        <h2 className="m-0 mb-3 text-[22px] font-bold text-[#0f172a] dark:text-[#eef2ff]">
+          Unternehmensübersicht
+        </h2>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <p className="m-0 max-w-[950px] flex-1 text-[12px] leading-relaxed text-[#64748b] dark:text-[#6b7a9a]">
+            Zentrale Live-Übersicht über Umsatz, Ausgaben, Gewinn, Belegung,
+            Rechnungen und kritische Bereiche des Unternehmens.
+          </p>
+          <div className="flex shrink-0 flex-wrap gap-2.5">
             <span className="inline-flex items-center rounded-full border border-black/10 bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-[#64748b] dark:border-white/[0.1] dark:bg-white/[0.06] dark:text-[#6b7a9a]">
               Live KPI
             </span>
