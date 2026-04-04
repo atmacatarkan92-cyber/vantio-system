@@ -181,6 +181,10 @@ function AdminSidebar() {
             📅 Belegung
           </NavLink>
 
+          <NavLink to="/admin/inventory" className={navSubLinkClass}>
+            📦 Inventar
+          </NavLink>
+
           <NavLink to="/admin/listings" className={navSubLinkClass}>
             🌐 Website Listings
           </NavLink>

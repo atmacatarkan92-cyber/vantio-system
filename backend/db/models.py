@@ -577,6 +577,55 @@ class UnitCost(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class InventoryItem(SQLModel, table=True):
+    """
+    Org-scoped stock / article (identical items). total_quantity is pool size.
+    Assignments (InventoryAssignment) distribute quantity to units/rooms.
+    Not UnitCost; purchase_price_chf is capex metadata only.
+    """
+
+    __tablename__ = "inventory_items"
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "inventory_number",
+            name="uq_inventory_items_org_inventory_number",
+        ),
+    )
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
+    inventory_number: str = Field(max_length=64, index=True)
+    name: str = Field(max_length=500)
+    category: str = Field(default="", max_length=200)
+    brand: Optional[str] = Field(default=None, max_length=200)
+    total_quantity: int = Field(default=1, ge=1)
+    condition: str = Field(default="", max_length=100)
+    status: str = Field(default="active", max_length=100)
+    purchase_price_chf: Optional[float] = Field(default=None)
+    purchase_date: Optional[date] = Field(default=None)
+    purchased_from: Optional[str] = Field(default=None, max_length=500)
+    notes: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class InventoryAssignment(SQLModel, table=True):
+    """Distribution of quantity from an InventoryItem to a unit (optional room)."""
+
+    __tablename__ = "inventory_assignments"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    organization_id: str = Field(foreign_key="organization.id", index=True)
+    inventory_item_id: str = Field(foreign_key="inventory_items.id", index=True)
+    unit_id: str = Field(foreign_key="unit.id", index=True)
+    room_id: Optional[str] = Field(default=None, foreign_key="room.id", index=True)
+    quantity: int = Field(ge=1)
+    notes: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class UserRole(str, Enum):
     """Roles allowed by DB CHECK (users_role_allowed)."""
     admin = "admin"

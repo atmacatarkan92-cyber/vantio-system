@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import InventorySection from "../../components/admin/InventorySection";
 import RoomMap from "../../components/RoomMap";
 import RoomCalendar from "../../components/RoomCalendar";
 import OccupancyMap from "../../components/OccupancyMap";
@@ -3029,6 +3030,8 @@ function AdminUnitDetailPage() {
             </div>
           )}
         </SectionCard>
+
+        <InventorySection unitId={unitId} rooms={rooms} />
 
         <SectionCard
           title="Mieter"

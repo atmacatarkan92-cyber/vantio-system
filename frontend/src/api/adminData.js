@@ -204,6 +204,129 @@ export async function deleteAdminUnitCost(unitId, costId) {
   }
 }
 
+/** GET /api/admin/inventory — catalog with assigned/available per item */
+export function fetchAdminInventory(params = {}) {
+  const sp = new URLSearchParams();
+  if (params.skip != null) sp.set("skip", String(params.skip));
+  if (params.limit != null) sp.set("limit", String(params.limit));
+  if (params.q) sp.set("q", params.q);
+  if (params.category) sp.set("category", params.category);
+  if (params.status) sp.set("status", params.status);
+  const qs = sp.toString();
+  return fetch(`${API_BASE_URL}/api/admin/inventory${qs ? `?${qs}` : ""}`, {
+    headers: getApiHeaders(),
+  }).then((res) => {
+    if (!res.ok) throw new Error("Inventar konnte nicht geladen werden.");
+    return res.json();
+  });
+}
+
+/** GET /api/admin/inventory/summary */
+export function fetchAdminInventorySummary() {
+  return fetch(`${API_BASE_URL}/api/admin/inventory/summary`, {
+    headers: getApiHeaders(),
+  }).then((res) => {
+    if (!res.ok) throw new Error("Inventar-Zusammenfassung konnte nicht geladen werden.");
+    return res.json();
+  });
+}
+
+export async function createInventoryItem(body) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/inventory`, {
+    method: "POST",
+    headers: getApiHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await parseAdminErrorResponse(res));
+  return res.json();
+}
+
+export async function updateInventoryItem(itemId, body) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/inventory/${encodeURIComponent(itemId)}`,
+    {
+      method: "PATCH",
+      headers: getApiHeaders(),
+      body: JSON.stringify(body),
+    }
+  );
+  if (!res.ok) throw new Error(await parseAdminErrorResponse(res));
+  return res.json();
+}
+
+export async function deleteInventoryItem(itemId) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/inventory/${encodeURIComponent(itemId)}`, {
+    method: "DELETE",
+    headers: getApiHeaders(),
+  });
+  if (!res.ok) throw new Error(await parseAdminErrorResponse(res));
+  try {
+    return await res.json();
+  } catch {
+    return { status: "ok" };
+  }
+}
+
+/** GET /api/admin/units/{unitId}/inventory-assignments */
+export function fetchUnitInventoryAssignments(unitId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/units/${encodeURIComponent(unitId)}/inventory-assignments`,
+    { headers: getApiHeaders() }
+  ).then((res) => {
+    if (!res.ok) throw new Error("Zuordnungen konnten nicht geladen werden.");
+    return res.json();
+  });
+}
+
+export function fetchInventoryItemAssignments(itemId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/inventory/${encodeURIComponent(itemId)}/assignments`,
+    { headers: getApiHeaders() }
+  ).then((res) => {
+    if (!res.ok) throw new Error("Zuordnungen konnten nicht geladen werden.");
+    return res.json();
+  });
+}
+
+export async function createInventoryAssignment(itemId, body) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/inventory/${encodeURIComponent(itemId)}/assignments`,
+    {
+      method: "POST",
+      headers: getApiHeaders(),
+      body: JSON.stringify(body),
+    }
+  );
+  if (!res.ok) throw new Error(await parseAdminErrorResponse(res));
+  return res.json();
+}
+
+export async function updateInventoryAssignment(assignmentId, body) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/inventory/assignments/${encodeURIComponent(assignmentId)}`,
+    {
+      method: "PATCH",
+      headers: getApiHeaders(),
+      body: JSON.stringify(body),
+    }
+  );
+  if (!res.ok) throw new Error(await parseAdminErrorResponse(res));
+  return res.json();
+}
+
+export async function deleteInventoryAssignment(assignmentId) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/inventory/assignments/${encodeURIComponent(assignmentId)}`,
+    { method: "DELETE", headers: getApiHeaders() }
+  );
+  if (!res.ok) throw new Error(await parseAdminErrorResponse(res));
+  try {
+    return await res.json();
+  } catch {
+    return { status: "ok" };
+  }
+}
+
 /**
  * Audit log entries for an entity (e.g. unit). GET /api/admin/audit-logs
  */

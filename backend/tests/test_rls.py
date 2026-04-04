@@ -72,6 +72,8 @@ def test_rls_environment_validates_database_role_and_policies(engine):
         ("properties", "org_isolation_properties"),
         ("landlords", "org_isolation_landlords"),
         ("unit_costs", "org_isolation_unit_costs"),
+        ("inventory_assignments", "org_isolation_inventory_assignments"),
+        ("inventory_items", "org_isolation_inventory_items"),
         ("tenant_notes", "org_isolation_tenant_notes"),
         ("tenant_events", "org_isolation_tenant_events"),
         ("users", "org_isolation_users"),
@@ -118,7 +120,8 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                 JOIN pg_namespace n ON n.oid = c.relnamespace
                 WHERE n.nspname = 'public' AND c.relkind = 'r'
                   AND c.relname IN (
-                    'audit_logs', 'email_verification_tokens', 'inquiries', 'invoices', 'landlords',
+                    'audit_logs', 'email_verification_tokens', 'inquiries', 'inventory_assignments',
+                    'inventory_items', 'invoices', 'landlords',
                     'listing_amenities', 'listing_images', 'listings', 'password_reset_tokens',
                     'properties', 'refresh_tokens', 'room', 'tenancies', 'tenancy_participants',
                     'tenant', 'tenant_events', 'tenant_notes', 'unit', 'unit_costs',
@@ -133,6 +136,8 @@ def test_rls_environment_validates_database_role_and_policies(engine):
             "audit_logs",
             "email_verification_tokens",
             "inquiries",
+            "inventory_assignments",
+            "inventory_items",
             "invoices",
             "landlords",
             "listing_amenities",
@@ -167,6 +172,8 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                 "inquiries",
                 "password_reset_tokens",
                 "email_verification_tokens",
+                "inventory_assignments",
+                "inventory_items",
             ):
                 assert relforcerowsecurity is True, (
                     f"FORCE ROW LEVEL SECURITY expected on {relname}"
@@ -184,7 +191,8 @@ def test_rls_environment_validates_database_role_and_policies(engine):
                     'tenant_notes', 'tenant_events', 'users',
                     'user_credentials', 'refresh_tokens',
                     'listings', 'listing_images', 'listing_amenities',
-                    'inquiries', 'password_reset_tokens', 'email_verification_tokens'
+                    'inquiries', 'inventory_assignments', 'inventory_items', 'password_reset_tokens',
+                    'email_verification_tokens'
                 )
                 """
             )

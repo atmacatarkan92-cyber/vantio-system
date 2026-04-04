@@ -11,6 +11,7 @@ from slowapi.errors import RateLimitExceeded
 from app.api.v1.routes_admin_address import router as admin_address_router
 from app.api.v1.routes_admin_audit_logs import router as admin_audit_logs_router
 from app.api.v1.routes_admin_dashboard import router as admin_dashboard_router
+from app.api.v1.routes_admin_inventory import router as admin_inventory_router
 from app.api.v1.routes_admin_landlord_documents import router as admin_landlord_documents_router
 from app.api.v1.routes_admin_landlords import router as admin_landlords_router
 from app.api.v1.routes_admin_listings import router as admin_listings_router
@@ -166,6 +167,7 @@ app.include_router(admin_rooms_router)
 app.include_router(admin_tenants_router)
 app.include_router(admin_tenancies_router)
 app.include_router(admin_dashboard_router)
+app.include_router(admin_inventory_router)
 app.include_router(admin_landlords_router)
 app.include_router(admin_address_router)
 app.include_router(admin_property_managers_router)
