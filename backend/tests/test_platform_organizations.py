@@ -101,6 +101,7 @@ class _PlatformListSession:
         self._orgs = orgs
         self._users = users or []
         self._last_org_id: str | None = None
+        self.info: dict = {}
 
     def exec(self, query):
         class _R:
@@ -127,6 +128,13 @@ class _PlatformListSession:
                     return o
             self._last_org_id = None
             return None
+        return None
+
+    def in_transaction(self) -> bool:
+        return False
+
+    def execute(self, *_args, **_kwargs):
+        """No-op: real sessions run SET LOCAL for RLS; mock filters by _last_org_id in exec()."""
         return None
 
     def close(self) -> None:

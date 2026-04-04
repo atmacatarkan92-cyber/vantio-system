@@ -25,6 +25,7 @@ from auth.dependencies import get_db_session, require_platform_admin
 from auth.schemas import Token
 from auth.security import create_access_token, password_version_ts
 from db.models import Organization, User, UserCredentials
+from db.rls import apply_pg_organization_context
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +137,10 @@ def get_organization(
     if org is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
     org_id_str = str(org.id)
+    # RLS on users matches app.current_organization_id; platform admin's JWT still scopes
+    # get_current_user to the shell org — switch GUC to the org being viewed for this request only
+    # (SET LOCAL via apply_pg_organization_context; session discarded after response).
+    apply_pg_organization_context(session, org_id_str)
     user_rows = session.exec(
         select(User).where(User.organization_id == org_id_str).order_by(User.created_at)
     ).all()
