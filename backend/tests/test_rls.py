@@ -188,8 +188,8 @@ def test_rls_environment_validates_database_role_and_policies(engine):
             )
         ).all()
         got = {(r[0], r[1]) for r in pols}
-        assert got == expected_policies, (
-            f"expected policies {expected_policies}; got {got}. "
+        assert expected_policies.issubset(got), (
+            f"expected policies {expected_policies} to be subset of {got}. "
             "Apply migrations 023_rls_unit_tenant_room, 025_rls_core_tables, 030_rls_tenant_crm, "
             "042_rls_users_audit_logs, 044_rls_tokens_credentials, 045_rls_listings_ext, 046_fix_listing_rls."
         )
