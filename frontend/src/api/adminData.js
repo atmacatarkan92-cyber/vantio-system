@@ -204,6 +204,20 @@ export async function deleteAdminUnitCost(unitId, costId) {
   }
 }
 
+/** GET /api/admin/inventory/{itemId} — single item with assigned/available */
+export function fetchAdminInventoryItem(itemId) {
+  return fetch(
+    `${API_BASE_URL}/api/admin/inventory/${encodeURIComponent(itemId)}`,
+    { headers: getApiHeaders() }
+  ).then(async (res) => {
+    if (!res.ok) {
+      if (res.status === 404) return null;
+      throw new Error(await parseAdminErrorResponse(res));
+    }
+    return res.json();
+  });
+}
+
 /** GET /api/admin/inventory — catalog with assigned/available per item */
 export function fetchAdminInventory(params = {}) {
   const sp = new URLSearchParams();

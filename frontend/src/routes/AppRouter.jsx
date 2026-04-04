@@ -21,6 +21,7 @@ import AdminInvoicesPage from "../pages/admin/AdminInvoicesPage";
 import AdminInvoiceDetailPage from "../pages/admin/AdminInvoiceDetailPage";
 import AdminBusinessApartmentsDashboardPage from "../pages/admin/AdminBusinessApartmentsDashboardPage";
 import AdminInventoryPage from "../pages/admin/AdminInventoryPage";
+import AdminInventoryDetailPage from "../pages/admin/AdminInventoryDetailPage";
 import AdminObjektePage from "../pages/admin/AdminObjektePage";
 import AdminRoomsPage from "../pages/admin/AdminRoomsPage";
 import AdminOccupancyPage from "../pages/admin/AdminOccupancyPage";
@@ -143,6 +144,7 @@ export default function AppRouter() {
               <Route path="units" element={<Navigate to="/admin/apartments" replace />} />
               <Route path="rooms" element={<AdminRoomsPage />} />
               <Route path="occupancy" element={<AdminOccupancyPage />} />
+              <Route path="inventory/:itemId" element={<AdminInventoryDetailPage />} />
               <Route path="inventory" element={<AdminInventoryPage />} />
               <Route path="tenants/active" element={<AdminTenantsPage />} />
               <Route path="tenants/move-outs" element={<AdminTenantsPage />} />

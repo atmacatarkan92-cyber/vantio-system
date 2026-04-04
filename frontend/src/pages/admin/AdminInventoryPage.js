@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   fetchAdminInventory,
   fetchAdminInventorySummary,
   createInventoryItem,
-  updateInventoryItem,
-  deleteInventoryItem,
 } from "../../api/adminData";
 
 function formatChf(value) {
@@ -60,6 +59,7 @@ const emptyItemForm = () => ({
 });
 
 export default function AdminInventoryPage() {
+  const navigate = useNavigate();
   const [summary, setSummary] = useState(null);
   const [data, setData] = useState({ items: [], total: 0, skip: 0, limit: 50 });
   const [loading, setLoading] = useState(true);
@@ -67,8 +67,6 @@ export default function AdminInventoryPage() {
   const [skip, setSkip] = useState(0);
   const limit = 50;
   const [createOpen, setCreateOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
   const [form, setForm] = useState(emptyItemForm());
   const [saving, setSaving] = useState(false);
   const [formErr, setFormErr] = useState("");
@@ -102,31 +100,7 @@ export default function AdminInventoryPage() {
   function openCreate() {
     setForm(emptyItemForm());
     setFormErr("");
-    setEditingItem(null);
-    setEditOpen(false);
     setCreateOpen(true);
-  }
-
-  function openEdit(row) {
-    setCreateOpen(false);
-    setEditingItem(row);
-    setForm({
-      name: row.name || "",
-      category: row.category || "",
-      brand: row.brand || "",
-      total_quantity: String(row.total_quantity ?? 1),
-      condition: row.condition || "",
-      status: row.status || "active",
-      purchase_price_chf:
-        row.purchase_price_chf != null ? String(row.purchase_price_chf) : "",
-      purchase_date: row.purchase_date ? String(row.purchase_date).slice(0, 10) : "",
-      supplier_article_number: row.supplier_article_number || "",
-      purchased_from: row.purchased_from || "",
-      product_url: row.product_url || "",
-      notes: row.notes || "",
-    });
-    setFormErr("");
-    setEditOpen(true);
   }
 
   function bodyFromForm() {
@@ -175,42 +149,6 @@ export default function AdminInventoryPage() {
       setFormErr(err?.message || "Fehler.");
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function submitEdit(e) {
-    e.preventDefault();
-    if (!editingItem) return;
-    const b = bodyFromForm();
-    if (b._error) {
-      setFormErr(b._error);
-      return;
-    }
-    if (!b.name) {
-      setFormErr("Name erforderlich.");
-      return;
-    }
-    setSaving(true);
-    setFormErr("");
-    try {
-      await updateInventoryItem(editingItem.id, b);
-      setEditOpen(false);
-      setEditingItem(null);
-      load();
-    } catch (err) {
-      setFormErr(err?.message || "Fehler.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDelete(row) {
-    if (!window.confirm(`Artikel «${row.name}» inkl. Zuordnungen löschen?`)) return;
-    try {
-      await deleteInventoryItem(row.id);
-      load();
-    } catch (err) {
-      setError(err?.message || "Löschen fehlgeschlagen.");
     }
   }
 
@@ -276,11 +214,23 @@ export default function AdminInventoryPage() {
                   </thead>
                   <tbody>
                     {data.items.map((row) => (
-                      <tr key={row.id} className="border-b border-white/[0.05]">
+                      <tr
+                        key={row.id}
+                        className="cursor-pointer border-b border-white/[0.05] hover:bg-white/[0.02]"
+                        onClick={() => navigate(`/admin/inventory/${row.id}`)}
+                      >
                         <td className="py-2 pr-3 font-mono text-[12px] text-[#93a4bf]">
                           {row.inventory_number}
                         </td>
-                        <td className="py-2 pr-3 font-medium">{row.name}</td>
+                        <td className="py-2 pr-3 font-medium">
+                          <Link
+                            to={`/admin/inventory/${row.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[#f8fafc] hover:text-[#5b8cff] hover:underline"
+                          >
+                            {row.name}
+                          </Link>
+                        </td>
                         <td className="py-2 pr-3 text-[#93a4bf]">{row.category || "—"}</td>
                         <td
                           className="py-2 pr-3 max-w-[100px] truncate text-[11px] text-[#93a4bf]"
@@ -294,7 +244,10 @@ export default function AdminInventoryPage() {
                         >
                           {row.purchased_from || "—"}
                         </td>
-                        <td className="py-2 pr-3 whitespace-nowrap">
+                        <td
+                          className="py-2 pr-3 whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <ProductUrlLink url={row.product_url} />
                         </td>
                         <td className="py-2 pr-3 text-right tabular-nums">{row.total_quantity ?? 1}</td>
@@ -310,17 +263,13 @@ export default function AdminInventoryPage() {
                         <td className="py-2 pr-0 text-right">
                           <button
                             type="button"
-                            onClick={() => openEdit(row)}
-                            className="mr-2 text-[#5b8cff] hover:underline text-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/admin/inventory/${row.id}`);
+                            }}
+                            className="rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-1.5 text-[13px] font-semibold text-[#93a4bf] hover:bg-white/[0.04]"
                           >
-                            Bearbeiten
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(row)}
-                            className="text-[#93a4bf] hover:text-[#f87171] hover:underline text-sm"
-                          >
-                            Löschen
+                            Öffnen
                           </button>
                         </td>
                       </tr>
@@ -357,17 +306,12 @@ export default function AdminInventoryPage() {
         </div>
       </div>
 
-      {(createOpen || editOpen) && (
+      {createOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[14px] border border-white/[0.08] bg-[#0b1220] p-6">
-            <h4 className="m-0 text-lg font-semibold">
-              {editOpen ? "Artikel bearbeiten" : "Neuer Artikel"}
-            </h4>
+            <h4 className="m-0 text-lg font-semibold">Neuer Artikel</h4>
             {formErr ? <p className="mt-2 text-sm text-[#f87171]">{formErr}</p> : null}
-            <form
-              onSubmit={editOpen ? submitEdit : submitCreate}
-              className="mt-4 grid grid-cols-1 gap-3 text-[#f8fafc]"
-            >
+            <form onSubmit={submitCreate} className="mt-4 grid grid-cols-1 gap-3 text-[#f8fafc]">
               <label className="text-[11px] text-[#93a4bf]">
                 Name *
                 <input
@@ -501,8 +445,6 @@ export default function AdminInventoryPage() {
                   type="button"
                   onClick={() => {
                     setCreateOpen(false);
-                    setEditOpen(false);
-                    setEditingItem(null);
                     setFormErr("");
                   }}
                   className="rounded-lg border border-white/[0.12] px-4 py-2 text-sm"

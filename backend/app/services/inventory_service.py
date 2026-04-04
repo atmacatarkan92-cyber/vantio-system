@@ -140,6 +140,13 @@ def _assignment_to_dict(
     }
 
 
+def get_inventory_item(session: Session, org_id: str, item_id: str) -> dict:
+    row = _assert_org_item(session, org_id, item_id)
+    at = _assigned_sum(session, item_id)
+    tot = int(row.total_quantity or 1)
+    return _item_to_dict(row, assigned_total=at, available=max(0, tot - at))
+
+
 def list_inventory_items(
     session: Session,
     org_id: str,

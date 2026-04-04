@@ -126,6 +126,16 @@ def admin_list_inventory(
     )
 
 
+@router.get("/inventory/{item_id}", response_model=dict)
+def admin_get_inventory_item(
+    item_id: str,
+    org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+    session=Depends(get_db_session),
+):
+    return invsvc.get_inventory_item(session, org_id, item_id)
+
+
 @router.post("/inventory", response_model=dict)
 @limiter.limit("30/minute")
 def admin_create_inventory_item(
