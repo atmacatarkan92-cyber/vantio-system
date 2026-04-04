@@ -13,7 +13,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 # Bump when adding migrations; override with EXPECTED_ALEMBIC_REVISION for staged rollouts.
-_DEFAULT_EXPECTED_REVISION = "065_email_verification_schema"
+_DEFAULT_EXPECTED_REVISION = "066_inventory"
 
 CRITICAL_TABLES: tuple[str, ...] = (
     "email_verification_tokens",
