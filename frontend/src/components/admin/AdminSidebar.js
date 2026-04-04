@@ -95,7 +95,7 @@ function AdminSidebar() {
   const sidebarShell =
     theme === "light"
       ? "box-border flex min-h-screen w-[280px] flex-col border-r border-black/[0.08] bg-white px-4 pb-4 pt-6 text-[#0f172a]"
-      : "box-border flex min-h-screen w-[280px] flex-col bg-[#060b14] px-4 pb-4 pt-6 text-[#f8fafc]";
+      : "box-border flex min-h-screen w-[280px] flex-col border-r border-solid border-white/[0.08] bg-[#0b1220] px-4 pb-4 pt-6 text-[#f8fafc]";
 
   const orgPillClass =
     theme === "light"
