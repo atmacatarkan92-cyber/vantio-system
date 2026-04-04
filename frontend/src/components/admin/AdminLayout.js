@@ -18,9 +18,6 @@ function AdminLayout() {
     ? "relative z-[1] bg-[#060b14] text-[#f8fafc]"
     : "relative z-[1] bg-[#f8fafc] text-[#0f172a]";
   const mainClass = isDark ? "bg-[#060b14]" : "bg-[#f8fafc]";
-  const topBarClass = isDark
-    ? "sticky top-0 z-10 shrink-0 border-b border-white/[0.08] bg-[#0b1220]"
-    : "sticky top-0 z-10 shrink-0 border-b border-slate-200/80 bg-white";
   const scrollbarStyle = isDark
     ? { scrollbarColor: "rgba(255,255,255,0.12) #060b14" }
     : { scrollbarColor: "rgba(15,23,42,0.2) #f8fafc" };
@@ -80,7 +77,6 @@ function AdminLayout() {
           style={scrollbarStyle}
         >
           {supportBanner}
-          <header className={`${topBarClass} h-14`} aria-hidden />
           <div className="p-4 md:p-10">
             <Outlet />
           </div>
@@ -115,7 +111,6 @@ function AdminLayout() {
         style={scrollbarStyle}
       >
         {supportBanner}
-        <header className={`${topBarClass} h-14`} aria-hidden />
         <div className="p-4 md:p-10">
           <Outlet />
         </div>
