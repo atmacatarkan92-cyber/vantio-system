@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { fetchPlatformAuditLogs } from "../../api/adminData";
+import { buildLoginDeviceStatusMap, loginDeviceStatusLabel } from "../../utils/loginDeviceAuditStatus";
 import { getDeviceLabelFromUserAgent } from "../../utils/userAgentLabel";
 
 const METADATA_MAX_LEN = 240;
@@ -36,6 +37,16 @@ function formatJsonField(value) {
   }
 }
 
+function loginDeviceBadgeClass(status) {
+  if (status === "new") {
+    return "inline-flex w-fit shrink-0 items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[9px] font-semibold text-amber-900 dark:border-amber-500/35 dark:bg-amber-500/12 dark:text-amber-100";
+  }
+  if (status === "known") {
+    return "inline-flex w-fit shrink-0 items-center rounded-full border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-[9px] font-semibold text-emerald-800 dark:border-emerald-500/25 dark:bg-emerald-500/12 dark:text-emerald-300";
+  }
+  return "inline-flex w-fit shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[9px] font-semibold text-slate-600 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-400";
+}
+
 /**
  * Platform admin: last 50 audit log rows (cross-tenant).
  */
@@ -63,6 +74,8 @@ function PlatformAuditLogsPage() {
       cancelled = true;
     };
   }, []);
+
+  const loginDeviceStatusById = useMemo(() => buildLoginDeviceStatusMap(rows), [rows]);
 
   const detailTextClass = "mt-1 text-[13px] text-[#0f172a] dark:text-[#e2e8f0]";
   const detailJsonClass =
@@ -157,6 +170,25 @@ function PlatformAuditLogsPage() {
                     </dt>
                     <dd className={detailTextClass}>
                       {getDeviceLabelFromUserAgent(selectedLog.metadata.user_agent)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
+                      Status
+                    </dt>
+                    <dd className={detailTextClass}>
+                      {loginDeviceStatusLabel(loginDeviceStatusById.get(selectedLog.id))}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
+                      IP-Adresse
+                    </dt>
+                    <dd className={detailTextClass}>
+                      {selectedLog.metadata.ip_address != null &&
+                      String(selectedLog.metadata.ip_address) !== ""
+                        ? String(selectedLog.metadata.ip_address)
+                        : "—"}
                     </dd>
                   </div>
                   <div>
@@ -267,8 +299,15 @@ function PlatformAuditLogsPage() {
                     <td className="max-w-[200px] px-3 py-2 align-top break-all">
                       {row.organization_name || row.organization_id || "—"}
                     </td>
-                    <td className="max-w-[240px] px-3 py-2 align-top text-[11px] text-[#64748b] dark:text-[#94a3b8]">
-                      {formatMetadataListCell(row)}
+                    <td className="max-w-[280px] px-3 py-2 align-top text-[11px] text-[#64748b] dark:text-[#94a3b8]">
+                      <div className="flex flex-col gap-1">
+                        {row.action === "login" ? (
+                          <span className={loginDeviceBadgeClass(loginDeviceStatusById.get(row.id))}>
+                            {loginDeviceStatusLabel(loginDeviceStatusById.get(row.id))}
+                          </span>
+                        ) : null}
+                        <span className="break-all">{formatMetadataListCell(row)}</span>
+                      </div>
                     </td>
                   </tr>
                 ))
