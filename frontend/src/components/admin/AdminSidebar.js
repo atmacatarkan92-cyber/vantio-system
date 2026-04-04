@@ -110,15 +110,23 @@ function AdminSidebar() {
       ? "w-full cursor-pointer rounded-[8px] border border-black/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] hover:bg-black/[0.04]"
       : "w-full cursor-pointer rounded-[8px] border border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#8090b0] hover:bg-white/[0.04]";
 
-  const logoClass =
-    theme === "light"
-      ? "m-0 text-[20px] font-extrabold tracking-[-0.02em] text-[#0f172a]"
-      : "m-0 text-[20px] font-bold tracking-[-0.02em] text-white";
-
   return (
     <div className={sidebarShell}>
       <div className="mb-6 shrink-0">
-        <h2 className={logoClass}>Vantio</h2>
+        <h2 className="m-0">
+          <span style={{ fontSize: "20px", fontWeight: 800, letterSpacing: "-0.7px" }}>
+            Van
+            <span
+              style={{
+                background: "linear-gradient(135deg, #5b8cff, #9d7bff)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              tio
+            </span>
+          </span>
+        </h2>
         {user ? (
           <div className={orgPillClass} title={user.organization_id}>
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-400" aria-hidden />
