@@ -21,6 +21,7 @@ function PlatformOrganizationsPage() {
     organization_slug: "",
     admin_email: "",
     admin_password: "",
+    admin_password_confirm: "",
   });
 
   const load = (showSpinner = true) => {
@@ -48,6 +49,7 @@ function PlatformOrganizationsPage() {
       organization_slug: "",
       admin_email: "",
       admin_password: "",
+      admin_password_confirm: "",
     });
     setFormOpen(true);
   };
@@ -66,6 +68,10 @@ function PlatformOrganizationsPage() {
     }
     if (!pw || !String(pw).trim()) {
       setError("Admin-Passwort ist erforderlich.");
+      return;
+    }
+    if (String(form.admin_password) !== String(form.admin_password_confirm)) {
+      setError("Passwörter stimmen nicht überein.");
       return;
     }
 
@@ -278,6 +284,19 @@ function PlatformOrganizationsPage() {
                   autoComplete="new-password"
                   value={form.admin_password}
                   onChange={(e) => setForm((f) => ({ ...f, admin_password: e.target.value }))}
+                  required
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[10px] text-[#64748b] dark:text-[#6b7a9a]">
+                  Passwort bestätigen
+                </label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={form.admin_password_confirm}
+                  onChange={(e) => setForm((f) => ({ ...f, admin_password_confirm: e.target.value }))}
                   required
                   className={inputClass}
                 />
