@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { fetchPlatformAuditLogs } from "../../api/adminData";
+import { getDeviceLabelFromUserAgent } from "../../utils/userAgentLabel";
 
 const METADATA_MAX_LEN = 240;
 
@@ -11,6 +12,19 @@ function formatMetadata(meta) {
   } catch {
     return "—";
   }
+}
+
+/** List column: readable device + IP for login; otherwise JSON summary. */
+function formatMetadataListCell(row) {
+  const meta = row.metadata;
+  if (row.action === "login" && meta && typeof meta === "object") {
+    const label = getDeviceLabelFromUserAgent(meta.user_agent);
+    const ip = meta.ip_address != null && meta.ip_address !== "" ? String(meta.ip_address) : null;
+    const parts = [label];
+    if (ip) parts.push(ip);
+    return parts.join(" · ");
+  }
+  return formatMetadata(meta);
 }
 
 function formatJsonField(value) {
@@ -133,6 +147,31 @@ function PlatformAuditLogsPage() {
                     : "—"}
                 </dd>
               </div>
+              {selectedLog.action === "login" &&
+              selectedLog.metadata &&
+              typeof selectedLog.metadata === "object" ? (
+                <>
+                  <div>
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
+                      Gerät
+                    </dt>
+                    <dd className={detailTextClass}>
+                      {getDeviceLabelFromUserAgent(selectedLog.metadata.user_agent)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
+                      User-Agent roh
+                    </dt>
+                    <dd className={detailJsonClass}>
+                      {selectedLog.metadata.user_agent != null &&
+                      String(selectedLog.metadata.user_agent) !== ""
+                        ? String(selectedLog.metadata.user_agent)
+                        : "—"}
+                    </dd>
+                  </div>
+                </>
+              ) : null}
               <div>
                 <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
                   metadata
@@ -229,7 +268,7 @@ function PlatformAuditLogsPage() {
                       {row.organization_name || row.organization_id || "—"}
                     </td>
                     <td className="max-w-[240px] px-3 py-2 align-top text-[11px] text-[#64748b] dark:text-[#94a3b8]">
-                      {formatMetadata(row.metadata)}
+                      {formatMetadataListCell(row)}
                     </td>
                   </tr>
                 ))
