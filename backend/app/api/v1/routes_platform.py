@@ -8,6 +8,7 @@ without weakening customer org isolation for normal routes.
 """
 
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Optional
 
@@ -20,6 +21,7 @@ from sqlmodel import select
 from app.services.email_verification_helpers import (
     try_create_and_send_email_verification_for_org_admin,
 )
+from app.services.ip_geolocation import get_ip_location
 from app.services.organization_onboarding_service import (
     OrganizationDuplicateError,
     OrganizationNameAmbiguousError,
@@ -141,6 +143,9 @@ class PlatformAuditLogItem(BaseModel):
     metadata: Optional[dict] = None
     old_values: Optional[dict] = None
     new_values: Optional[dict] = None
+    # Read-time enrichment for login rows only (not stored in DB).
+    location_city: Optional[str] = None
+    location_country: Optional[str] = None
 
 
 def _audit_row_to_platform_item(row: AuditLog, org_names: dict[str, str]) -> PlatformAuditLogItem:
@@ -159,6 +164,58 @@ def _audit_row_to_platform_item(row: AuditLog, org_names: dict[str, str]) -> Pla
         old_values=row.old_values,
         new_values=row.new_values,
     )
+
+
+def _enrich_platform_audit_log_locations(items: list[PlatformAuditLogItem]) -> list[PlatformAuditLogItem]:
+    """Attach location_city / location_country for login rows (read-time, cached GeoIP)."""
+    ips_unique: list[str] = []
+    seen: set[str] = set()
+    for it in items:
+        if it.action != "login" or not it.metadata or not isinstance(it.metadata, dict):
+            continue
+        raw = it.metadata.get("ip_address")
+        if raw is None:
+            continue
+        ip = str(raw).strip()
+        if not ip or ip in seen:
+            continue
+        seen.add(ip)
+        ips_unique.append(ip)
+
+    if not ips_unique:
+        return items
+
+    ip_to_loc: dict[str, dict[str, str | None] | None] = {}
+    max_workers = min(8, len(ips_unique))
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        future_to_ip = {pool.submit(get_ip_location, ip): ip for ip in ips_unique}
+        for fut in as_completed(future_to_ip):
+            ip = future_to_ip[fut]
+            try:
+                ip_to_loc[ip] = fut.result()
+            except Exception:
+                logger.exception("ip_geolocation enrichment failed for ip=%s", ip)
+                ip_to_loc[ip] = None
+
+    out: list[PlatformAuditLogItem] = []
+    for it in items:
+        if it.action != "login" or not it.metadata or not isinstance(it.metadata, dict):
+            out.append(it)
+            continue
+        ip = str(it.metadata.get("ip_address") or "").strip()
+        loc = ip_to_loc.get(ip) if ip else None
+        if loc and (loc.get("city") or loc.get("country")):
+            out.append(
+                it.model_copy(
+                    update={
+                        "location_city": loc.get("city"),
+                        "location_country": loc.get("country"),
+                    }
+                )
+            )
+        else:
+            out.append(it)
+    return out
 
 
 @router.get("/organizations", response_model=list[OrganizationListItem])
@@ -184,7 +241,8 @@ def list_platform_audit_logs(
         o = session.get(Organization, oid)
         if o is not None:
             org_names[oid] = o.name or ""
-    return [_audit_row_to_platform_item(r, org_names) for r in rows]
+    items = [_audit_row_to_platform_item(r, org_names) for r in rows]
+    return _enrich_platform_audit_log_locations(items)
 
 
 @router.get("/organizations/{organization_id}", response_model=OrganizationDetailResponse)

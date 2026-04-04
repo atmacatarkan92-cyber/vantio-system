@@ -28,6 +28,20 @@ function formatMetadataListCell(row) {
   return formatMetadata(meta);
 }
 
+/** Backend read-time GeoIP: city + country or fallback label. */
+function formatAuditLocationLine(row) {
+  if (row.action !== "login") return "";
+  const city = row.location_city;
+  const country = row.location_country;
+  const hasCity = city != null && String(city).trim() !== "";
+  const hasCountry = country != null && String(country).trim() !== "";
+  if (!hasCity && !hasCountry) return "Unbekannter Ort";
+  const parts = [];
+  if (hasCity) parts.push(String(city).trim());
+  if (hasCountry) parts.push(String(country).trim());
+  return parts.join(", ");
+}
+
 function formatJsonField(value) {
   if (value == null) return "—";
   try {
@@ -193,6 +207,12 @@ function PlatformAuditLogsPage() {
                   </div>
                   <div>
                     <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
+                      Standort (ungefähr)
+                    </dt>
+                    <dd className={detailTextClass}>{formatAuditLocationLine(selectedLog)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#94a3b8]">
                       User-Agent roh
                     </dt>
                     <dd className={detailJsonClass}>
@@ -307,6 +327,11 @@ function PlatformAuditLogsPage() {
                           </span>
                         ) : null}
                         <span className="break-all">{formatMetadataListCell(row)}</span>
+                        {row.action === "login" ? (
+                          <span className="text-[10px] leading-snug text-[#64748b] dark:text-[#94a3b8]">
+                            {formatAuditLocationLine(row)}
+                          </span>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
