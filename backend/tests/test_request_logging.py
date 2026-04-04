@@ -62,6 +62,52 @@ class TestRequestLogContext:
         assert rec.request_id != "-"
         assert rec.org_id == "-"
         assert rec.user_id == "-"
+        msg = rec.getMessage()
+        assert "request_id=" in msg
+        assert "user_id=null" in msg
+        assert "organization_id=null" in msg
+
+    def test_authenticated_request_completed_log_includes_user_and_org(
+        self, client: TestClient, app, caplog: pytest.LogCaptureFixture
+    ):
+        from fastapi import Request
+
+        from app.core.request_logging import set_log_user_id
+        from auth.dependencies import get_current_user
+        from db.models import User, UserRole
+        from db.rls import set_request_organization_id
+
+        uid = "req-log-test-user"
+        oid = "req-log-test-org"
+
+        def fake_current_user(request: Request) -> User:
+            set_log_user_id(uid)
+            set_request_organization_id(oid)
+            request.state.user_id = uid
+            request.state.organization_id = oid
+            return User(
+                id=uid,
+                organization_id=oid,
+                email="a@a.com",
+                full_name="A",
+                role=UserRole.admin,
+                is_active=True,
+            )
+
+        app.dependency_overrides[get_current_user] = fake_current_user
+        try:
+            caplog.set_level(logging.INFO, logger="app.request")
+            r = client.get("/auth/me")
+            assert r.status_code == 200
+            msg = next(
+                rec.getMessage()
+                for rec in caplog.records
+                if rec.name == "app.request" and "event=request_completed" in rec.getMessage()
+            )
+            assert uid in msg
+            assert oid in msg
+        finally:
+            app.dependency_overrides.pop(get_current_user, None)
 
     def test_request_context_filter_injects_ids(self):
         """Filter reads ContextVar / RLS org (same bindings as an authenticated request)."""

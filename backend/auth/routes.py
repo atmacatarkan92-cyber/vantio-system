@@ -160,6 +160,7 @@ def login(request: Request, data: LoginRequest, session=Depends(get_db_session))
             metadata={
                 "ip_address": ip_address,
                 "user_agent": user_agent,
+                "request_id": getattr(request.state, "request_id", None),
             },
         )
     except Exception:

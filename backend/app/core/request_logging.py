@@ -67,6 +67,13 @@ def install_request_context_filter() -> None:
 _request_logger = logging.getLogger("app.request")
 
 
+def _log_field(value: str | None) -> str:
+    """String for structured logs when a field is absent."""
+    if value is None or value == "":
+        return "null"
+    return str(value)
+
+
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """
     Innermost HTTP middleware: assign request_id, log completion/failure, echo X-Request-ID.
@@ -81,6 +88,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         try:
             rid = _resolve_request_id_from_headers(request.headers)
             _request_id.set(rid)
+            request.state.request_id = rid
             path = request.url.path
             method = request.method
             start = time.perf_counter()
@@ -88,21 +96,32 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 response = await call_next(request)
             except Exception:
                 duration_ms = int((time.perf_counter() - start) * 1000)
+                _uid = get_log_user_id() or getattr(request.state, "user_id", None)
+                _oid = get_request_organization_id() or getattr(request.state, "organization_id", None)
                 _request_logger.exception(
-                    "event=request_failed method=%s path=%s duration_ms=%s",
+                    "event=request_failed request_id=%s method=%s path=%s status_code=%s duration_ms=%s user_id=%s organization_id=%s",
+                    _log_field(get_request_id()),
                     method,
                     path,
+                    "null",
                     duration_ms,
+                    _log_field(_uid),
+                    _log_field(_oid),
                 )
                 raise
             duration_ms = int((time.perf_counter() - start) * 1000)
             response.headers[REQUEST_ID_HEADER] = rid
+            _uid = get_log_user_id() or getattr(request.state, "user_id", None)
+            _oid = get_request_organization_id() or getattr(request.state, "organization_id", None)
             _request_logger.info(
-                "event=request_completed method=%s path=%s status_code=%s duration_ms=%s",
+                "event=request_completed request_id=%s method=%s path=%s status_code=%s duration_ms=%s user_id=%s organization_id=%s",
+                _log_field(get_request_id()),
                 method,
                 path,
                 response.status_code,
                 duration_ms,
+                _log_field(_uid),
+                _log_field(_oid),
             )
             return response
         finally:

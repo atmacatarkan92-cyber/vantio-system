@@ -123,6 +123,10 @@ def get_current_user(
     else:
         set_request_organization_id(None)
 
+    request.state.user_id = str(user.id)
+    _oid = getattr(user, "organization_id", None)
+    request.state.organization_id = str(_oid).strip() if _oid else None
+
     return user
 
 
