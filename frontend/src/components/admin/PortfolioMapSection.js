@@ -56,6 +56,19 @@ function portfolioMapClusterSortUnits(a, b) {
   return sa.localeCompare(sb, "de-CH");
 }
 
+/** Marker/cluster click may be MapMouseEvent or legacy DOM event; stop map from treating it as a map click (closes InfoWindow). */
+function portfolioMapStopMapMouseEvent(event) {
+  if (!event) return;
+  try {
+    if (typeof event.stop === "function") event.stop();
+  } catch {
+    /* ignore */
+  }
+  const raw = event.domEvent != null ? event.domEvent : event;
+  if (raw && typeof raw.stopPropagation === "function") raw.stopPropagation();
+  if (raw && typeof raw.preventDefault === "function") raw.preventDefault();
+}
+
 /** Marker fill colors (Google circle symbols). */
 function portfolioMapMarkerFill(mapStatus) {
   switch (mapStatus) {
@@ -227,28 +240,29 @@ function PortfolioClusterListContent({ units, onOpenUnit, onHoverUnit, theme }) 
   );
 }
 
-/** Custom cluster marker: high-contrast count bubble (reads well on light/neutral maps). */
+/** Cluster badge: strong border/shadow/count for visibility on light maps (restrained, not cartoonish). */
 const portfolioMapClusterRenderer = {
   render(cluster, _stats, _map) {
     const count = cluster.count;
     const position = cluster.position;
     const fid = `pmc_${count}_${Math.round(position.lat() * 1e5)}_${Math.round(position.lng() * 1e5)}`;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 84" width="84" height="84">
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
       <defs>
-        <filter id="${fid}" x="-35%" y="-35%" width="170%" height="170%">
-          <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.32"/>
+        <filter id="${fid}" x="-40%" y="-40%" width="180%" height="180%">
+          <feDropShadow dx="0" dy="3" stdDeviation="3.5" flood-color="#0f172a" flood-opacity="0.42"/>
         </filter>
       </defs>
-      <circle cx="42" cy="42" r="22" fill="#ffffff" stroke="#0f172a" stroke-width="2.75" filter="url(#${fid})"/>
-      <text x="42" y="48" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="system-ui,-apple-system,sans-serif">${count}</text>
+      <circle cx="48" cy="48" r="28" fill="#0f172a" opacity="0.12"/>
+      <circle cx="48" cy="48" r="26" fill="#ffffff" stroke="#0f172a" stroke-width="3.25" filter="url(#${fid})"/>
+      <text x="48" y="56" text-anchor="middle" font-size="18" font-weight="800" fill="#0f172a" font-family="system-ui,-apple-system,sans-serif">${count}</text>
     </svg>`;
     return new globalThis.google.maps.Marker({
       position,
       cursor: "pointer",
       icon: {
         url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-        scaledSize: new globalThis.google.maps.Size(44, 44),
-        anchor: new globalThis.google.maps.Point(22, 22),
+        scaledSize: new globalThis.google.maps.Size(52, 52),
+        anchor: new globalThis.google.maps.Point(26, 26),
       },
       zIndex: Number(globalThis.google.maps.Marker.MAX_ZINDEX) + count,
       title: `${count} Einheiten`,
@@ -307,6 +321,7 @@ function PortfolioMapMarkersAndCluster({
   const loaded = useApiIsLoaded();
   const clustererRef = useRef(null);
   const markersRef = useRef([]);
+  const clusterPopupOpenTimerRef = useRef(null);
   const navigate = useNavigate();
   const { theme } = useTheme();
 
@@ -376,7 +391,7 @@ function PortfolioMapMarkersAndCluster({
       marker.set("portfolioUnit", it);
       if (!preview) {
         marker.addListener("click", (ev) => {
-          ev?.stop?.();
+          portfolioMapStopMapMouseEvent(ev);
           const pos = marker.getPosition();
           if (!pos) return;
           setClusterInfo(null);
@@ -399,7 +414,7 @@ function PortfolioMapMarkersAndCluster({
       onClusterClick: preview
         ? () => {}
         : (event, c) => {
-            event?.stop?.();
+            portfolioMapStopMapMouseEvent(event);
             setSingleInfo(null);
             onSinglePopupClose();
             onHoverClear();
@@ -408,15 +423,27 @@ function PortfolioMapMarkersAndCluster({
               .filter(Boolean);
             const sorted = [...units].sort(portfolioMapClusterSortUnits);
             const p = c.position;
-            setClusterInfo({
+            const payload = {
               position: { lat: p.lat(), lng: p.lng() },
               units: sorted,
-            });
+            };
+            if (clusterPopupOpenTimerRef.current != null) {
+              globalThis.clearTimeout(clusterPopupOpenTimerRef.current);
+            }
+            // Open after the cluster click is fully handled; otherwise the same gesture can hit the map as a click and close the InfoWindow immediately.
+            clusterPopupOpenTimerRef.current = globalThis.setTimeout(() => {
+              clusterPopupOpenTimerRef.current = null;
+              setClusterInfo(payload);
+            }, 0);
           },
     });
     clustererRef.current = clusterer;
 
     return () => {
+      if (clusterPopupOpenTimerRef.current != null) {
+        globalThis.clearTimeout(clusterPopupOpenTimerRef.current);
+        clusterPopupOpenTimerRef.current = null;
+      }
       if (clustererRef.current) {
         clustererRef.current.clearMarkers();
         clustererRef.current.setMap(null);
@@ -498,7 +525,7 @@ function PortfolioMapMarkersAndCluster({
           position={clusterInfo.position}
           shouldFocus={false}
           disableAutoPan
-          pixelOffset={[0, -14]}
+          pixelOffset={[0, -10]}
           className="portfolio-map-iw"
           style={iwStyleCluster}
           onClose={closeClusterPopup}
