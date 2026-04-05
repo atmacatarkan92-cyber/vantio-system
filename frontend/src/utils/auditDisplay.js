@@ -106,7 +106,7 @@ function auditFallbackIdDisplay(value) {
 }
 
 function sortAuditChangedFieldKeys(keys) {
-  const priority = new Map(AUDIT_UPDATE_FIELD_ORDER.map((k, i) => [k, i]));
+  const priority = new Map(AUDIT_UPDATE_FIELD_ORDER.map((k, idx) => [k, idx]));
   return [...keys].sort((a, b) => {
     const pa = priority.has(a) ? priority.get(a) : 1000;
     const pb = priority.has(b) ? priority.get(b) : 1000;
@@ -893,7 +893,6 @@ export function formatAuditLog(log, context = {}) {
   }
 
   if (entityType === "landlord") {
-    const action = String(log.action || "").toLowerCase();
     if (action === "create") {
       return { summary: "Verwaltung angelegt", changes: [] };
     }
@@ -912,7 +911,6 @@ export function formatAuditLog(log, context = {}) {
   }
 
   if (entityType === "property_manager") {
-    const action = String(log.action || "").toLowerCase();
     if (action === "create") {
       return { summary: "Bewirtschafter angelegt", changes: [] };
     }
@@ -931,7 +929,6 @@ export function formatAuditLog(log, context = {}) {
   }
 
   if (entityType === "owner") {
-    const action = String(log.action || "").toLowerCase();
     if (action === "create") {
       return { summary: "Eigentümer angelegt", changes: [] };
     }
@@ -963,7 +960,6 @@ export function formatAuditLog(log, context = {}) {
   }
 
   if (entityType === "tenant") {
-    const action = String(log.action || "").toLowerCase();
     const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
     const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
 
