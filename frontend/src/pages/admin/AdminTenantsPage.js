@@ -42,29 +42,25 @@ function formatDate(dateString) {
 
 function getStatusMeta(status) {
   const normalized = String(status || "").toLowerCase();
-  const pillBase =
-    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold";
+  const aktiv =
+    "inline-flex items-center rounded-full border border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#3ddc84]";
+  const reserviert =
+    "inline-flex items-center rounded-full border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#f5a623]";
+  const ausgezogen =
+    "inline-flex items-center rounded-full border border-[#1c2035] bg-[#191c28] px-2 py-[2px] text-[9px] font-semibold text-[#4a5070]";
+  const neutral =
+    "inline-flex items-center rounded-full border border-[#1c2035] bg-[#191c28] px-2 py-[2px] text-[9px] font-semibold text-[#8892b0]";
 
   if (
     normalized === "active" ||
     normalized === "aktiv" ||
     normalized === "belegt"
   ) {
-    return {
-      label: "Aktiv",
-      pillClass:
-        "inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400",
-    };
+    return { label: "Aktiv", pillClass: aktiv };
   }
 
-  if (
-    normalized === "reserved" ||
-    normalized === "reserviert"
-  ) {
-    return {
-      label: "Reserviert",
-      pillClass: `${pillBase} border-amber-500/20 bg-amber-500/10 text-amber-400`,
-    };
+  if (normalized === "reserved" || normalized === "reserviert") {
+    return { label: "Reserviert", pillClass: reserviert };
   }
 
   if (
@@ -73,23 +69,41 @@ function getStatusMeta(status) {
     normalized === "move_out" ||
     normalized === "ausgezogen"
   ) {
-    return {
-      label: "Ausgezogen",
-      pillClass: `${pillBase} border-red-500/20 bg-red-500/10 text-red-400`,
-    };
+    return { label: "Ausgezogen", pillClass: ausgezogen };
   }
 
   if (normalized === "inactive" || normalized === "inaktiv") {
-    return {
-      label: "Inaktiv",
-      pillClass: `${pillBase} border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] text-[#64748b] dark:text-[#6b7a9a]`,
-    };
+    return { label: "Inaktiv", pillClass: neutral };
   }
 
   return {
     label: status || "Offen",
-    pillClass: `${pillBase} border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] text-[#64748b] dark:text-[#6b7a9a]`,
+    pillClass: neutral,
   };
+}
+
+const AVATAR_PALETTES = [
+  "border border-[rgba(91,156,246,0.2)] bg-[rgba(91,156,246,0.1)] text-[#5b9cf6]",
+  "border border-[rgba(157,124,244,0.2)] bg-[rgba(157,124,244,0.1)] text-[#9d7cf4]",
+  "border border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] text-[#3ddc84]",
+  "border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] text-[#f5a623]",
+];
+
+function initialsFromDisplayName(name) {
+  const parts = String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] || ""}${parts[parts.length - 1][0] || ""}`.toUpperCase();
+}
+
+function roleBadgeClass(label) {
+  if (label === "Hauptmieter") {
+    return "inline-flex rounded-full border border-[rgba(91,156,246,0.2)] bg-[rgba(91,156,246,0.1)] px-[6px] py-[1px] text-[9px] font-semibold text-[#5b9cf6]";
+  }
+  return "inline-flex rounded-full border border-[#1c2035] bg-[#191c28] px-[6px] py-[1px] text-[9px] font-semibold text-[#8892b0]";
 }
 
 /** Tenancies where this tenant is primary (tenant_id) or listed in participants. */
@@ -389,7 +403,7 @@ function AdminTenantsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] p-6 text-[#64748b] [color-scheme:light] dark:bg-[#07090f] dark:text-[#6b7a9a] dark:[color-scheme:dark]">
+      <div className="min-h-screen bg-[#080a0f] p-6 text-[#4a5070]">
         Lade Mieter, Zimmer, Mietverhältnisse und Rechnungen …
       </div>
     );
@@ -397,102 +411,113 @@ function AdminTenantsPage() {
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] p-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
-        <div className="rounded-[14px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[14px] text-[#f87171]">
-          <strong className="font-semibold text-[#f87171]">Fehler beim Laden:</strong> {loadError}
+      <div className="min-h-screen bg-[#080a0f] p-6 text-[#edf0f7]">
+        <div className="rounded-[12px] border border-[rgba(255,95,109,0.25)] bg-[rgba(255,95,109,0.08)] px-4 py-3 text-[14px] text-[#ff5f6d]">
+          <strong className="font-semibold">Fehler beim Laden:</strong> {loadError}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
-      <div className="mx-auto grid max-w-[min(1400px,100%)] gap-6 p-6">
-        <TenantCreateModal
-          open={createOpen}
-          onClose={() => setCreateOpen(false)}
-          onCreated={() => {
-            reloadData();
-          }}
-        />
+    <div className="-m-6 min-h-screen bg-[#080a0f]">
+      <TenantCreateModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => {
+          reloadData();
+        }}
+      />
+
+      <div className="sticky top-0 z-30 flex h-[50px] items-center justify-end border-b border-[#1c2035] bg-[#0c0e15] px-6 backdrop-blur-md">
+        <div className="mr-auto flex items-center gap-3">
+          <span className="font-semibold text-[#edf0f7]">
+            Van<span className="text-[#5b9cf6]">tio</span>
+          </span>
+          <span className="text-[#4a5070]">·</span>
+          <span className="text-[14px] font-medium text-[#edf0f7]">Mieter</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="rounded-[6px] border border-[rgba(91,156,246,0.28)] bg-[rgba(91,156,246,0.1)] px-[14px] py-[5px] text-[11px] font-medium text-[#5b9cf6]"
+        >
+          + Neuer Mieter
+        </button>
+      </div>
+
+      <div className="mx-auto flex max-w-[min(1400px,100%)] flex-col gap-4 px-6 py-5">
+        {deleteError ? (
+          <div className="rounded-[10px] border border-[rgba(255,95,109,0.25)] bg-[rgba(255,95,109,0.08)] px-4 py-3 text-[14px] text-[#ff5f6d]">
+            {deleteError}
+          </div>
+        ) : null}
+
         <div>
-          <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Vantio</div>
-
-          {deleteError ? (
-            <div className="mb-4 rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[14px] text-[#f87171]">
-              {deleteError}
-            </div>
-          ) : null}
-
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h2 className="m-0 text-[22px] font-bold text-[#0f172a] dark:text-[#eef2ff]">Mieter</h2>
-              <p className="mt-2 max-w-[560px] text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
-                CRM-Übersicht: Mieter durchsuchen, anlegen und bearbeiten. Mietverhältnisse
-                und weitere Module folgen.
+          <div className="mb-[10px] flex items-center gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">
+              Übersicht · Live
+            </span>
+            <div className="h-px flex-1 bg-[#1c2035]" />
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#5b9cf6]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">
+                Mieter gesamt
               </p>
+              <p className="mb-[4px] font-mono text-[22px] font-medium leading-none text-[#5b9cf6]">
+                {summary.totalCount}
+              </p>
+              <p className="text-[10px] leading-[1.4] text-[#4a5070]">Alle erfassten Mieter</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setCreateOpen(true)}
-              className="cursor-pointer rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-[18px] py-3 text-[15px] font-semibold text-white"
-            >
-              Neuer Mieter
-            </button>
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#3ddc84]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">
+                Aktive Mieter
+              </p>
+              <p className="mb-[4px] font-mono text-[22px] font-medium leading-none text-[#3ddc84]">
+                {summary.activeCount}
+              </p>
+              <p className="text-[10px] leading-[1.4] text-[#4a5070]">Aktuell laufende Mietverhältnisse</p>
+            </div>
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#f5a623]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Reserviert</p>
+              <p className="mb-[4px] font-mono text-[22px] font-medium leading-none text-[#f5a623]">
+                {summary.reservedCount}
+              </p>
+              <p className="text-[10px] leading-[1.4] text-[#4a5070]">Einzug geplant</p>
+            </div>
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#ff5f6d]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">
+                Offene Rechnungen
+              </p>
+              <p className="mb-[4px] font-mono text-[22px] font-medium leading-none text-[#ff5f6d]">
+                {summary.totalOpenInvoices}
+              </p>
+              <p className="text-[10px] leading-[1.4] text-[#4a5070]">{formatCurrency(summary.totalOpenAmount)}</p>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
-          <div className="rounded-[14px] border border-black/10 border-t-4 dark:border-white/[0.07] border-t-slate-500 bg-white dark:bg-[#141824] p-5">
-            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
-              Mieter gesamt
-            </div>
-            <div className="text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{summary.totalCount}</div>
-            <div className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Alle erfassten Mieter</div>
-          </div>
-
-          <div className="rounded-[14px] border border-black/10 border-t-4 dark:border-white/[0.07] border-t-green-500 bg-white dark:bg-[#141824] p-5">
-            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
-              Aktive Mieter
-            </div>
-            <div className="text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{summary.activeCount}</div>
-            <div className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Aktuell laufende Mietverhältnisse</div>
-          </div>
-
-          <div className="rounded-[14px] border border-black/10 border-t-4 dark:border-white/[0.07] border-t-amber-500 bg-white dark:bg-[#141824] p-5">
-            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
-              Reserviert
-            </div>
-            <div className="text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{summary.reservedCount}</div>
-            <div className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Einzug geplant</div>
-          </div>
-
-          <div className="rounded-[14px] border border-black/10 border-t-4 dark:border-white/[0.07] border-t-red-500 bg-white dark:bg-[#141824] p-5">
-            <div className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
-              Offene Rechnungen
-            </div>
-            <div className="text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{summary.totalOpenInvoices}</div>
-            <div className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">{formatCurrency(summary.totalOpenAmount)}</div>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-5">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h3 className="m-0 text-[16px] font-bold text-[#0f172a] dark:text-[#eef2ff]">Mieterübersicht</h3>
-
-            <div className="flex flex-wrap items-center gap-2.5">
+        <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+          <div className="flex flex-col gap-3 border-b border-[#1c2035] px-[18px] py-[13px] sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="m-0 text-[13px] font-medium text-[#edf0f7]">Mieterübersicht</h3>
+            <div className="flex flex-wrap items-center gap-[8px]">
               <input
                 type="search"
                 placeholder="Suche: Name, E-Mail, Telefon …"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="min-w-[200px] rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2.5 text-[13px] text-[#0f172a] dark:text-[#eef2ff] placeholder:text-[#64748b] dark:placeholder:text-[#6b7a9a]"
+                className="w-[220px] rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[5px] font-['DM_Sans'] text-[12px] text-[#edf0f7] outline-none placeholder:text-[#4a5070]"
                 aria-label="Mieter suchen"
               />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-[8px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2.5 text-[13px] text-[#0f172a] dark:text-[#eef2ff]"
+                className="cursor-pointer appearance-none rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[5px] font-['DM_Sans'] text-[12px] text-[#8892b0]"
                 aria-label="Status filtern"
               >
                 <option value="all">Alle Status</option>
@@ -501,162 +526,182 @@ function AdminTenantsPage() {
                 <option value="ended">Ausgezogen</option>
                 <option value="open">Offen / Sonstige</option>
               </select>
+              <span className="rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[3px] text-[10px] text-[#4a5070]">
+                {filteredRows.length === rows.length
+                  ? `${rows.length} Einträge`
+                  : `${filteredRows.length} / ${rows.length}`}
+              </span>
             </div>
           </div>
 
-          <div className="mb-3 text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
-            {filteredRows.length === rows.length
-              ? `${rows.length} Einträge`
-              : `${filteredRows.length} von ${rows.length} Einträgen (gefiltert)`}
-          </div>
-
           {rows.length === 0 ? (
-            <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Keine Mieter erfasst.</p>
+            <p className="px-[18px] py-[16px] text-[12px] text-[#4a5070]">Keine Mieter erfasst.</p>
           ) : filteredRows.length === 0 ? (
-            <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Keine Mieter für diese Filter.</p>
+            <p className="px-[18px] py-[16px] text-[12px] text-[#4a5070]">Keine Mieter für diese Filter.</p>
           ) : (
-            <table className="w-full border-collapse text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
-              <thead className="bg-slate-100 dark:bg-[#111520]">
-                <tr className="text-left">
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-                    Mieter
-                  </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-                    Kontakt
-                  </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-                    Unit
-                  </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-                    Zimmer
-                  </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-                    Start
-                  </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-                    Ende
-                  </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-                    Einnahmen / Monat (Äquivalent)
-                  </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-                    Rechnungen offen
-                  </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-                    Offener Betrag
-                  </th>
-                  <th className="px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-                    Status
-                  </th>
-                  <th className="min-w-[180px] px-3 py-3 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:text-[#6b7a9a]">
-                    Aktion
-                  </th>
-                </tr>
-              </thead>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Mieter
+                    </th>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Kontakt
+                    </th>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Unit
+                    </th>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Zimmer
+                    </th>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Start
+                    </th>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Ende
+                    </th>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Einnahmen / Monat (Äquivalent)
+                    </th>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Rechnungen offen
+                    </th>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Offener Betrag
+                    </th>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Status
+                    </th>
+                    <th className="min-w-[180px] whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Aktion
+                    </th>
+                  </tr>
+                </thead>
 
-              <tbody>
-                {filteredRows.map((row) => {
-                  const statusMeta = getStatusMeta(row.status);
+                <tbody>
+                  {filteredRows.map((row, rowIdx) => {
+                    const statusMeta = getStatusMeta(row.status);
+                    const av = AVATAR_PALETTES[rowIdx % AVATAR_PALETTES.length];
+                    const openCnt = row.openInvoicesCount ?? 0;
 
-                  return (
-                    <tr
-                      key={row.id}
-                      className="cursor-pointer border-b border-black/10 dark:border-white/[0.05]"
-                      onClick={() => navigate(`/admin/tenants/${row.id}`)}
-                    >
-                      <td className="px-3 py-3 align-top">
-                        <div className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{row.fullName}</div>
-                        {row.tenancyRoleLabel ? (
-                          <div className="mt-1">
-                            <span className="inline-flex items-center rounded-full border border-slate-300/80 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-white/[0.12] dark:bg-white/[0.06] dark:text-[#94a3b8]">
-                              {row.tenancyRoleLabel}
-                            </span>
-                          </div>
-                        ) : null}
-                        {row.notes ? (
-                          <div className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">{row.notes}</div>
-                        ) : null}
-                      </td>
-
-                      <td className="px-3 py-3 align-top">
-                        <div className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">{row.email}</div>
-                        <div className="mt-1 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">{row.phone}</div>
-                      </td>
-
-                      <td className="px-3 py-3 align-top">
-                        {row.unitId && row.unitId !== "—" ? (
-                          <Link
-                            to={`/admin/units/${encodeURIComponent(row.unitId)}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-blue-700 dark:text-blue-400 font-medium hover:underline text-[13px]"
-                          >
-                            {row.unitAddress}
-                          </Link>
-                        ) : (
-                          <div className="text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                            {row.unitAddress}
-                          </div>
-                        )}
-                        <div className="mt-0.5 text-[10px] text-[#64748b] dark:text-[#6b7a9a]">{row.unitId}</div>
-                      </td>
-
-                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                        {row.roomName}
-                      </td>
-                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                        {formatDate(row.startDate)}
-                      </td>
-                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                        {formatDate(row.endDate)}
-                      </td>
-                      <td
-                        className={`px-3 py-3 align-top text-[13px] font-semibold ${
-                          row.monthlyRent == null
-                            ? "text-[#64748b] dark:text-[#6b7a9a]"
-                            : "text-emerald-600 dark:text-emerald-400"
+                    return (
+                      <tr
+                        key={row.id}
+                        className={`cursor-pointer border-b border-[#1c2035] text-[11px] text-[#8892b0] transition-colors hover:bg-[#141720] ${
+                          rowIdx === filteredRows.length - 1 ? "border-b-0" : ""
                         }`}
+                        onClick={() => navigate(`/admin/tenants/${row.id}`)}
                       >
-                        {row.monthlyRent == null ? "—" : formatCurrency(row.monthlyRent)}
-                      </td>
-                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                        {row.openInvoicesCount}
-                      </td>
-                      <td className="px-3 py-3 align-top text-[13px] font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                        {formatCurrency(row.totalOpenAmount)}
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        <span className={statusMeta.pillClass}>{statusMeta.label}</span>
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/admin/tenants/${row.id}`);
-                            }}
-                            className="rounded-[8px] border border-black/10 bg-transparent px-3 py-1.5 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
+                        <td className="align-middle px-[14px] py-[10px]">
+                          <div className="flex items-center gap-[9px]">
+                            <span
+                              className={`flex h-[32px] w-[32px] flex-shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${av}`}
+                            >
+                              {initialsFromDisplayName(row.fullName)}
+                            </span>
+                            <div>
+                              <div className="font-medium text-[12px] text-[#edf0f7]">{row.fullName}</div>
+                              {row.tenancyRoleLabel ? (
+                                <div className="mt-[3px]">
+                                  <span className={roleBadgeClass(row.tenancyRoleLabel)}>
+                                    {row.tenancyRoleLabel}
+                                  </span>
+                                </div>
+                              ) : null}
+                              {row.notes ? (
+                                <div className="mt-1 text-[10px] text-[#4a5070]">{row.notes}</div>
+                              ) : null}
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="align-middle px-[14px] py-[10px]">
+                          <div className="text-[11px] text-[#8892b0]">{row.email}</div>
+                          <div className="mt-[1px] font-mono text-[10px] text-[#4a5070]">{row.phone}</div>
+                        </td>
+
+                        <td className="align-middle px-[14px] py-[10px]">
+                          {row.unitId && row.unitId !== "—" ? (
+                            <Link
+                              to={`/admin/units/${encodeURIComponent(row.unitId)}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[11px] font-medium text-[#5b9cf6] hover:underline"
+                            >
+                              {row.unitAddress}
+                            </Link>
+                          ) : (
+                            <div className="text-[11px] text-[#8892b0]">{row.unitAddress}</div>
+                          )}
+                          <div className="mt-[1px] max-w-[120px] truncate font-mono text-[8px] text-[#4a5070]">
+                            {row.unitId}
+                          </div>
+                        </td>
+
+                        <td className="align-middle px-[14px] py-[10px] text-[11px] text-[#8892b0]">
+                          {row.roomName}
+                        </td>
+                        <td className="align-middle px-[14px] py-[10px] font-mono text-[10px] text-[#4a5070]">
+                          {formatDate(row.startDate)}
+                        </td>
+                        <td className="align-middle px-[14px] py-[10px] font-mono text-[10px] text-[#4a5070]">
+                          {formatDate(row.endDate)}
+                        </td>
+                        <td
+                          className={`align-middle px-[14px] py-[10px] font-mono text-[11px] font-medium ${
+                            row.monthlyRent == null ? "text-[#4a5070]" : "text-[#3ddc84]"
+                          }`}
+                        >
+                          {row.monthlyRent == null ? "—" : formatCurrency(row.monthlyRent)}
+                        </td>
+                        <td className="align-middle px-[14px] py-[10px] text-right">
+                          <span
+                            className={`inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1 font-mono text-[10px] font-semibold ${
+                              openCnt > 0
+                                ? "border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] text-[#f5a623]"
+                                : "border border-[#1c2035] bg-[#191c28] text-[#4a5070]"
+                            }`}
                           >
-                            Öffnen
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => handleDeleteTenant(e, row.id)}
-                            className="rounded-[8px] border border-red-300 bg-red-50 px-3 py-1.5 text-[13px] font-semibold text-red-700 hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-[#f87171] dark:hover:bg-red-500/15"
-                          >
-                            Löschen
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                            {openCnt}
+                          </span>
+                        </td>
+                        <td className="align-middle px-[14px] py-[10px] font-mono text-[11px] text-[#4a5070]">
+                          {formatCurrency(row.totalOpenAmount)}
+                        </td>
+                        <td className="align-middle px-[14px] py-[10px]">
+                          <span className={statusMeta.pillClass}>{statusMeta.label}</span>
+                        </td>
+                        <td className="align-middle px-[14px] py-[10px]">
+                          <div className="flex items-center gap-[5px]">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/admin/tenants/${row.id}`);
+                              }}
+                              className="rounded-[6px] border border-[#252a3a] bg-[#141720] px-[10px] py-[3px] text-[10px] text-[#8892b0] transition-all hover:border-[#242840] hover:text-[#edf0f7]"
+                            >
+                              Öffnen →
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteTenant(e, row.id)}
+                              className="rounded-[6px] border border-[#1c2035] bg-transparent px-[10px] py-[3px] text-[10px] text-[#4a5070] transition-all hover:border-[rgba(255,95,109,0.2)] hover:bg-[rgba(255,95,109,0.1)] hover:text-[#ff5f6d]"
+                            >
+                              Löschen
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
-        <div className="rounded-[10px] border border-blue-500/[0.12] bg-blue-500/[0.06] px-5 py-4 text-[14px] font-medium text-[#7aaeff]">
+        <div className="rounded-[8px] border border-[rgba(91,156,246,0.2)] bg-[rgba(91,156,246,0.08)] px-[16px] py-[10px] text-[11px] text-[#5b9cf6]">
           Mieter, Zimmer, Mietverhältnisse und Rechnungen werden aus der Backend-API geladen.
         </div>
       </div>
