@@ -880,7 +880,6 @@ export function formatAuditLog(log, context = {}) {
   if (entityType === "unit") {
     const lines = getAuditEntryDisplayLines(log, context.resolvers || {});
     const flatChanges = buildUnitFlatFieldChangesFixed(log, context.resolvers || {});
-    const action = String(log.action || "").toLowerCase();
     const changes =
       action === "update" && flatChanges.length > 0 ? flatChanges : linesToChanges(lines.slice(1));
     return {
