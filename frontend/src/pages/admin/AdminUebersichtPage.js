@@ -93,15 +93,14 @@ function loadSavedArray(key) {
   }
 }
 
-function kpiBadgeClass(badge) {
-  const b = String(badge || "");
-  if (b === "Summary") {
-    return "border border-[rgba(157,124,244,0.25)] bg-[rgba(157,124,244,0.12)] text-[#9d7cf4]";
+function kpiBadgeClass(kind) {
+  if (kind === "Summary") {
+    return "border border-violet-200 bg-violet-50 text-violet-700 dark:border-[rgba(157,124,244,0.25)] dark:bg-[rgba(157,124,244,0.12)] dark:text-[#9d7cf4]";
   }
-  if (b === "Live") {
-    return "border border-[rgba(61,220,132,0.25)] bg-[rgba(61,220,132,0.12)] text-[#3ddc84]";
+  if (kind === "Live") {
+    return "border border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-[rgba(61,220,132,0.25)] dark:bg-[rgba(61,220,132,0.12)] dark:text-[#3ddc84]";
   }
-  return "border border-[rgba(91,156,246,0.25)] bg-[rgba(91,156,246,0.12)] text-[#5b9cf6]";
+  return "border border-sky-200 bg-sky-50 text-sky-800 dark:border-[rgba(91,156,246,0.25)] dark:bg-[rgba(91,156,246,0.12)] dark:text-[#5b9cf6]";
 }
 
 function KpiKarte({
@@ -116,17 +115,22 @@ function KpiKarte({
   hinweisClassName,
 }) {
   const badgeKind =
-    badge === "Summary" ? "Summary" : badge === "Live" ? "Live" : "Tenancy";
+    badge === "Übersicht" || badge === "Summary"
+      ? "Summary"
+      : badge === "Live"
+        ? "Live"
+        : "Tenancy";
   const hinweisWrap =
-    hinweisClassName ?? "mt-[4px] text-[10px] leading-[1.4] text-[#4a5070]";
+    hinweisClassName ??
+    "mt-[4px] text-[10px] leading-[1.4] text-gray-500 dark:text-[#4a5070]";
   return (
-    <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[14px_15px] transition-colors hover:border-[#242840]">
+    <div className="relative overflow-hidden rounded-[10px] border border-gray-200 bg-white p-[14px_15px] transition-colors hover:border-gray-300 dark:border-[#1c2035] dark:bg-[#10121a] dark:hover:border-[#242840]">
       <div
         className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px]"
         style={{ background: akzent }}
       />
       <div className="mb-[5px] flex items-start justify-between gap-2">
-        <div className="text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">{titel}</div>
+        <div className="text-[9px] font-medium uppercase tracking-[0.5px] text-gray-500 dark:text-[#4a5070]">{titel}</div>
         <span
           className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-[6px] py-[2px] text-[9px] font-semibold uppercase tracking-[0.4px] ${kpiBadgeClass(badgeKind)}`}
         >
@@ -134,7 +138,7 @@ function KpiKarte({
         </span>
       </div>
       <div
-        className={`mb-[4px] font-mono text-[20px] font-medium leading-none text-[#edf0f7] ${wertClassName}`.trim()}
+        className={`mb-[4px] font-mono text-[20px] font-medium leading-none text-gray-900 dark:text-[#edf0f7] ${wertClassName}`.trim()}
         style={farbe ? { color: farbe } : undefined}
       >
         {wert}
@@ -152,15 +156,18 @@ function StatusBadge({ status }) {
   let cls = base;
   if (normalized === "paid") {
     label = "Bezahlt";
-    cls += "border-[rgba(61,220,132,0.25)] bg-[rgba(61,220,132,0.12)] text-[#3ddc84]";
+    cls +=
+      "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-[rgba(61,220,132,0.25)] dark:bg-[rgba(61,220,132,0.12)] dark:text-[#3ddc84]";
   } else if (normalized === "overdue") {
     label = "Überfällig";
-    cls += "border-[rgba(255,95,109,0.25)] bg-[rgba(255,95,109,0.12)] text-[#ff5f6d]";
+    cls +=
+      "border-rose-200 bg-rose-50 text-rose-800 dark:border-[rgba(255,95,109,0.25)] dark:bg-[rgba(255,95,109,0.12)] dark:text-[#ff5f6d]";
   } else if (normalized === "cancelled") {
     label = "Storniert";
-    cls += "border-[#1c2035] bg-[#141720] text-[#8892b0]";
+    cls += "border-gray-200 bg-slate-100 text-slate-600 dark:border-[#1c2035] dark:bg-[#141720] dark:text-[#8892b0]";
   } else {
-    cls += "border-[rgba(245,166,35,0.25)] bg-[rgba(245,166,35,0.12)] text-[#f5a623]";
+    cls +=
+      "border-amber-200 bg-amber-50 text-amber-900 dark:border-[rgba(245,166,35,0.25)] dark:bg-[rgba(245,166,35,0.12)] dark:text-[#f5a623]";
   }
   return <span className={cls}>{label}</span>;
 }
@@ -193,6 +200,7 @@ function renderFinanceLineSvg(data) {
   };
   const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => padT + innerH * (1 - t));
   return (
+    <div className="[&_line]:stroke-slate-200 dark:[&_line]:stroke-[#1c2035]">
     <svg viewBox={`0 0 ${W} ${H}`} className="h-[220px] w-full" preserveAspectRatio="xMidYMid meet">
       <defs>
         <linearGradient id="ueFinRev" x1="0" y1="0" x2="0" y2="1">
@@ -211,7 +219,7 @@ function renderFinanceLineSvg(data) {
           y1={gy}
           x2={W - padR}
           y2={gy}
-          stroke="#1c2035"
+          stroke="currentColor"
           strokeWidth="0.5"
           strokeDasharray="3 4"
         />
@@ -252,14 +260,15 @@ function renderFinanceLineSvg(data) {
             x={x(i)}
             y={H - 10}
             textAnchor="middle"
+            className={i === n - 1 ? "fill-sky-500 dark:fill-[#5b9cf6]" : "fill-slate-500 dark:fill-[#4a5070]"}
             style={{ fontFamily: "ui-monospace, monospace", fontSize: 7 }}
-            fill={i === n - 1 ? "#5b9cf6" : "#4a5070"}
           >
             {d.month}
           </text>
         </g>
       ))}
     </svg>
+    </div>
   );
 }
 
@@ -285,6 +294,7 @@ function renderBelegungBarsSvg(data) {
   const yh = (v) => (Math.max(0, v) / maxY) * innerH;
   const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => padT + innerH * (1 - t));
   return (
+    <div className="[&_line]:stroke-slate-200 dark:[&_line]:stroke-[#1c2035]">
     <svg viewBox={`0 0 ${W} ${H}`} className="h-[220px] w-full" preserveAspectRatio="xMidYMid meet">
       <defs>
         <linearGradient id="ueBegOcc" x1="0" y1="0" x2="0" y2="1">
@@ -303,7 +313,7 @@ function renderBelegungBarsSvg(data) {
           y1={gy}
           x2={W - padR}
           y2={gy}
-          stroke="#1c2035"
+          stroke="currentColor"
           strokeWidth="0.5"
           strokeDasharray="3 4"
         />
@@ -336,8 +346,8 @@ function renderBelegungBarsSvg(data) {
               x={cx}
               y={H - 10}
               textAnchor="middle"
+              className={i === n - 1 ? "fill-sky-500 dark:fill-[#5b9cf6]" : "fill-slate-500 dark:fill-[#4a5070]"}
               style={{ fontFamily: "ui-monospace, monospace", fontSize: 7 }}
-              fill={i === n - 1 ? "#5b9cf6" : "#4a5070"}
             >
               {d.month}
             </text>
@@ -345,6 +355,7 @@ function renderBelegungBarsSvg(data) {
         );
       })}
     </svg>
+    </div>
   );
 }
 
@@ -624,58 +635,18 @@ export default function AdminUebersichtPage() {
     );
   }, [operationsStats.weakestUnit, units]);
 
-  const systemWarnings = useMemo(() => {
-    const warnings = [];
-    if (operationsStats.freeRooms > 0) {
-      warnings.push({
-        level: "warning",
-        title: "Freie Rooms vorhanden",
-        text: `${operationsStats.freeRooms} Rooms sind aktuell frei und verursachen Leerstand.`,
-      });
-    }
-    if (invoiceStats.openCount > 0) {
-      warnings.push({
-        level: "warning",
-        title: "Offene Rechnungen",
-        text: `${invoiceStats.openCount} Rechnungen sind aktuell noch offen.`,
-      });
-    }
-    if (invoiceStats.overdueCount > 0) {
-      warnings.push({
-        level: "danger",
-        title: "Überfällige Rechnungen",
-        text: `${invoiceStats.overdueCount} Rechnungen sind bereits überfällig.`,
-      });
-    }
-    if (operationsStats.weakestUnit && operationsStats.weakestUnit.profit < 0) {
-      warnings.push({
-        level: "danger",
-        title: "Schwächste Unit",
-        text: `${weakestUnitDisplayLabel || operationsStats.weakestUnit.unitId} macht aktuell Verlust.`,
-      });
-    }
-    if (warnings.length === 0) {
-      warnings.push({
-        level: "success",
-        title: "Keine kritischen Warnungen",
-        text: "Aktuell wurden keine dringenden Probleme erkannt.",
-      });
-    }
-    return warnings.slice(0, 4);
-  }, [operationsStats, invoiceStats, weakestUnitDisplayLabel]);
-
   return (
     <div
       data-testid="admin-dashboard-page"
-      className="min-h-screen bg-[#080a0f] text-[#edf0f7]"
+      className="min-h-screen bg-gray-50 text-gray-900 dark:bg-[#080a0f] dark:text-[#edf0f7]"
     >
-      <header className="sticky top-0 z-30 flex h-[50px] items-center justify-between border-b border-[#1c2035] bg-[#0c0e15] px-6 backdrop-blur-md">
+      <header className="sticky top-0 z-30 flex h-[50px] items-center justify-between border-b border-gray-200 bg-white px-6 backdrop-blur-md dark:border-[#1c2035] dark:bg-[#0c0e15]">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="text-[14px] font-semibold text-[#edf0f7]">
+          <span className="text-[14px] font-semibold text-gray-900 dark:text-[#edf0f7]">
             Van<span className="text-[#5b9cf6]">tio</span>
           </span>
-          <span className="text-[#4a5070]">·</span>
-          <span className="truncate text-[14px] font-medium text-[#edf0f7]">Unternehmensübersicht</span>
+          <span className="text-gray-400 dark:text-[#4a5070]">·</span>
+          <span className="truncate text-[14px] font-medium text-gray-900 dark:text-[#edf0f7]">Unternehmensübersicht</span>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <select
@@ -684,7 +655,7 @@ export default function AdminUebersichtPage() {
               const [y, m] = e.target.value.split("-").map(Number);
               setKpisPeriod({ year: y, month: m });
             }}
-            className="rounded-[6px] border border-[#1c2035] bg-[#141720] px-3 py-1 font-mono text-[12px] text-[#edf0f7] outline-none"
+            className="rounded-[6px] border border-gray-200 bg-white px-3 py-1 font-mono text-[12px] text-gray-900 outline-none dark:border-[#1c2035] dark:bg-[#141720] dark:text-[#edf0f7]"
           >
             {(() => {
               const d = new Date();
@@ -702,19 +673,19 @@ export default function AdminUebersichtPage() {
               return options;
             })()}
           </select>
-          <span className="inline-flex items-center rounded-[6px] border border-[#1c2035] bg-[#141720] px-3 py-1 text-[11px] text-[#8892b0]">
-            Live KPI
+          <span className="inline-flex items-center rounded-[6px] border border-gray-200 bg-slate-100 px-3 py-1 text-[11px] text-gray-500 dark:border-[#1c2035] dark:bg-[#141720] dark:text-[#8892b0]">
+            Live-KPI
           </span>
-          <span className="inline-flex items-center rounded-[6px] border border-[rgba(91,156,246,0.25)] bg-[rgba(91,156,246,0.1)] px-3 py-1 text-[11px] font-medium text-[#5b9cf6]">
-            Management Ansicht
+          <span className="inline-flex items-center rounded-[6px] border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-medium text-sky-600 dark:border-[rgba(91,156,246,0.25)] dark:bg-[rgba(91,156,246,0.1)] dark:text-[#5b9cf6]">
+            Management-Ansicht
           </span>
         </div>
       </header>
 
       <div className="mx-auto max-w-[min(1400px,100%)] space-y-5 px-6 py-5">
         <div className="mb-[10px] flex items-center gap-2">
-          <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Kernkennzahlen</span>
-          <div className="h-px flex-1 bg-[#1c2035]" />
+          <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-gray-500 dark:text-[#4a5070]">Kernkennzahlen</span>
+          <div className="h-px flex-1 bg-gray-200 dark:bg-[#1c2035]" />
         </div>
 
         {portfolio && (
@@ -722,10 +693,10 @@ export default function AdminUebersichtPage() {
             <KpiKarte
               titel="Gesamt-Umsatz"
               wert={formatCurrency(portfolio.totalRevenue)}
-              hinweis="Summe aktiver Mietverhältnisse (alle Units)"
-              farbe="#edf0f7"
+              hinweis="Summe aktiver Mietverhältnisse (alle Einheiten)"
+              wertClassName="!text-gray-900 dark:!text-[#edf0f7]"
               akzent="#3ddc84"
-              badge="Tenancy"
+              badge="Mietverhältnis"
             />
             <KpiKarte
               titel="Vollbelegungs-Potenzial"
@@ -733,7 +704,7 @@ export default function AdminUebersichtPage() {
               hinweis="Co-Living: Zimmerpreise · Apartment: Mieterpreis"
               farbe="#f5a623"
               akzent="#f5a623"
-              badge="Tenancy"
+              badge="Mietverhältnis"
             />
             <KpiKarte
               titel="Leerstand"
@@ -741,7 +712,7 @@ export default function AdminUebersichtPage() {
               hinweis="Potenzial minus aktueller Umsatz"
               farbe="#ff5f6d"
               akzent="#ff5f6d"
-              badge="Tenancy"
+              badge="Mietverhältnis"
             />
             <KpiKarte
               titel="Auslastung %"
@@ -751,21 +722,21 @@ export default function AdminUebersichtPage() {
               hinweis={
                 occupancyKpiUi?.showSlots ? (
                   <>
-                    <span className="font-medium tabular-nums text-[#5b9cf6]">
-                      {portfolio.occupiedSlots} von {portfolio.capacitySlots} Slots belegt
+                    <span className="font-medium tabular-nums text-sky-600 dark:text-[#5b9cf6]">
+                      {portfolio.occupiedSlots} von {portfolio.capacitySlots} Plätzen belegt
                     </span>
                   </>
                 ) : (
                   ""
                 )
               }
-              hinweisClassName="mt-[4px] text-[10px] leading-[1.4] text-[#5b9cf6]"
+              hinweisClassName="mt-[4px] text-[10px] leading-[1.4] text-sky-600 dark:text-[#5b9cf6]"
               farbe="#5b9cf6"
               akzent="#5b9cf6"
-              badge="Tenancy"
+              badge="Mietverhältnis"
             >
               {portfolio.occupancyRate != null && occupancyKpiUi ? (
-                <div className="mb-[4px] mt-[7px] h-[2px] w-full overflow-hidden rounded-full bg-[#191c28]">
+                <div className="mb-[4px] mt-[7px] h-[2px] w-full overflow-hidden rounded-full bg-slate-200 dark:bg-[#191c28]">
                   <div
                     className="h-full rounded-full transition-[width] duration-300 ease-out"
                     style={{
@@ -777,7 +748,7 @@ export default function AdminUebersichtPage() {
               ) : null}
             </KpiKarte>
             <KpiKarte
-              titel="Beste Unit"
+              titel="Beste Einheit"
               wert={
                 portfolio.bestUnit
                   ? getPortfolioUnitLabel(portfolio.bestUnit.unit, portfolio.bestUnit.listIndex)
@@ -787,23 +758,23 @@ export default function AdminUebersichtPage() {
               farbe="#9d7cf4"
               akzent="#9d7cf4"
               wertClassName="!text-[15px]"
-              badge="Summary"
+              badge="Übersicht"
             />
           </div>
         )}
 
         {tenancies === null && !operationsLoadError && (
-          <p className="py-2 text-[11px] text-[#8892b0]">Portfolio-KPIs (Tenancies) werden geladen…</p>
+          <p className="py-2 text-[11px] text-gray-500 dark:text-[#8892b0]">Portfolio-KPIs werden geladen…</p>
         )}
 
         {portfolio && (
           <div className="grid grid-cols-1 gap-2 lg:grid-cols-[1fr_2fr]">
-            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[14px_15px] transition-colors hover:border-[#242840]">
+            <div className="relative overflow-hidden rounded-[10px] border border-gray-200 bg-white p-[14px_15px] transition-colors hover:border-gray-300 dark:border-[#1c2035] dark:bg-[#10121a] dark:hover:border-[#242840]">
               <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#9d7cf4]" />
               <div className="mb-[5px] flex items-start justify-between gap-2">
-                <span className="text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Schwächste Unit</span>
-                <span className="inline-flex shrink-0 items-center rounded-full border border-[rgba(157,124,244,0.25)] bg-[rgba(157,124,244,0.12)] px-[6px] py-[2px] text-[9px] font-semibold uppercase tracking-[0.4px] text-[#9d7cf4]">
-                  Summary
+                <span className="text-[9px] font-medium uppercase tracking-[0.5px] text-gray-500 dark:text-[#4a5070]">Schwächste Einheit</span>
+                <span className="inline-flex shrink-0 items-center rounded-full border border-violet-200 bg-violet-50 px-[6px] py-[2px] text-[9px] font-semibold uppercase tracking-[0.4px] text-violet-700 dark:border-[rgba(157,124,244,0.25)] dark:bg-[rgba(157,124,244,0.12)] dark:text-[#9d7cf4]">
+                  Übersicht
                 </span>
               </div>
               <div className="flex items-start justify-between gap-2">
@@ -818,30 +789,30 @@ export default function AdminUebersichtPage() {
                     : "—"}
                 </div>
               </div>
-              <p className="mt-[4px] text-[10px] leading-[1.4] text-[#4a5070]">
+              <p className="mt-[4px] text-[10px] leading-[1.4] text-gray-500 dark:text-[#4a5070]">
                 {portfolio.worstUnit ? `${formatCurrency(portfolio.worstUnit.profit)} Gewinn` : "Keine Daten"}
               </p>
             </div>
 
-            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[14px_15px] transition-colors hover:border-[#242840]">
+            <div className="relative overflow-hidden rounded-[10px] border border-gray-200 bg-white p-[14px_15px] transition-colors hover:border-gray-300 dark:border-[#1c2035] dark:bg-[#10121a] dark:hover:border-[#242840]">
               <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#22d3ee]" />
               <div className="mb-[5px] flex items-start justify-between gap-2">
-                <span className="text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Trend &amp; Prognose</span>
-                <span className="inline-flex shrink-0 items-center rounded-full border border-[rgba(91,156,246,0.25)] bg-[rgba(91,156,246,0.12)] px-[6px] py-[2px] text-[9px] font-semibold uppercase tracking-[0.4px] text-[#5b9cf6]">
-                  Tenancy
+                <span className="text-[9px] font-medium uppercase tracking-[0.5px] text-gray-500 dark:text-[#4a5070]">Trend &amp; Prognose</span>
+                <span className="inline-flex shrink-0 items-center rounded-full border border-sky-200 bg-sky-50 px-[6px] py-[2px] text-[9px] font-semibold uppercase tracking-[0.4px] text-sky-700 dark:border-[rgba(91,156,246,0.25)] dark:bg-[rgba(91,156,246,0.12)] dark:text-[#5b9cf6]">
+                  Mietverhältnis
                 </span>
               </div>
               <div className="mt-2 grid grid-cols-4 gap-[10px]">
                 <div>
-                  <p className="mb-[3px] text-[9px] uppercase tracking-[0.4px] text-[#4a5070]">Prognose</p>
-                  <p className="font-mono text-[18px] text-[#edf0f7]">
+                  <p className="mb-[3px] text-[9px] uppercase tracking-[0.4px] text-gray-500 dark:text-[#4a5070]">Prognose</p>
+                  <p className="font-mono text-[18px] text-gray-900 dark:text-[#edf0f7]">
                     {kpis && !kpisLoading && kpis.summary_cards?.forecast_next_month?.revenue != null
                       ? formatCurrency(kpis.summary_cards.forecast_next_month.revenue)
                       : "—"}
                   </p>
                 </div>
                 <div>
-                  <p className="mb-[3px] text-[9px] uppercase tracking-[0.4px] text-[#4a5070]">Ø Umsatz/Zi.</p>
+                  <p className="mb-[3px] text-[9px] uppercase tracking-[0.4px] text-gray-500 dark:text-[#4a5070]">Ø Umsatz/Zi.</p>
                   <p className="font-mono text-[18px] text-[#3ddc84]">
                     {kpis && !kpisLoading && kpis.summary_cards?.average_revenue_per_room?.value != null
                       ? formatCurrency(kpis.summary_cards.average_revenue_per_room.value)
@@ -849,7 +820,7 @@ export default function AdminUebersichtPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="mb-[3px] text-[9px] uppercase tracking-[0.4px] text-[#4a5070]">Ø Gewinn/Zi.</p>
+                  <p className="mb-[3px] text-[9px] uppercase tracking-[0.4px] text-gray-500 dark:text-[#4a5070]">Ø Gewinn/Zi.</p>
                   <p className="font-mono text-[18px] text-[#f5a623]">
                     {kpis && !kpisLoading && kpis.summary_cards?.average_profit_per_unit?.value != null
                       ? formatCurrency(kpis.summary_cards.average_profit_per_unit.value)
@@ -857,7 +828,7 @@ export default function AdminUebersichtPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="mb-[3px] text-[9px] uppercase tracking-[0.4px] text-[#4a5070]">Leerstand Tage</p>
+                  <p className="mb-[3px] text-[9px] uppercase tracking-[0.4px] text-gray-500 dark:text-[#4a5070]">Leerstand Tage</p>
                   <p className="font-mono text-[18px] text-[#f5a623]">
                     {kpis && !kpisLoading ? kpis.summary_cards?.vacant_days_this_month?.value ?? "—" : "—"}
                   </p>
@@ -867,62 +838,62 @@ export default function AdminUebersichtPage() {
           </div>
         )}
 
-        {kpisLoading && <p className="py-2 text-[11px] text-[#8892b0]">Lade KPI-Daten…</p>}
+        {kpisLoading && <p className="py-2 text-[11px] text-gray-500 dark:text-[#8892b0]">Lade KPI-Daten…</p>}
         {kpisError && (
-          <div className="rounded-[10px] border border-[rgba(255,95,109,0.25)] bg-[rgba(255,95,109,0.08)] px-4 py-3 text-[13px] text-[#ff5f6d]">
+          <div className="rounded-[10px] border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-[rgba(255,95,109,0.25)] dark:bg-[rgba(255,95,109,0.08)] dark:text-[#ff5f6d]">
             {kpisError}
           </div>
         )}
 
         <div className="mb-[10px] mt-2 flex items-center gap-2">
-          <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Portfolio</span>
-          <div className="h-px flex-1 bg-[#1c2035]" />
+          <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-gray-500 dark:text-[#4a5070]">Portfolio</span>
+          <div className="h-px flex-1 bg-gray-200 dark:bg-[#1c2035]" />
         </div>
 
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.8fr_1fr]">
-          <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
-            <div className="flex items-start justify-between border-b border-[#1c2035] px-[15px] py-[12px]">
+          <div className="overflow-hidden rounded-[12px] border border-gray-200 bg-white dark:border-[#1c2035] dark:bg-[#10121a]">
+            <div className="flex items-start justify-between border-b border-gray-200 px-[15px] py-[12px] dark:border-[#1c2035]">
               <div>
-                <p className="text-[13px] font-medium text-[#edf0f7]">Portfolio-Karte</p>
-                <p className="mt-0.5 text-[10px] text-[#4a5070]">Standorte &amp; Status (Vorschau)</p>
+                <p className="text-[13px] font-medium text-gray-900 dark:text-[#edf0f7]">Portfolio-Karte</p>
+                <p className="mt-0.5 text-[10px] text-gray-500 dark:text-[#4a5070]">Standorte &amp; Status (Vorschau)</p>
               </div>
-              <p className="text-[10px] text-[#4a5070]">
+              <p className="text-[10px] text-gray-500 dark:text-[#4a5070]">
                 {portfolio?.totalUnits ?? units.length} Einheiten · {units.filter((u) => u.latitude != null || u.lat != null).length}{" "}
                 auf Karte
               </p>
             </div>
-            <div className="bg-[#080a0f]">
+            <div className="bg-slate-100 dark:bg-[#080a0f]">
               <PortfolioMapSection preview />
             </div>
-            <div className="flex flex-wrap items-center gap-[14px] border-t border-[#1c2035] px-[15px] py-[10px]">
+            <div className="flex flex-wrap items-center gap-[14px] border-t border-gray-200 px-[15px] py-[10px] dark:border-[#1c2035]">
               <div className="flex items-center gap-1.5">
                 <span className="h-[6px] w-[6px] rounded-full bg-[#3ddc84]" />
-                <span className="text-[10px] text-[#4a5070]">Belegt</span>
-                <span className="text-[10px] font-medium text-[#edf0f7]">{operationsStats.occupiedRooms}</span>
+                <span className="text-[10px] text-gray-500 dark:text-[#4a5070]">Belegt</span>
+                <span className="text-[10px] font-medium text-gray-900 dark:text-[#edf0f7]">{operationsStats.occupiedRooms}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="h-[6px] w-[6px] rounded-full bg-[#f5a623]" />
-                <span className="text-[10px] text-[#4a5070]">Reserviert</span>
-                <span className="text-[10px] font-medium text-[#edf0f7]">{operationsStats.reservedRooms}</span>
+                <span className="text-[10px] text-gray-500 dark:text-[#4a5070]">Reserviert</span>
+                <span className="text-[10px] font-medium text-gray-900 dark:text-[#edf0f7]">{operationsStats.reservedRooms}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="h-[6px] w-[6px] rounded-full bg-[#ff5f6d]" />
-                <span className="text-[10px] text-[#4a5070]">Frei</span>
-                <span className="text-[10px] font-medium text-[#edf0f7]">{operationsStats.freeRooms}</span>
+                <span className="text-[10px] text-gray-500 dark:text-[#4a5070]">Frei</span>
+                <span className="text-[10px] font-medium text-gray-900 dark:text-[#edf0f7]">{operationsStats.freeRooms}</span>
               </div>
               <Link
                 to="/admin/portfolio-map"
-                className="ml-auto rounded-[6px] border border-[#1c2035] bg-[#141720] px-3 py-1 text-[11px] text-[#8892b0] no-underline transition-colors hover:border-[#242840]"
+                className="ml-auto rounded-[6px] border border-gray-200 bg-slate-50 px-3 py-1 text-[11px] text-gray-600 no-underline transition-colors hover:border-gray-300 dark:border-[#1c2035] dark:bg-[#141720] dark:text-[#8892b0] dark:hover:border-[#242840]"
               >
                 Portfolio-Karte öffnen →
               </Link>
             </div>
           </div>
 
-          <div className="flex min-h-[320px] flex-col overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
-            <div className="border-b border-[#1c2035] px-[15px] py-[12px]">
-              <p className="text-[13px] font-medium text-[#edf0f7]">Units</p>
-              <p className="text-[10px] text-[#4a5070]">Übersicht nach Auslastung</p>
+          <div className="flex min-h-[320px] flex-col overflow-hidden rounded-[12px] border border-gray-200 bg-white dark:border-[#1c2035] dark:bg-[#10121a]">
+            <div className="border-b border-gray-200 px-[15px] py-[12px] dark:border-[#1c2035]">
+              <p className="text-[13px] font-medium text-gray-900 dark:text-[#edf0f7]">Einheiten</p>
+              <p className="text-[10px] text-gray-500 dark:text-[#4a5070]">Übersicht nach Auslastung</p>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
               {units.slice(0, 12).map((unit, idx) => {
@@ -932,76 +903,76 @@ export default function AdminUebersichtPage() {
                 const occR = occ ? Number(occ.occupied_rooms ?? 0) : 0;
                 const resR = occ ? Number(occ.reserved_rooms ?? 0) : 0;
                 let badgeCls =
-                  "rounded-full border px-2 py-[2px] text-[9px] font-semibold border-[rgba(61,220,132,0.22)] bg-[rgba(61,220,132,0.12)] text-[#3ddc84]";
+                  "rounded-full border px-2 py-[2px] text-[9px] font-semibold border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-[rgba(61,220,132,0.22)] dark:bg-[rgba(61,220,132,0.12)] dark:text-[#3ddc84]";
                 let badgeLabel = "Belegt";
                 if (resR > 0 && occR === 0) {
                   badgeCls =
-                    "rounded-full border px-2 py-[2px] text-[9px] font-semibold border-[rgba(157,124,244,0.22)] bg-[rgba(157,124,244,0.12)] text-[#9d7cf4]";
+                    "rounded-full border px-2 py-[2px] text-[9px] font-semibold border-violet-200 bg-violet-50 text-violet-800 dark:border-[rgba(157,124,244,0.22)] dark:bg-[rgba(157,124,244,0.12)] dark:text-[#9d7cf4]";
                   badgeLabel = "Reserviert";
                 } else if (occR > 0 && free > 0) {
                   badgeCls =
-                    "rounded-full border px-2 py-[2px] text-[9px] font-semibold border-[rgba(245,166,35,0.22)] bg-[rgba(245,166,35,0.12)] text-[#f5a623]";
+                    "rounded-full border px-2 py-[2px] text-[9px] font-semibold border-amber-200 bg-amber-50 text-amber-900 dark:border-[rgba(245,166,35,0.22)] dark:bg-[rgba(245,166,35,0.12)] dark:text-[#f5a623]";
                   badgeLabel = "Bald frei";
                 } else if (free > 0) {
                   badgeCls =
-                    "rounded-full border px-2 py-[2px] text-[9px] font-semibold border-[rgba(255,95,109,0.22)] bg-[rgba(255,95,109,0.12)] text-[#ff5f6d]";
+                    "rounded-full border px-2 py-[2px] text-[9px] font-semibold border-rose-200 bg-rose-50 text-rose-700 dark:border-[rgba(255,95,109,0.22)] dark:bg-[rgba(255,95,109,0.12)] dark:text-[#ff5f6d]";
                   badgeLabel = "Frei";
                 }
                 return (
                   <Link
                     key={uid || idx}
                     to={`/admin/units/${encodeURIComponent(uid)}`}
-                    className="flex cursor-pointer items-center justify-between border-b border-[#1c2035] px-[15px] py-[9px] transition-colors hover:bg-[#141720]"
+                    className="flex cursor-pointer items-center justify-between border-b border-gray-200 px-[15px] py-[9px] transition-colors hover:bg-slate-50 dark:border-[#1c2035] dark:hover:bg-[#141720]"
                   >
                     <div className="min-w-0 pr-2">
-                      <p className="truncate text-[12px] font-medium text-[#edf0f7]">{getPortfolioUnitLabel(unit, idx)}</p>
-                      <p className="truncate text-[10px] text-[#4a5070]">{unit.type || "—"}</p>
+                      <p className="truncate text-[12px] font-medium text-gray-900 dark:text-[#edf0f7]">{getPortfolioUnitLabel(unit, idx)}</p>
+                      <p className="truncate text-[10px] text-gray-500 dark:text-[#4a5070]">{unit.type || "—"}</p>
                     </div>
                     <span className={badgeCls}>{badgeLabel}</span>
                   </Link>
                 );
               })}
             </div>
-            <div className="mt-auto grid grid-cols-2 gap-2 border-t border-[#1c2035] px-[15px] py-[10px]">
-              <div className="rounded-[7px] bg-[#141720] p-[7px_10px]">
-                <p className="mb-[3px] text-[9px] uppercase tracking-[0.4px] text-[#4a5070]">Gewinn</p>
+            <div className="mt-auto grid grid-cols-2 gap-2 border-t border-gray-200 px-[15px] py-[10px] dark:border-[#1c2035]">
+              <div className="rounded-[7px] bg-slate-100 p-[7px_10px] dark:bg-[#141720]">
+                <p className="mb-[3px] text-[9px] uppercase tracking-[0.4px] text-gray-500 dark:text-[#4a5070]">Gewinn</p>
                 <p className="font-mono text-[13px] text-[#3ddc84]">{formatCurrency(operationsStats.currentProfit)}</p>
               </div>
-              <div className="rounded-[7px] bg-[#141720] p-[7px_10px]">
-                <p className="mb-[3px] text-[9px] uppercase tracking-[0.4px] text-[#4a5070]">Leerstand</p>
-                <p className="font-mono text-[13px] text-[#f5a623]">{operationsStats.freeRooms} Rooms</p>
+              <div className="rounded-[7px] bg-slate-100 p-[7px_10px] dark:bg-[#141720]">
+                <p className="mb-[3px] text-[9px] uppercase tracking-[0.4px] text-gray-500 dark:text-[#4a5070]">Leerstand</p>
+                <p className="font-mono text-[13px] text-[#f5a623]">{operationsStats.freeRooms} Zimmer</p>
               </div>
             </div>
           </div>
         </div>
 
         <div className="mb-[10px] mt-6 flex items-center gap-2">
-          <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Analyse</span>
-          <div className="h-px flex-1 bg-[#1c2035]" />
+          <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-gray-500 dark:text-[#4a5070]">Analyse</span>
+          <div className="h-px flex-1 bg-gray-200 dark:bg-[#1c2035]" />
         </div>
 
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.3fr_1fr]">
           <div className="flex flex-col gap-3">
             {kpis && !kpisLoading && Array.isArray(kpis.warnings) && kpis.warnings.length > 0 ? (
-              <div className="rounded-[12px] border border-[rgba(245,166,35,0.14)] bg-[rgba(245,166,35,0.04)] p-[15px_18px]">
-                <h3 className="m-0 text-[12px] font-medium text-[#f5a623]">Warnungen (Units / Liegenschaften)</h3>
-                <p className="mt-[2px] text-[10px] text-[#4a5070]">Units mit Leerstand, Kosten ohne Umsatz oder negativem Gewinn.</p>
+              <div className="rounded-[12px] border border-amber-200 bg-amber-50 p-[15px_18px] dark:border-[rgba(245,166,35,0.14)] dark:bg-[rgba(245,166,35,0.04)]">
+                <h3 className="m-0 text-[12px] font-medium text-amber-800 dark:text-[#f5a623]">Warnungen (Einheiten / Liegenschaften)</h3>
+                <p className="mt-[2px] text-[10px] text-gray-600 dark:text-[#4a5070]">Einheiten mit Leerstand, Kosten ohne Umsatz oder negativem Gewinn.</p>
                 <ul className="m-0 list-none p-0">
                   {kpis.warnings.map((w, i) => (
                     <li
                       key={`${w.unit_id}-${i}`}
-                      className="flex items-start gap-[10px] border-b border-[rgba(245,166,35,0.07)] py-[8px] last:border-b-0"
+                      className="flex items-start gap-[10px] border-b border-amber-100 py-[8px] last:border-b-0 dark:border-[rgba(245,166,35,0.07)]"
                     >
                       <span className="mt-[5px] h-[5px] w-[5px] shrink-0 rounded-full bg-[#f5a623]" />
-                      <p className="flex-1 text-[11px] leading-[1.5] text-[#8892b0]">
-                        <strong className="font-medium text-[#edf0f7]">{w.unit_title || w.unit_id}</strong>: {w.message}
+                      <p className="flex-1 text-[11px] leading-[1.5] text-gray-600 dark:text-[#8892b0]">
+                        <strong className="font-medium text-gray-900 dark:text-[#edf0f7]">{w.unit_title || w.unit_id}</strong>: {w.message}
                       </p>
                       {w.severity === "high" ? (
-                        <span className="shrink-0 rounded-[4px] border border-[rgba(255,95,109,0.2)] bg-[rgba(255,95,109,0.12)] px-[6px] py-[2px] text-[9px] font-semibold text-[#ff5f6d]">
+                        <span className="shrink-0 rounded-[4px] border border-rose-200 bg-rose-50 px-[6px] py-[2px] text-[9px] font-semibold text-rose-700 dark:border-[rgba(255,95,109,0.2)] dark:bg-[rgba(255,95,109,0.12)] dark:text-[#ff5f6d]">
                           Hoch
                         </span>
                       ) : (
-                        <span className="shrink-0 rounded-[4px] border border-[rgba(245,166,35,0.22)] bg-[rgba(245,166,35,0.12)] px-[6px] py-[2px] text-[9px] font-semibold text-[#f5a623]">
+                        <span className="shrink-0 rounded-[4px] border border-amber-200 bg-amber-50 px-[6px] py-[2px] text-[9px] font-semibold text-amber-800 dark:border-[rgba(245,166,35,0.22)] dark:bg-[rgba(245,166,35,0.12)] dark:text-[#f5a623]">
                           Mittel
                         </span>
                       )}
@@ -1010,76 +981,56 @@ export default function AdminUebersichtPage() {
                 </ul>
               </div>
             ) : null}
-
-            {kpis && !kpisLoading && Array.isArray(kpis.assumptions) && kpis.assumptions.length > 0 ? (
-              <div className="rounded-[12px] border border-[#1c2035] bg-[#10121a] p-[14px_18px]">
-                <h3 className="mb-[10px] text-[10px] font-medium uppercase tracking-[0.7px] text-[#4a5070]">Annahmen &amp; Limitationen</h3>
-                <div className="grid grid-cols-1 gap-x-[20px] gap-y-[2px] md:grid-cols-3">
-                  {kpis.assumptions.map((a, i) => (
-                    <div key={i} className="flex items-start gap-[7px] py-1 text-[10px] leading-[1.5] text-[#4a5070]">
-                      <span className="mt-[6px] h-[3px] w-[3px] shrink-0 rounded-full bg-[#4a5070]" />
-                      <span>{a}</span>
-                    </div>
-                  ))}
-                </div>
-                {kpis.availability ? (
-                  <p className="mt-3 text-[10px] leading-relaxed text-[#4a5070]">
-                    Verfügbarkeit: Umsatz/Gewinn = {kpis.availability.revenue}; Leerstandstage = {kpis.availability.vacant_days}; Prognose ={" "}
-                    {kpis.availability.forecast}; Break-even = {kpis.availability.break_even}.
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
           </div>
 
           <div className="flex flex-col gap-3">
-            <div className="rounded-[12px] border border-[#1c2035] bg-[#10121a] p-[16px_18px]">
-              <h3 className="m-0 text-[13px] font-medium text-[#edf0f7]">Finanzentwicklung</h3>
-              <p className="mt-[2px] text-[10px] text-[#4a5070]">Letzte 6 Monate</p>
+            <div className="rounded-[12px] border border-gray-200 bg-white p-[16px_18px] dark:border-[#1c2035] dark:bg-[#10121a]">
+              <h3 className="m-0 text-[13px] font-medium text-gray-900 dark:text-[#edf0f7]">Finanzentwicklung</h3>
+              <p className="mt-[2px] text-[10px] text-gray-500 dark:text-[#4a5070]">Letzte 6 Monate</p>
               <div className="mt-3 flex flex-wrap gap-3">
-                <span className="flex items-center gap-1.5 text-[10px] text-[#4a5070]">
+                <span className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-[#4a5070]">
                   <span className="h-[2px] w-[14px] rounded-full bg-[#5b9cf6]" />
                   Umsatz
                 </span>
-                <span className="flex items-center gap-1.5 text-[10px] text-[#4a5070]">
+                <span className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-[#4a5070]">
                   <span className="h-[2px] w-[14px] rounded-full bg-[#3ddc84]" />
                   Gewinn
                 </span>
-                <span className="flex items-center gap-1.5 text-[10px] text-[#4a5070]">
+                <span className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-[#4a5070]">
                   <span className="h-[2px] w-[14px] rounded-full border-t-2 border-dashed border-[#ff5f6d]" />
                   Kosten
                 </span>
               </div>
               {monthlyChartsLoading ? (
-                <p className="mt-3 text-[11px] text-[#8892b0]">Lade Monatsdaten…</p>
+                <p className="mt-3 text-[11px] text-gray-500 dark:text-[#8892b0]">Lade Monatsdaten…</p>
               ) : monthlyChartsError ? (
-                <p className="mt-3 text-[11px] text-[#ff5f6d]">{monthlyChartsError}</p>
+                <p className="mt-3 text-[11px] text-rose-600 dark:text-[#ff5f6d]">{monthlyChartsError}</p>
               ) : financeChartData.length === 0 ? (
-                <p className="mt-3 text-[11px] text-[#8892b0]">Keine Daten vorhanden</p>
+                <p className="mt-3 text-[11px] text-gray-500 dark:text-[#8892b0]">Keine Daten vorhanden</p>
               ) : (
                 renderFinanceLineSvg(financeChartData)
               )}
             </div>
 
-            <div className="rounded-[12px] border border-[#1c2035] bg-[#10121a] p-[16px_18px]">
-              <h3 className="m-0 text-[13px] font-medium text-[#edf0f7]">Belegung Rooms</h3>
-              <p className="mt-[2px] text-[10px] text-[#4a5070]">Letzte 6 Monate</p>
+            <div className="rounded-[12px] border border-gray-200 bg-white p-[16px_18px] dark:border-[#1c2035] dark:bg-[#10121a]">
+              <h3 className="m-0 text-[13px] font-medium text-gray-900 dark:text-[#edf0f7]">Belegung Zimmer</h3>
+              <p className="mt-[2px] text-[10px] text-gray-500 dark:text-[#4a5070]">Letzte 6 Monate</p>
               <div className="mt-3 flex flex-wrap gap-3">
-                <span className="flex items-center gap-1.5 text-[10px] text-[#4a5070]">
+                <span className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-[#4a5070]">
                   <span className="h-[7px] w-[7px] rounded-full bg-[#3ddc84]" />
                   Belegt
                 </span>
-                <span className="flex items-center gap-1.5 text-[10px] text-[#4a5070]">
+                <span className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-[#4a5070]">
                   <span className="h-[7px] w-[7px] rounded-full bg-[#ff5f6d]" />
                   Frei
                 </span>
               </div>
               {monthlyChartsLoading ? (
-                <p className="mt-3 text-[11px] text-[#8892b0]">Lade Monatsdaten…</p>
+                <p className="mt-3 text-[11px] text-gray-500 dark:text-[#8892b0]">Lade Monatsdaten…</p>
               ) : monthlyChartsError ? (
-                <p className="mt-3 text-[11px] text-[#ff5f6d]">{monthlyChartsError}</p>
+                <p className="mt-3 text-[11px] text-rose-600 dark:text-[#ff5f6d]">{monthlyChartsError}</p>
               ) : belegungChartData.length === 0 ? (
-                <p className="mt-3 text-[11px] text-[#8892b0]">Keine Daten vorhanden</p>
+                <p className="mt-3 text-[11px] text-gray-500 dark:text-[#8892b0]">Keine Daten vorhanden</p>
               ) : (
                 renderBelegungBarsSvg(belegungChartData)
               )}
@@ -1088,14 +1039,14 @@ export default function AdminUebersichtPage() {
         </div>
 
         {operationsLoadError && (
-          <div className="rounded-[10px] border border-[rgba(255,95,109,0.25)] bg-[rgba(255,95,109,0.08)] px-4 py-3 text-[13px] text-[#ff5f6d]">
+          <div className="rounded-[10px] border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-[rgba(255,95,109,0.25)] dark:bg-[rgba(255,95,109,0.08)] dark:text-[#ff5f6d]">
             <strong className="font-semibold text-inherit">Fehler beim Laden der Betriebsdaten:</strong> {operationsLoadError}
           </div>
         )}
 
         <div className="mb-[10px] mt-6 flex items-center gap-2">
-          <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Rechnungen · Live</span>
-          <div className="h-px flex-1 bg-[#1c2035]" />
+          <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-gray-500 dark:text-[#4a5070]">Rechnungen · Live</span>
+          <div className="h-px flex-1 bg-gray-200 dark:bg-[#1c2035]" />
         </div>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -1124,12 +1075,12 @@ export default function AdminUebersichtPage() {
             badge="Live"
           />
           <KpiKarte
-            titel="Kritische Units"
+            titel="Kritische Einheiten"
             wert={operationsStats.criticalUnits}
             hinweis={
               operationsStats.weakestUnit
-                ? `Schwächste Unit: ${weakestUnitDisplayLabel || operationsStats.weakestUnit.unitId}`
-                : "Keine kritischen Units erkannt"
+                ? `Schwächste Einheit: ${weakestUnitDisplayLabel || operationsStats.weakestUnit.unitId}`
+                : "Keine kritischen Einheiten erkannt"
             }
             farbe="#9d7cf4"
             akzent="#9d7cf4"
@@ -1137,63 +1088,43 @@ export default function AdminUebersichtPage() {
           />
         </div>
 
-        <div className="rounded-[12px] border border-[#1c2035] bg-[#10121a] p-[15px_18px]">
-          <h3 className="m-0 text-[13px] font-medium text-[#edf0f7]">Kritische Hinweise</h3>
-          <p className="mb-[12px] mt-[2px] text-[10px] text-[#4a5070]">Die wichtigsten Auffälligkeiten auf einen Blick.</p>
-          <div className="grid grid-cols-2 gap-2">
-            {systemWarnings.map((warning, index) => {
-              const isDanger = warning.level === "danger";
-              const box = isDanger
-                ? "border border-[rgba(255,95,109,0.18)] bg-[rgba(255,95,109,0.05)]"
-                : "border border-[rgba(245,166,35,0.18)] bg-[rgba(245,166,35,0.05)]";
-              const title = isDanger ? "text-[11px] font-semibold text-[#ff5f6d]" : "text-[11px] font-semibold text-[#f5a623]";
-              return (
-                <div key={`${warning.title}-${index}`} className={`rounded-[8px] p-[11px_14px] ${box}`}>
-                  <div className={`mb-[4px] ${title}`}>{warning.title}</div>
-                  <div className="text-[10px] leading-[1.5] text-[#4a5070]">{warning.text}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1c2035] px-[18px] py-[13px]">
+        <div className="overflow-hidden rounded-[12px] border border-gray-200 bg-white dark:border-[#1c2035] dark:bg-[#10121a]">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-[18px] py-[13px] dark:border-[#1c2035]">
             <div>
-              <h3 className="m-0 text-[13px] font-medium text-[#edf0f7]">Letzte Rechnungen</h3>
-              <p className="mt-[2px] text-[10px] text-[#4a5070]">Die zuletzt erfassten Rechnungen aus deinem Billing-Modul.</p>
+              <h3 className="m-0 text-[13px] font-medium text-gray-900 dark:text-[#edf0f7]">Letzte Rechnungen</h3>
+              <p className="mt-[2px] text-[10px] text-gray-500 dark:text-[#4a5070]">Die zuletzt erfassten Rechnungen aus deinem Billing-Modul.</p>
             </div>
             <Link
               to="/admin/invoices"
-              className="inline-block whitespace-nowrap rounded-[6px] border border-[rgba(91,156,246,0.28)] bg-[rgba(91,156,246,0.1)] px-[14px] py-[5px] text-[11px] font-medium text-[#5b9cf6] no-underline transition-colors hover:border-[rgba(91,156,246,0.4)]"
+              className="inline-block whitespace-nowrap rounded-[6px] border border-sky-200 bg-sky-50 px-[14px] py-[5px] text-[11px] font-medium text-sky-700 no-underline transition-colors hover:border-sky-300 dark:border-[rgba(91,156,246,0.28)] dark:bg-[rgba(91,156,246,0.1)] dark:text-[#5b9cf6] dark:hover:border-[rgba(91,156,246,0.4)]"
             >
               Alle Rechnungen →
             </Link>
           </div>
           {invoiceLoading ? (
-            <p className="px-[18px] py-4 text-[11px] text-[#8892b0]">Rechnungen werden geladen...</p>
+            <p className="px-[18px] py-4 text-[11px] text-gray-500 dark:text-[#8892b0]">Rechnungen werden geladen…</p>
           ) : invoiceError ? (
-            <p className="px-[18px] py-4 text-[11px] text-[#ff5f6d]">{invoiceError}</p>
+            <p className="px-[18px] py-4 text-[11px] text-rose-600 dark:text-[#ff5f6d]">{invoiceError}</p>
           ) : latestInvoices.length === 0 ? (
-            <p className="px-[18px] py-4 text-[11px] text-[#8892b0]">Noch keine Rechnungen vorhanden.</p>
+            <p className="px-[18px] py-4 text-[11px] text-gray-500 dark:text-[#8892b0]">Noch keine Rechnungen vorhanden.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="text-left">
-                    <th className="border-b border-[#1c2035] px-[18px] py-2 text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                    <th className="border-b border-gray-200 px-[18px] py-2 text-left text-[9px] font-medium uppercase tracking-[0.6px] text-gray-500 dark:border-[#1c2035] dark:text-[#4a5070]">
                       Rechnungsnummer
                     </th>
-                    <th className="border-b border-[#1c2035] px-[18px] py-2 text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                    <th className="border-b border-gray-200 px-[18px] py-2 text-[9px] font-medium uppercase tracking-[0.6px] text-gray-500 dark:border-[#1c2035] dark:text-[#4a5070]">
                       Betrag
                     </th>
-                    <th className="border-b border-[#1c2035] px-[18px] py-2 text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                    <th className="border-b border-gray-200 px-[18px] py-2 text-[9px] font-medium uppercase tracking-[0.6px] text-gray-500 dark:border-[#1c2035] dark:text-[#4a5070]">
                       Status
                     </th>
-                    <th className="border-b border-[#1c2035] px-[18px] py-2 text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                    <th className="border-b border-gray-200 px-[18px] py-2 text-[9px] font-medium uppercase tracking-[0.6px] text-gray-500 dark:border-[#1c2035] dark:text-[#4a5070]">
                       Rechnungsdatum
                     </th>
-                    <th className="border-b border-[#1c2035] px-[18px] py-2 text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                    <th className="border-b border-gray-200 px-[18px] py-2 text-[9px] font-medium uppercase tracking-[0.6px] text-gray-500 dark:border-[#1c2035] dark:text-[#4a5070]">
                       Fälligkeitsdatum
                     </th>
                   </tr>
@@ -1204,27 +1135,27 @@ export default function AdminUebersichtPage() {
                     return (
                       <tr
                         key={invoice.id}
-                        className={`cursor-pointer border-b border-[#1c2035] transition-colors hover:bg-[#141720] ${invIdx === latestInvoices.length - 1 ? "border-b-0" : ""}`}
+                        className={`cursor-pointer border-b border-gray-200 transition-colors hover:bg-slate-50 dark:border-[#1c2035] dark:hover:bg-[#141720] ${invIdx === latestInvoices.length - 1 ? "border-b-0" : ""}`}
                       >
                         <td className="px-[18px] py-[10px]">
                           <Link
                             to={`/admin/invoices/${invoice.id}`}
-                            className="font-mono text-[11px] text-[#5b9cf6] no-underline hover:underline"
+                            className="font-mono text-[11px] text-sky-600 no-underline hover:underline dark:text-[#5b9cf6]"
                           >
                             {invoice.invoice_number}
                           </Link>
                         </td>
-                        <td className="px-[18px] py-[10px] font-mono text-[12px] font-medium text-[#edf0f7]">
+                        <td className="px-[18px] py-[10px] font-mono text-[12px] font-medium text-gray-900 dark:text-[#edf0f7]">
                           {formatCurrency(invoice.amount)}
                         </td>
-                        <td className="px-[18px] py-[10px] text-[12px] text-[#8892b0]">
+                        <td className="px-[18px] py-[10px] text-[12px] text-gray-500 dark:text-[#8892b0]">
                           <StatusBadge status={invoice.status} />
                         </td>
-                        <td className="px-[18px] py-[10px] font-mono text-[11px] text-[#4a5070]">
+                        <td className="px-[18px] py-[10px] font-mono text-[11px] text-gray-500 dark:text-[#4a5070]">
                           {formatDate(invoice.issue_date)}
                         </td>
                         <td
-                          className={`px-[18px] py-[10px] font-mono text-[11px] ${overdue ? "text-[#ff5f6d]" : "text-[#4a5070]"}`}
+                          className={`px-[18px] py-[10px] font-mono text-[11px] ${overdue ? "text-rose-600 dark:text-[#ff5f6d]" : "text-gray-500 dark:text-[#4a5070]"}`}
                         >
                           {formatDate(invoice.due_date)}
                         </td>
@@ -1236,6 +1167,26 @@ export default function AdminUebersichtPage() {
             </div>
           )}
         </div>
+
+        {kpis && !kpisLoading && Array.isArray(kpis.assumptions) && kpis.assumptions.length > 0 ? (
+          <div className="mt-6 rounded-[12px] border border-gray-200 bg-white p-[14px_18px] dark:border-[#1c2035] dark:bg-[#10121a]">
+            <h3 className="mb-[10px] text-[10px] font-medium uppercase tracking-[0.7px] text-gray-500 dark:text-[#4a5070]">Annahmen &amp; Limitationen</h3>
+            <div className="grid grid-cols-1 gap-x-[20px] gap-y-[2px] md:grid-cols-3">
+              {kpis.assumptions.map((a, i) => (
+                <div key={i} className="flex items-start gap-[7px] py-1 text-[10px] leading-[1.5] text-gray-500 dark:text-[#4a5070]">
+                  <span className="mt-[6px] h-[3px] w-[3px] shrink-0 rounded-full bg-gray-400 dark:bg-[#4a5070]" />
+                  <span>{a}</span>
+                </div>
+              ))}
+            </div>
+            {kpis.availability ? (
+              <p className="mt-3 text-[10px] leading-relaxed text-gray-500 dark:text-[#4a5070]">
+                Verfügbarkeit: Umsatz/Gewinn = {kpis.availability.revenue}; Leerstandstage = {kpis.availability.vacant_days}; Prognose ={" "}
+                {kpis.availability.forecast}; Gewinnschwelle = {kpis.availability.break_even}.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );
