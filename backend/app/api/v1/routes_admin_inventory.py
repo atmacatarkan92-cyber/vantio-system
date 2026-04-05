@@ -2,10 +2,12 @@
 Admin inventory catalog + assignments. Paths ordered so static segments match before {item_id}.
 """
 
+import re
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional, Tuple
+from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, field_validator
 
 from auth.dependencies import get_current_organization, get_db_session, require_roles
@@ -101,6 +103,79 @@ class AssignmentPatchBody(BaseModel):
     notes: Optional[str] = None
 
 
+class ImportPreviewBody(BaseModel):
+    source_type: Literal["url", "text"]
+    url: Optional[str] = None
+    text: Optional[str] = None
+
+
+def _stub_import_preview_url(raw_url: str) -> Tuple[Dict[str, Any], str]:
+    try:
+        product_url = _normalize_product_url(raw_url)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    host = urlparse(product_url).netloc or "Link"
+    draft = {
+        "name": f"Vorschau-Artikel ({host})",
+        "category": "",
+        "brand": "",
+        "total_quantity": 1,
+        "condition": "",
+        "status": "active",
+        "purchase_price_chf": None,
+        "purchase_date": None,
+        "purchased_from": "",
+        "supplier_article_number": "",
+        "product_url": product_url,
+        "notes": "",
+    }
+    excerpt = raw_url.strip()[:500]
+    return draft, excerpt
+
+
+def _stub_import_preview_text(raw: str) -> Tuple[Dict[str, Any], str]:
+    lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
+    first = lines[0] if lines else ""
+    name = (first[:200] if first else None) or "Vorschau-Artikel"
+    excerpt = raw.strip()[:500]
+    purchase_price_chf: Optional[float] = None
+    # Deterministic: first CHF / Fr. style amount in text
+    m = re.search(
+        r"(?:CHF|Fr\.?)\s*([0-9]+(?:[.,][0-9]+)?)|([0-9]+(?:[.,][0-9]+)?)\s*(?:CHF|Fr\.?)",
+        raw,
+        re.IGNORECASE,
+    )
+    if m:
+        g = m.group(1) or m.group(2)
+        if g:
+            purchase_price_chf = float(g.replace(",", "."))
+    notes = ""
+    me = re.search(
+        r"EUR\s*([0-9]+(?:[.,][0-9]+)?)|([0-9]+(?:[.,][0-9]+)?)\s*EUR",
+        raw,
+        re.IGNORECASE,
+    )
+    if me and purchase_price_chf is None:
+        g = me.group(1) or me.group(2)
+        if g:
+            notes = f"EUR-Betrag in Quelle erkannt ({g.replace(',', '.')} EUR, Vorschau)."
+    draft = {
+        "name": name,
+        "category": "",
+        "brand": "",
+        "total_quantity": 1,
+        "condition": "",
+        "status": "active",
+        "purchase_price_chf": purchase_price_chf,
+        "purchase_date": None,
+        "purchased_from": "",
+        "supplier_article_number": "",
+        "product_url": None,
+        "notes": notes,
+    }
+    return draft, excerpt
+
+
 @router.get("/inventory/summary", response_model=dict)
 def admin_inventory_org_summary(
     org_id: str = Depends(get_current_organization),
@@ -146,6 +221,43 @@ def admin_create_inventory_item(
     session=Depends(get_db_session),
 ):
     return invsvc.create_inventory_item(session, org_id, body, str(current_user.id), request)
+
+
+@router.post("/inventory/import-preview", response_model=dict)
+def admin_inventory_import_preview(
+    body: ImportPreviewBody,
+    _org_id: str = Depends(get_current_organization),
+    _=Depends(require_roles("admin", "manager")),
+):
+    """Deterministic stub preview for Smart Import (no network, no AI, no persistence)."""
+    if body.source_type == "url":
+        raw = (body.url or "").strip()
+        if not raw:
+            raise HTTPException(status_code=422, detail="URL erforderlich.")
+        draft, excerpt = _stub_import_preview_url(raw)
+    else:
+        raw = (body.text or "").strip()
+        if not raw:
+            raise HTTPException(status_code=422, detail="Text erforderlich.")
+        draft, excerpt = _stub_import_preview_text(raw)
+
+    field_hints: Dict[str, str] = {"name": "review", "purchase_price_chf": "review"}
+    return {
+        "draft": draft,
+        "field_hints": field_hints,
+        "warnings": [
+            {
+                "code": "stub_preview",
+                "message": "Dies ist eine Vorschau ohne Live-Analyse. Bitte alle Felder prüfen.",
+                "severity": "info",
+            }
+        ],
+        "meta": {
+            "source_type": body.source_type,
+            "source_excerpt": excerpt,
+            "extraction_version": "stub_v1",
+        },
+    }
 
 
 @router.patch("/inventory/assignments/{assignment_id}", response_model=dict)

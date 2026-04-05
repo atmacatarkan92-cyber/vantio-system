@@ -255,6 +255,17 @@ export async function createInventoryItem(body) {
   return res.json();
 }
 
+/** POST /api/admin/inventory/import-preview — Smart Import stub (deterministic, no persistence). */
+export async function postInventoryImportPreview(body) {
+  const res = await fetch(`${API_BASE_URL}/api/admin/inventory/import-preview`, {
+    method: "POST",
+    headers: getApiHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await parseAdminErrorResponse(res));
+  return res.json();
+}
+
 export async function updateInventoryItem(itemId, body) {
   const res = await fetch(
     `${API_BASE_URL}/api/admin/inventory/${encodeURIComponent(itemId)}`,
