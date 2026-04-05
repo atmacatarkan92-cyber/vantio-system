@@ -12,9 +12,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 from sqlmodel import select
 
@@ -148,6 +148,13 @@ class PlatformAuditLogItem(BaseModel):
     location_country: Optional[str] = None
 
 
+class PlatformAuditLogsPageResponse(BaseModel):
+    items: list[PlatformAuditLogItem]
+    total_count: int
+    page: int
+    page_size: int
+
+
 def _audit_row_to_platform_item(row: AuditLog, org_names: dict[str, str]) -> PlatformAuditLogItem:
     oid = str(row.organization_id)
     return PlatformAuditLogItem(
@@ -228,13 +235,23 @@ def list_organizations(
     return [_organization_to_list_item(o) for o in rows]
 
 
-@router.get("/audit-logs", response_model=list[PlatformAuditLogItem])
+@router.get("/audit-logs", response_model=PlatformAuditLogsPageResponse)
 def list_platform_audit_logs(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
     _: User = Depends(require_platform_admin),
     session: Session = Depends(get_db_session),
-) -> list[PlatformAuditLogItem]:
+) -> PlatformAuditLogsPageResponse:
     apply_pg_platform_audit_full_read(session)
-    rows = session.exec(select(AuditLog).order_by(desc(AuditLog.created_at)).limit(50)).all()
+    _total_rows = session.exec(select(func.count()).select_from(AuditLog)).all()
+    total_count = int(_total_rows[0]) if _total_rows else 0
+    offset = (page - 1) * page_size
+    rows = session.exec(
+        select(AuditLog)
+        .order_by(desc(AuditLog.created_at))
+        .offset(offset)
+        .limit(page_size)
+    ).all()
     org_ids = {str(r.organization_id) for r in rows}
     org_names: dict[str, str] = {}
     for oid in org_ids:
@@ -242,7 +259,13 @@ def list_platform_audit_logs(
         if o is not None:
             org_names[oid] = o.name or ""
     items = [_audit_row_to_platform_item(r, org_names) for r in rows]
-    return _enrich_platform_audit_log_locations(items)
+    enriched = _enrich_platform_audit_log_locations(items)
+    return PlatformAuditLogsPageResponse(
+        items=enriched,
+        total_count=int(total_count),
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get("/organizations/{organization_id}", response_model=OrganizationDetailResponse)

@@ -1619,9 +1619,12 @@ export async function createPlatformOrganization(body) {
   return text ? JSON.parse(text) : null;
 }
 
-/** GET /api/platform/audit-logs — platform_admin only; latest 50 rows. */
-export async function fetchPlatformAuditLogs() {
-  const res = await fetch(`${API_BASE_URL}/api/platform/audit-logs`, {
+/** GET /api/platform/audit-logs — platform_admin only; paginated audit feed. */
+export async function fetchPlatformAuditLogs({ page = 1, pageSize = 25 } = {}) {
+  const q = new URLSearchParams();
+  q.set("page", String(page));
+  q.set("page_size", String(pageSize));
+  const res = await fetch(`${API_BASE_URL}/api/platform/audit-logs?${q.toString()}`, {
     headers: getApiHeaders(),
     credentials: "include",
   });

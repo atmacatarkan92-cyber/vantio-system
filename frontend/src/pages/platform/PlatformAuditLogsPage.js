@@ -68,21 +68,30 @@ const suspiciousBadgeClass =
   "inline-flex w-fit shrink-0 items-center rounded-full border border-rose-400/80 bg-rose-100 px-2 py-0.5 text-[9px] font-semibold text-rose-900 dark:border-rose-400/35 dark:bg-rose-500/15 dark:text-rose-200";
 
 /**
- * Platform admin: last 50 audit log rows (cross-tenant).
+ * Platform admin: paginated audit log rows (cross-tenant).
  */
 function PlatformAuditLogsPage() {
   const [rows, setRows] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedLog, setSelectedLog] = useState(null);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError("");
-    fetchPlatformAuditLogs()
+    fetchPlatformAuditLogs({ page, pageSize })
       .then((data) => {
-        if (!cancelled) setRows(Array.isArray(data) ? data : []);
+        if (!cancelled) {
+          const items = data?.items;
+          setRows(Array.isArray(items) ? items : []);
+          setTotalCount(typeof data?.total_count === "number" ? data.total_count : 0);
+        }
       })
       .catch((e) => {
         if (!cancelled) setError(e.message || "Laden fehlgeschlagen.");
@@ -93,7 +102,7 @@ function PlatformAuditLogsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [page, pageSize]);
 
   const loginDeviceStatusById = useMemo(() => buildLoginDeviceStatusMap(rows), [rows]);
   const suspiciousLoginById = useMemo(() => buildSuspiciousLoginAuditMap(rows), [rows]);
@@ -107,8 +116,11 @@ function PlatformAuditLogsPage() {
   const detailJsonClass =
     "mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-[8px] border border-black/[0.08] bg-[#f8fafc] p-2 font-mono text-[11px] leading-relaxed text-[#0f172a] dark:border-white/[0.08] dark:bg-[#0c1018] dark:text-[#e2e8f0]";
 
+  const showPageOverlay = loading && rows.length > 0;
+  const showInitialLoading = loading && rows.length === 0;
+
   return (
-    <div className="mx-auto max-w-6xl bg-[#f8fafc] px-4 py-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
+    <div className="w-full max-w-none bg-[#f8fafc] px-4 py-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
       {selectedLog ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
@@ -296,7 +308,7 @@ function PlatformAuditLogsPage() {
         </div>
         <h1 className="text-[22px] font-bold tracking-[-0.02em]">Audit-Protokoll</h1>
         <p className="mt-2 text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
-          Letzte 50 Einträge (plattformweit).
+          Audit-Protokoll (plattformweit)
         </p>
       </div>
 
@@ -306,10 +318,21 @@ function PlatformAuditLogsPage() {
         </div>
       )}
 
-      {loading ? (
-        <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Lade …</p>
+      {showInitialLoading ? (
+        <div className="flex min-h-[120px] items-center justify-center rounded-[12px] border border-black/10 bg-white dark:border-white/[0.07] dark:bg-[#141824]">
+          <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Lade …</p>
+        </div>
       ) : (
-        <div className="overflow-x-auto rounded-[12px] border border-black/10 bg-white dark:border-white/[0.07] dark:bg-[#141824]">
+        <div className="relative overflow-x-auto rounded-[12px] border border-black/10 bg-white dark:border-white/[0.07] dark:bg-[#141824]">
+          {showPageOverlay ? (
+            <div
+              className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 dark:bg-[#141824]/75"
+              aria-busy="true"
+              aria-live="polite"
+            >
+              <p className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">Lade …</p>
+            </div>
+          ) : null}
           <table className="w-full min-w-[720px] border-collapse text-left text-[12px]">
             <thead>
               <tr className="border-b border-black/10 dark:border-white/[0.08]">
@@ -391,6 +414,47 @@ function PlatformAuditLogsPage() {
           </table>
         </div>
       )}
+
+      {!showInitialLoading ? (
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] text-[#0f172a] dark:text-[#e2e8f0]">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={loading || page <= 1}
+            className="rounded-[8px] border border-black/10 bg-white px-3 py-1.5 font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.12] dark:bg-[#141824]"
+          >
+            Zurück
+          </button>
+          {totalPages <= 15
+            ? Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setPage(n)}
+                  disabled={loading || n === page}
+                  className={`min-w-[2rem] rounded-[8px] border px-2 py-1.5 font-medium disabled:cursor-default ${
+                    n === page
+                      ? "border-[#fb923c] bg-[#fff7ed] text-[#c2410c] dark:border-[#fb923c]/50 dark:bg-[#431407]/40 dark:text-[#fed7aa]"
+                      : "border-black/10 bg-white dark:border-white/[0.12] dark:bg-[#141824]"
+                  } ${loading ? "opacity-50" : ""}`}
+                >
+                  {n}
+                </button>
+              ))
+            : null}
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={loading || page >= totalPages}
+            className="rounded-[8px] border border-black/10 bg-white px-3 py-1.5 font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.12] dark:bg-[#141824]"
+          >
+            Weiter
+          </button>
+          <span className="ml-1 text-[#64748b] dark:text-[#94a3b8]">
+            Seite {page} von {totalPages}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
