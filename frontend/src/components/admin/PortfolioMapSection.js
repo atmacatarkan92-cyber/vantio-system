@@ -54,18 +54,20 @@ function portfolioMapClusterSortUnits(a, b) {
   return sa.localeCompare(sb, "de-CH");
 }
 
-function SectionCard({ title, subtitle, children, rightSlot = null }) {
+function SectionCard({ title, subtitle, children, rightSlot = null, hideHeader = false }) {
   return (
     <div className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-[#0f172a] dark:text-[#eef2ff]">{title}</h3>
-          {subtitle ? (
-            <p className="mt-1 text-sm text-[#64748b] dark:text-[#6b7a9a]">{subtitle}</p>
-          ) : null}
+      {!hideHeader ? (
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-[#0f172a] dark:text-[#eef2ff]">{title}</h3>
+            {subtitle ? (
+              <p className="mt-1 text-sm text-[#64748b] dark:text-[#6b7a9a]">{subtitle}</p>
+            ) : null}
+          </div>
+          {rightSlot}
         </div>
-        {rightSlot}
-      </div>
+      ) : null}
       {children}
     </div>
   );
@@ -396,7 +398,10 @@ function filterMapItems(items, filterType, filterStatus, filterCity) {
   });
 }
 
-export default function PortfolioMapSection() {
+export default function PortfolioMapSection({
+  preview = false,
+  hideSectionHeader = false,
+}) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -434,24 +439,28 @@ export default function PortfolioMapSection() {
   }, [items]);
 
   const filterType = useMemo(() => {
+    if (preview) return "all";
     const v = searchParams.get(PM_QS_TYPE);
     return PM_VALID_TYPES.has(v) ? v : "all";
-  }, [searchParams]);
+  }, [preview, searchParams]);
 
   const filterStatus = useMemo(() => {
+    if (preview) return "all";
     const v = searchParams.get(PM_QS_STATUS);
     return PM_VALID_STATUSES.has(v) ? v : "all";
-  }, [searchParams]);
+  }, [preview, searchParams]);
 
-  const filterCityParam = searchParams.get(PM_QS_CITY);
+  const filterCityParam = preview ? null : searchParams.get(PM_QS_CITY);
 
   const filterCity = useMemo(() => {
+    if (preview) return "all";
     if (!filterCityParam || filterCityParam === "all") return "all";
     if (cityOptions.length === 0) return filterCityParam;
     return cityOptions.includes(filterCityParam) ? filterCityParam : "all";
-  }, [filterCityParam, cityOptions]);
+  }, [preview, filterCityParam, cityOptions]);
 
   useEffect(() => {
+    if (preview) return;
     if (!filterCityParam || filterCityParam === "all") return;
     if (cityOptions.length === 0) return;
     if (!cityOptions.includes(filterCityParam)) {
@@ -464,7 +473,7 @@ export default function PortfolioMapSection() {
         { replace: true }
       );
     }
-  }, [filterCityParam, cityOptions, setSearchParams]);
+  }, [preview, filterCityParam, cityOptions, setSearchParams]);
 
   const filteredItems = useMemo(
     () => filterMapItems(items, filterType, filterStatus, filterCity),
@@ -486,12 +495,19 @@ export default function PortfolioMapSection() {
 
   const defaultMapCenter = [46.8, 8.2];
   const defaultMapZoom = 7;
+  const mapHeightPx = preview ? 200 : 380;
+  const sectionHideHeader = hideSectionHeader && !preview;
 
   if (loading) {
     return (
       <SectionCard
+        hideHeader={sectionHideHeader}
         title="Portfolio-Karte"
-        subtitle="Globale Übersicht aller Einheiten · Standorte aus Liegenschaftskoordinaten"
+        subtitle={
+          preview
+            ? "Vorschau · Klicken Sie für die interaktive Karte"
+            : "Globale Übersicht aller Einheiten · Standorte aus Liegenschaftskoordinaten"
+        }
       >
         <p className="py-8 text-sm text-[#64748b] dark:text-[#6b7a9a]">Karte wird geladen…</p>
       </SectionCard>
@@ -501,10 +517,23 @@ export default function PortfolioMapSection() {
   if (error) {
     return (
       <SectionCard
+        hideHeader={sectionHideHeader}
         title="Portfolio-Karte"
-        subtitle="Globale Übersicht aller Einheiten · Standorte aus Liegenschaftskoordinaten"
+        subtitle={
+          preview
+            ? "Vorschau · Klicken Sie für die interaktive Karte"
+            : "Globale Übersicht aller Einheiten · Standorte aus Liegenschaftskoordinaten"
+        }
       >
         <p className="py-4 text-sm text-[#f87171]">{error}</p>
+        {preview ? (
+          <Link
+            to="/admin/portfolio-map"
+            className="mt-3 inline-flex rounded-lg border border-black/10 bg-slate-100 px-4 py-2 text-sm font-semibold text-[#0f172a] no-underline transition-colors hover:bg-slate-200 dark:border-white/[0.1] dark:bg-[#111520] dark:text-[#eef2ff] dark:hover:bg-white/[0.08]"
+          >
+            Portfolio-Karte öffnen
+          </Link>
+        ) : null}
       </SectionCard>
     );
   }
@@ -514,21 +543,63 @@ export default function PortfolioMapSection() {
   const plotted = Number(summary.plotted_units) || 0;
   const missing = Number(summary.missing_coordinates) || 0;
 
+  const mapShellClass =
+    "overflow-hidden rounded-[12px] border border-black/10 dark:border-white/[0.08] [&_.leaflet-container]:bg-slate-200 [&_.leaflet-container]:dark:bg-[#0f1219] [&_.leaflet-popup-content-wrapper]:rounded-xl [&_.leaflet-popup-content-wrapper]:border [&_.leaflet-popup-content-wrapper]:border-black/10 [&_.leaflet-popup-content-wrapper]:bg-white dark:[&_.leaflet-popup-content-wrapper]:border-white/[0.08] dark:[&_.leaflet-popup-content-wrapper]:bg-[#1a2030] [&_.leaflet-popup-tip]:bg-white dark:[&_.leaflet-popup-tip]:bg-[#1a2030] dark:[&_.leaflet-popup-tip]:border-white/[0.08] [&_.portfolio-map-cm]:flex [&_.portfolio-map-cm]:items-center [&_.portfolio-map-cm]:justify-center [&_.portfolio-map-cm]:rounded-[19px] [&_.portfolio-map-cm]:border [&_.portfolio-map-cm]:border-slate-400/55 [&_.portfolio-map-cm]:bg-white/95 [&_.portfolio-map-cm]:shadow-sm dark:[&_.portfolio-map-cm]:border-slate-500/55 dark:[&_.portfolio-map-cm]:bg-slate-800/95 [&_.portfolio-map-cb]:flex [&_.portfolio-map-cb]:h-[30px] [&_.portfolio-map-cb]:min-w-[30px] [&_.portfolio-map-cb]:items-center [&_.portfolio-map-cb]:justify-center [&_.portfolio-map-cb]:rounded-[15px] [&_.portfolio-map-cb]:bg-slate-100 [&_.portfolio-map-cb]:px-1.5 [&_.portfolio-map-cb]:text-[12px] [&_.portfolio-map-cb]:font-semibold [&_.portfolio-map-cb]:text-slate-800 dark:[&_.portfolio-map-cb]:bg-slate-900/90 dark:[&_.portfolio-map-cb]:text-[#e8ecff]";
+
+  const mapBlock = (
+    <div
+      className={
+        preview
+          ? `${mapShellClass} [&_.leaflet-container]:pointer-events-none`
+          : mapShellClass
+      }
+      style={{ height: mapHeightPx }}
+    >
+      <MapContainer
+        center={defaultMapCenter}
+        zoom={defaultMapZoom}
+        style={{ height: "100%", width: "100%" }}
+        scrollWheelZoom={false}
+        dragging={!preview}
+        doubleClickZoom={!preview}
+        zoomControl={!preview}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <PortfolioMapFitBounds items={plottedItems} />
+        <PortfolioMapClusteredMarkers
+          plottedItems={plottedItems}
+          activeUnitId={activeUnitId}
+          onUnitMarkerClick={setActiveUnitId}
+          onSinglePopupClose={() => setActiveUnitId(null)}
+        />
+      </MapContainer>
+    </div>
+  );
+
   return (
     <SectionCard
+      hideHeader={sectionHideHeader}
       title="Portfolio-Karte"
-      subtitle="Alle Einheitstypen · Statusfarben · nur Marker mit Koordinaten an der Liegenschaft"
+      subtitle={
+        preview
+          ? "Vorschau · Klicken Sie für die interaktive Karte mit Filtern"
+          : "Alle Einheitstypen · Statusfarben · nur Marker mit Koordinaten an der Liegenschaft"
+      }
     >
       <p className="mb-4 text-sm font-medium text-[#0f172a] dark:text-[#eef2ff]">
         {total} Einheiten · {plotted} auf Karte · {missing} ohne Koordinaten
       </p>
 
-      {hasActiveFilters && (
+      {!preview && hasActiveFilters && (
         <p className="mb-3 text-xs text-[#64748b] dark:text-[#6b7a9a]">
           Nach Filter: {filteredItems.length} Einheiten · {plottedItems.length} Marker
         </p>
       )}
 
+      {!preview ? (
       <div className="mb-4 flex flex-wrap gap-3">
         <div className="min-w-[140px] flex-1">
           <label className="mb-1 block text-[11px] font-medium text-[#64748b] dark:text-[#6b7a9a]">
@@ -611,51 +682,74 @@ export default function PortfolioMapSection() {
           </select>
         </div>
       </div>
+      ) : null}
 
       {total === 0 ? (
-        <p className="rounded-[10px] border border-black/10 bg-slate-100 px-4 py-6 text-sm text-[#64748b] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#6b7a9a]">
-          Keine Einheiten vorhanden.
-        </p>
+        <>
+          <p className="rounded-[10px] border border-black/10 bg-slate-100 px-4 py-6 text-sm text-[#64748b] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#6b7a9a]">
+            Keine Einheiten vorhanden.
+          </p>
+          {preview ? (
+            <Link
+              to="/admin/portfolio-map"
+              className="mt-3 inline-flex rounded-lg border border-black/10 bg-slate-100 px-4 py-2 text-sm font-semibold text-[#0f172a] no-underline transition-colors hover:bg-slate-200 dark:border-white/[0.1] dark:bg-[#111520] dark:text-[#eef2ff] dark:hover:bg-white/[0.08]"
+            >
+              Portfolio-Karte öffnen
+            </Link>
+          ) : null}
+        </>
       ) : plotted === 0 ? (
-        <p className="rounded-[10px] border border-black/10 bg-slate-100 px-4 py-6 text-sm text-[#64748b] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#6b7a9a]">
-          Für diese Einheiten sind noch keine Koordinaten vorhanden. Bitte pflegen Sie die
-          Koordinaten an der zugehörigen Liegenschaft (Admin → Liegenschaften).
-        </p>
+        <>
+          <p className="rounded-[10px] border border-black/10 bg-slate-100 px-4 py-6 text-sm text-[#64748b] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#6b7a9a]">
+            {preview
+              ? "Noch keine Koordinaten an den Liegenschaften — Details und Pflege auf der Portfolio-Karte."
+              : "Für diese Einheiten sind noch keine Koordinaten vorhanden. Bitte pflegen Sie die Koordinaten an der zugehörigen Liegenschaft (Admin → Liegenschaften)."}
+          </p>
+          {preview ? (
+            <Link
+              to="/admin/portfolio-map"
+              className="mt-3 inline-flex rounded-lg border border-black/10 bg-slate-100 px-4 py-2 text-sm font-semibold text-[#0f172a] no-underline transition-colors hover:bg-slate-200 dark:border-white/[0.1] dark:bg-[#111520] dark:text-[#eef2ff] dark:hover:bg-white/[0.08]"
+            >
+              Portfolio-Karte öffnen
+            </Link>
+          ) : null}
+        </>
       ) : plottedItems.length === 0 && hasActiveFilters ? (
         <p className="rounded-[10px] border border-black/10 bg-slate-100 px-4 py-6 text-sm text-[#64748b] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#6b7a9a]">
           Keine Marker passen zu den aktuellen Filtern.
         </p>
       ) : (
         <>
-          {missing > 0 && !hasActiveFilters ? (
+          {missing > 0 && !hasActiveFilters && !preview ? (
             <p className="mb-3 text-sm text-[#64748b] dark:text-[#6b7a9a]">
               {missing} Einheiten haben noch keine Koordinaten und werden derzeit nicht auf der
               Karte angezeigt.
             </p>
           ) : null}
-          <div
-            className="overflow-hidden rounded-[12px] border border-black/10 dark:border-white/[0.08] [&_.leaflet-container]:bg-slate-200 [&_.leaflet-container]:dark:bg-[#0f1219] [&_.leaflet-popup-content-wrapper]:rounded-xl [&_.leaflet-popup-content-wrapper]:border [&_.leaflet-popup-content-wrapper]:border-black/10 [&_.leaflet-popup-content-wrapper]:bg-white dark:[&_.leaflet-popup-content-wrapper]:border-white/[0.08] dark:[&_.leaflet-popup-content-wrapper]:bg-[#1a2030] [&_.leaflet-popup-tip]:bg-white dark:[&_.leaflet-popup-tip]:bg-[#1a2030] dark:[&_.leaflet-popup-tip]:border-white/[0.08] [&_.portfolio-map-cm]:flex [&_.portfolio-map-cm]:items-center [&_.portfolio-map-cm]:justify-center [&_.portfolio-map-cm]:rounded-[19px] [&_.portfolio-map-cm]:border [&_.portfolio-map-cm]:border-slate-400/55 [&_.portfolio-map-cm]:bg-white/95 [&_.portfolio-map-cm]:shadow-sm dark:[&_.portfolio-map-cm]:border-slate-500/55 dark:[&_.portfolio-map-cm]:bg-slate-800/95 [&_.portfolio-map-cb]:flex [&_.portfolio-map-cb]:h-[30px] [&_.portfolio-map-cb]:min-w-[30px] [&_.portfolio-map-cb]:items-center [&_.portfolio-map-cb]:justify-center [&_.portfolio-map-cb]:rounded-[15px] [&_.portfolio-map-cb]:bg-slate-100 [&_.portfolio-map-cb]:px-1.5 [&_.portfolio-map-cb]:text-[12px] [&_.portfolio-map-cb]:font-semibold [&_.portfolio-map-cb]:text-slate-800 dark:[&_.portfolio-map-cb]:bg-slate-900/90 dark:[&_.portfolio-map-cb]:text-[#e8ecff]"
-            style={{ height: 380 }}
-          >
-            <MapContainer
-              center={defaultMapCenter}
-              zoom={defaultMapZoom}
-              style={{ height: "100%", width: "100%" }}
-              scrollWheelZoom={false}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <PortfolioMapFitBounds items={plottedItems} />
-              <PortfolioMapClusteredMarkers
-                plottedItems={plottedItems}
-                activeUnitId={activeUnitId}
-                onUnitMarkerClick={setActiveUnitId}
-                onSinglePopupClose={() => setActiveUnitId(null)}
-              />
-            </MapContainer>
-          </div>
+          {missing > 0 && !hasActiveFilters && preview ? (
+            <p className="mb-3 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">
+              {missing} ohne Koordinaten (nicht in der Vorschau).
+            </p>
+          ) : null}
+          {preview ? (
+            <>
+              <Link
+                to="/admin/portfolio-map"
+                className="group block rounded-[12px] no-underline outline-none ring-offset-2 ring-offset-white transition-shadow focus-visible:ring-2 focus-visible:ring-sky-500/60 dark:ring-offset-[#141824]"
+                aria-label="Zur vollständigen Portfolio-Karte mit Filtern"
+              >
+                {mapBlock}
+              </Link>
+              <Link
+                to="/admin/portfolio-map"
+                className="mt-3 inline-flex rounded-lg border border-black/10 bg-slate-100 px-4 py-2 text-sm font-semibold text-[#0f172a] no-underline transition-colors hover:bg-slate-200 dark:border-white/[0.1] dark:bg-[#111520] dark:text-[#eef2ff] dark:hover:bg-white/[0.08]"
+              >
+                Portfolio-Karte öffnen
+              </Link>
+            </>
+          ) : (
+            mapBlock
+          )}
         </>
       )}
     </SectionCard>

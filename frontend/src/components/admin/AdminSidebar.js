@@ -148,6 +148,10 @@ function AdminSidebar() {
           <NavLink to="/admin/business-apartments-dashboard" className={navSubLinkClass}>
             🏢 Business-Apartment-Dashboard
           </NavLink>
+
+          <NavLink to="/admin/portfolio-map" className={navSubLinkClass}>
+            🗺️ Portfolio-Karte
+          </NavLink>
         </Bereich>
 
         <Bereich title="Betrieb" defaultOpen={true} theme={theme}>

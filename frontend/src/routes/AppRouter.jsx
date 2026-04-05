@@ -20,6 +20,7 @@ import AdminUnitDetailPage from "../pages/admin/AdminUnitDetailPage";
 import AdminInvoicesPage from "../pages/admin/AdminInvoicesPage";
 import AdminInvoiceDetailPage from "../pages/admin/AdminInvoiceDetailPage";
 import AdminBusinessApartmentsDashboardPage from "../pages/admin/AdminBusinessApartmentsDashboardPage";
+import AdminPortfolioMapPage from "../pages/admin/AdminPortfolioMapPage";
 import AdminInventoryPage from "../pages/admin/AdminInventoryPage";
 import AdminInventoryDetailPage from "../pages/admin/AdminInventoryDetailPage";
 import AdminObjektePage from "../pages/admin/AdminObjektePage";
@@ -110,6 +111,7 @@ export default function AppRouter() {
               <Route path="dashboard" element={<AdminUebersichtPage />} />
               <Route path="operations" element={<AdminCoLivingDashboardPage />} />
               <Route path="business-apartments-dashboard" element={<AdminBusinessApartmentsDashboardPage />} />
+              <Route path="portfolio-map" element={<AdminPortfolioMapPage />} />
               <Route path="objekte-dashboard" element={<AdminObjektePage />} />
               <Route path="rechnungen-dashboard" element={<AdminInvoicesPage />} />
               <Route path="apartments" element={<AdminApartmentsPage />} />

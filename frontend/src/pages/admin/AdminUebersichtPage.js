@@ -569,7 +569,7 @@ export default function AdminUebersichtPage() {
       </div>
 
       <div className="mb-6">
-        <PortfolioMapSection />
+        <PortfolioMapSection preview />
       </div>
 
       {portfolio && (
