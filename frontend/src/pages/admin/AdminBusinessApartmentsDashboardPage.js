@@ -6,7 +6,6 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  Legend,
   BarChart,
   Bar,
 } from "recharts";
@@ -63,74 +62,52 @@ function apartmentDisplayLabel(unit) {
   return id || "—";
 }
 
-function HeroCard({
-  title,
-  value,
-  subtitle,
-  accent = "orange",
-  trend = null,
-}) {
-  const styles = {
-    orange: {
-      card: "border-t-orange-500",
-      value: "text-[#fb923c]",
-      dot: "bg-orange-500",
-    },
-    green: {
-      card: "border-t-green-500",
-      value: "text-[#4ade80]",
-      dot: "bg-green-500",
-    },
-    slate: {
-      card: "border-t-slate-500",
-      value: "text-[#0f172a] dark:text-[#eef2ff]",
-      dot: "bg-slate-500",
-    },
-    rose: {
-      card: "border-t-rose-500",
-      value: "text-[#f87171]",
-      dot: "bg-rose-500",
-    },
-    blue: {
-      card: "border-t-blue-500",
-      value: "text-[#7aaeff]",
-      dot: "bg-blue-500",
-    },
-    amber: {
-      card: "border-t-amber-500",
-      value: "text-[#fbbf24]",
-      dot: "bg-amber-500",
-    },
+function HeroCard({ title, value, subtitle, trend = null }) {
+  const cfgByTitle = {
+    "Aktueller Umsatz": { bar: "#f5a623", valueClass: "text-[20px] text-[#f5a623]" },
+    "Gewinn aktuell": { bar: "#3ddc84", valueClass: "text-[20px] text-[#3ddc84]" },
+    "Aktuelle Ausgaben": { bar: "#ff5f6d", valueClass: "text-[20px] text-[#ff5f6d]" },
+    "Belegt in %": { bar: "#5b9cf6", valueClass: "text-[20px] text-[#5b9cf6]" },
   };
-
-  const style = styles[accent] || styles.orange;
+  const cfg = cfgByTitle[title] || {
+    bar: "#f5a623",
+    valueClass: "text-[20px] text-[#edf0f7]",
+  };
+  const occPct =
+    title === "Belegt in %"
+      ? Math.max(0, Math.min(100, parseFloat(String(value)) || 0))
+      : null;
 
   return (
-    <div
-      className={`relative overflow-hidden rounded-[14px] border border-black/10 dark:border-white/[0.07] border-t-4 bg-white dark:bg-[#141824] p-5 ${style.card}`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className={`h-2.5 w-2.5 rounded-full ${style.dot}`} />
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">{title}</p>
-          </div>
-          <p className={`mt-2 text-2xl font-bold tracking-tight ${style.value}`}>
-            {value}
-          </p>
-          <p className="mt-2 text-sm text-[#64748b] dark:text-[#6b7a9a]">{subtitle}</p>
+    <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+      <div
+        className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px]"
+        style={{ background: cfg.bar }}
+      />
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">{title}</p>
+          <p className={`mb-[4px] font-mono font-medium leading-none ${cfg.valueClass}`}>{value}</p>
+          <p className="text-[10px] leading-[1.4] text-[#4a5070]">{subtitle}</p>
+          {occPct != null ? (
+            <div className="mb-[4px] mt-[8px] h-[3px] rounded-full bg-[#191c28]">
+              <div
+                className="h-full rounded-full bg-[#5b9cf6]"
+                style={{ width: `${occPct}%` }}
+              />
+            </div>
+          ) : null}
         </div>
-
-        <div className="flex flex-col items-end gap-2">
-          <span className="rounded-full border border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] px-2.5 py-1 text-xs font-semibold text-[#64748b] dark:text-[#6b7a9a]">
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span className="rounded-full border border-[rgba(61,220,132,0.25)] bg-[rgba(61,220,132,0.12)] px-[6px] py-[2px] text-[9px] font-semibold uppercase tracking-[0.4px] text-[#3ddc84]">
             Live
           </span>
           {trend ? (
             <span
-              className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${
+              className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold ${
                 trend.positive
-                  ? "border-green-500/20 bg-green-500/10 text-green-400"
-                  : "border-red-500/20 bg-red-500/10 text-red-400"
+                  ? "border-[rgba(61,220,132,0.25)] bg-[rgba(61,220,132,0.1)] text-[#3ddc84]"
+                  : "border-[rgba(255,95,109,0.25)] bg-[rgba(255,95,109,0.1)] text-[#ff5f6d]"
               }`}
             >
               {trend.label}
@@ -144,43 +121,64 @@ function HeroCard({
 
 function SectionCard({ title, subtitle, children, rightSlot = null }) {
   return (
-    <div className="rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824] p-5">
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-[#0f172a] dark:text-[#eef2ff]">{title}</h3>
+    <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+      <div className="flex items-start justify-between gap-3 border-b border-[#1c2035] px-[16px] py-[13px]">
+        <div className="min-w-0">
+          <h3 className="text-[13px] font-medium text-[#edf0f7]">{title}</h3>
           {subtitle ? (
-            <p className="mt-1 text-sm text-[#64748b] dark:text-[#6b7a9a]">{subtitle}</p>
+            <p className="mt-[2px] text-[10px] text-[#4a5070]">{subtitle}</p>
           ) : null}
         </div>
         {rightSlot}
       </div>
-      {children}
+      <div className="px-[16px] py-[14px]">{children}</div>
     </div>
   );
 }
 
-function SmallStatCard({ label, value, hint }) {
+function SmallStatCard({ label, value, hint, valueClassName = "text-[20px] text-[#edf0f7]" }) {
+  const barByLabel = {
+    "Apartments gesamt": "#5b9cf6",
+    "Belegte Apartments": "#3ddc84",
+    "Freie Apartments": "#ff5f6d",
+  };
+  const bar = barByLabel[label] || "#5b9cf6";
+
   return (
-    <div className="rounded-[14px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-[#0f172a] dark:text-[#eef2ff]">{value}</p>
-      {hint ? <p className="mt-2 text-sm text-[#64748b] dark:text-[#6b7a9a]">{hint}</p> : null}
+    <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+      <div
+        className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px]"
+        style={{ background: bar }}
+      />
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">{label}</p>
+          <p className={`mb-[4px] font-mono font-medium leading-none ${valueClassName}`}>{value}</p>
+          {hint ? <p className="text-[10px] leading-[1.4] text-[#4a5070]">{hint}</p> : null}
+        </div>
+        <span className="shrink-0 rounded-full border border-[rgba(61,220,132,0.25)] bg-[rgba(61,220,132,0.12)] px-[6px] py-[2px] text-[9px] font-semibold uppercase tracking-[0.4px] text-[#3ddc84]">
+          Live
+        </span>
+      </div>
     </div>
   );
 }
 
 function RankingBadge({ value, type }) {
   const styles = {
-    success: "border-green-500/20 bg-green-500/10 text-green-400",
-    warning: "border-amber-500/20 bg-amber-500/10 text-amber-400",
-    danger: "border-red-500/20 bg-red-500/10 text-red-400",
-    neutral: "border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] text-[#64748b] dark:text-[#6b7a9a]",
-    blue: "border-blue-500/20 bg-blue-500/10 text-[#7aaeff]",
+    success:
+      "border border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] text-[#3ddc84]",
+    warning:
+      "border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] text-[#f5a623]",
+    danger:
+      "border border-[rgba(255,95,109,0.2)] bg-[rgba(255,95,109,0.1)] text-[#ff5f6d]",
+    neutral: "border border-[#1c2035] bg-[#141720] text-[#8892b0]",
+    blue: "border border-[rgba(91,156,246,0.25)] bg-[rgba(91,156,246,0.12)] text-[#5b9cf6]",
   };
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${styles[type]}`}
+      className={`inline-flex items-center rounded-full px-2 py-[2px] text-[9px] font-semibold ${styles[type]}`}
     >
       {value}
     </span>
@@ -189,12 +187,12 @@ function RankingBadge({ value, type }) {
 
 function FilterSelect({ label, value, onChange, children }) {
   return (
-    <div className="min-w-[180px]">
-      <label className="mb-2 block text-xs font-medium text-[#64748b] dark:text-[#6b7a9a]">{label}</label>
+    <div className="flex min-w-[160px] flex-col gap-[3px]">
+      <label className="text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">{label}</label>
       <select
         value={value}
         onChange={onChange}
-        className="w-full rounded-lg border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-3 py-2 text-sm text-[#0f172a] dark:text-[#eef2ff] outline-none"
+        className="w-full cursor-pointer appearance-none rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[5px] font-['DM_Sans'] text-[12px] text-[#edf0f7] outline-none"
       >
         {children}
       </select>
@@ -577,321 +575,513 @@ function AdminBusinessApartmentsDashboardPage() {
     return "Belegte und freie Apartments im Verlauf";
   }, [selectedPeriod]);
 
-  return (
-    <div className="-m-6 min-h-screen bg-[#f8fafc] p-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark] md:p-8">
-      <div className="mx-auto max-w-[1800px] space-y-6">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b] dark:text-[#6b7a9a]">
-              Vantio
-            </p>
-            <h2 className="mt-2 text-xl font-semibold tracking-tight text-[#0f172a] dark:text-[#eef2ff]">
-              Business-Apartment Dashboard
-            </h2>
-            <p className="mt-3 max-w-3xl text-sm text-[#64748b] dark:text-[#6b7a9a]">
-              Übersicht über Belegung, Umsatz, Gewinn und Performance deiner
-              Business Apartments.
-            </p>
-          </div>
+  const chartAxisTick = { fill: "#4a5070", fontSize: 9, fontFamily: "DM Mono, monospace" };
+  const chartTooltipStyle = {
+    background: "#10121a",
+    border: "1px solid #1c2035",
+    borderRadius: 8,
+    color: "#edf0f7",
+    fontSize: 11,
+  };
 
+  return (
+    <div className="-m-6 min-h-screen bg-[#080a0f] p-6 md:p-8">
+      <div className="mx-auto max-w-[1800px] space-y-[14px]">
+        <div className="sticky top-0 z-30 flex h-[50px] items-center justify-between border-b border-[#1c2035] bg-[#0c0e15] px-6 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <span className="font-semibold text-[#edf0f7]">
+              Van<span className="text-[#5b9cf6]">tio</span>
+            </span>
+            <span className="text-[#4a5070]">·</span>
+            <span className="text-[14px] font-medium text-[#edf0f7]">Business-Apartment Dashboard</span>
+          </div>
           <div className="flex items-center gap-2">
-            <span className="rounded-full border border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#64748b] dark:text-[#6b7a9a]">
+            <span className="rounded-[6px] border border-[#1c2035] bg-[#141720] px-3 py-1 text-[11px] text-[#8892b0]">
               Live KPI
             </span>
-            <span className="rounded-full border border-black/10 dark:border-white/[0.1] bg-slate-100 dark:bg-white/[0.06] px-3 py-1.5 text-[11px] font-bold text-[#64748b] dark:text-[#6b7a9a]">
+            <span className="rounded-[6px] border border-[rgba(91,156,246,0.28)] bg-[rgba(91,156,246,0.1)] px-[14px] py-[5px] text-[11px] font-medium text-[#5b9cf6]">
               Business Apartments only
             </span>
           </div>
         </div>
 
-        <SectionCard
-          title="Global Filter"
-          subtitle="Filtere das Dashboard nach Zeitraum, Ort und Apartment"
-        >
-          <div className="flex flex-col lg:flex-row gap-4">
-            <FilterSelect
-              label="Zeitraum"
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-            >
-              <option value="lastMonth">Letzter Monat</option>
-              <option value="thisMonth">Dieser Monat</option>
-              <option value="year">Dieses Jahr</option>
-              <option value="all">Alle Zeit</option>
-            </FilterSelect>
+        <div className="flex flex-wrap items-center gap-[12px] rounded-[10px] border border-[#1c2035] bg-[#10121a] px-[16px] py-[12px]">
+          <FilterSelect
+            label="Zeitraum"
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+          >
+            <option value="lastMonth">Letzter Monat</option>
+            <option value="thisMonth">Dieser Monat</option>
+            <option value="year">Dieses Jahr</option>
+            <option value="all">Alle Zeit</option>
+          </FilterSelect>
 
-            <FilterSelect
-              label="Ort"
-              value={selectedPlace}
-              onChange={(e) => {
-                setSelectedPlace(e.target.value);
-                setSelectedUnitId("all");
-              }}
-            >
-              <option value="all">Alle Orte</option>
-              {placeOptions.map((place) => (
-                <option key={place} value={place}>
-                  {place}
+          <div className="hidden h-[32px] w-px bg-[#1c2035] sm:block" />
+
+          <FilterSelect
+            label="Ort"
+            value={selectedPlace}
+            onChange={(e) => {
+              setSelectedPlace(e.target.value);
+              setSelectedUnitId("all");
+            }}
+          >
+            <option value="all">Alle Orte</option>
+            {placeOptions.map((place) => (
+              <option key={place} value={place}>
+                {place}
+              </option>
+            ))}
+          </FilterSelect>
+
+          <div className="hidden h-[32px] w-px bg-[#1c2035] sm:block" />
+
+          <FilterSelect
+            label="Apartment"
+            value={selectedUnitId}
+            onChange={(e) => setSelectedUnitId(e.target.value)}
+          >
+            <option value="all">Alle Apartments</option>
+            {businessUnits
+              .filter(
+                (unit) =>
+                  selectedPlace === "all" || unit.place === selectedPlace
+              )
+              .map((unit) => (
+                <option key={unit.unitId} value={unit.unitId}>
+                  {apartmentDisplayLabel(unit)}
                 </option>
               ))}
-            </FilterSelect>
+          </FilterSelect>
 
-            <FilterSelect
-              label="Apartment"
-              value={selectedUnitId}
-              onChange={(e) => setSelectedUnitId(e.target.value)}
-            >
-              <option value="all">Alle Apartments</option>
-              {businessUnits
-                .filter(
-                  (unit) =>
-                    selectedPlace === "all" || unit.place === selectedPlace
-                )
-                .map((unit) => (
-                  <option key={unit.unitId} value={unit.unitId}>
-                    {apartmentDisplayLabel(unit)}
-                  </option>
-                ))}
-            </FilterSelect>
+          <div className="ml-auto flex items-center gap-[6px]">
+            <span className="h-[6px] w-[6px] rounded-full bg-[#3ddc84]" />
+            <span className="text-[11px] text-[#4a5070]">Live</span>
           </div>
-        </SectionCard>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <HeroCard
-            title="Aktueller Umsatz"
-            value={
-              chartsLoading || chartsError || !heroFinance
-                ? "-"
-                : formatCurrency(heroFinance.revenue)
-            }
-            subtitle="Umsatz aus aktuell belegten Apartments"
-            accent="orange"
-            trend={revenueTrend}
-          />
-          <HeroCard
-            title="Gewinn aktuell"
-            value={
-              chartsLoading || chartsError || !heroFinance
-                ? "-"
-                : formatCurrency(heroFinance.profit)
-            }
-            subtitle="Umsatz minus laufende Ausgaben"
-            accent="green"
-            trend={profitTrend}
-          />
-          <HeroCard
-            title="Aktuelle Ausgaben"
-            value={
-              chartsLoading || chartsError || !heroFinance
-                ? "-"
-                : formatCurrency(heroFinance.costs)
-            }
-            subtitle="Miete, Nebenkosten und Reinigung"
-            accent="slate"
-            trend={costTrend}
-          />
-          <HeroCard
-            title="Belegt in %"
-            value={formatPercent(dashboard.occupiedRate)}
-            subtitle="Aktuelle Auslastung über alle Apartments"
-            accent="rose"
-            trend={occupancyTrend}
-          />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <SectionCard
-            title={financeChartTitle}
-            subtitle={financeChartSubtitle}
-          >
-            {chartsLoading ? (
-              <p className="py-8 text-sm text-[#64748b] dark:text-[#6b7a9a]">Lade Monatsdaten…</p>
-            ) : chartsError ? (
-              <p className="py-8 text-sm text-[#f87171]">{chartsError}</p>
-            ) : financeChartData.length === 0 ? (
-              <p className="py-8 text-sm text-[#64748b] dark:text-[#6b7a9a]">Keine Daten vorhanden</p>
-            ) : (
-              <div className="h-[420px] text-[#64748b] dark:text-[#6b7a9a] [&_.recharts-cartesian-grid_line]:stroke-[#e2e8f0] dark:[&_.recharts-cartesian-grid_line]:stroke-[rgba(255,255,255,0.08)]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={financeChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" vertical={false} />
-                    <XAxis dataKey="month" tick={{ fill: "currentColor", fontSize: 11 }} />
-                    <YAxis tick={{ fill: "currentColor", fontSize: 11 }} />
-                    <Tooltip
-                      formatter={(value) => `CHF ${value.toLocaleString()}`}
-                      wrapperClassName="rounded-lg border border-black/10 bg-white !text-[#0f172a] shadow-sm dark:border-white/10 dark:bg-[#141824] dark:!text-[#eef2ff]"
-                    />
-                    <Legend />
-                    <Bar name="Umsatz" dataKey="revenue" fill="#f97316" radius={[8, 8, 0, 0]} />
-                    <Bar name="Ausgaben" dataKey="costs" fill="#334155" radius={[8, 8, 0, 0]} />
-                    <Bar name="Gewinn" dataKey="profit" fill="#16a34a" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </SectionCard>
-
-          <SectionCard
-            title={occupancyChartTitle}
-            subtitle={occupancyChartSubtitle}
-          >
-            {chartsLoading ? (
-              <p className="py-8 text-sm text-[#64748b] dark:text-[#6b7a9a]">Lade Monatsdaten…</p>
-            ) : chartsError ? (
-              <p className="py-8 text-sm text-[#f87171]">{chartsError}</p>
-            ) : occupancyChartData.length === 0 ? (
-              <p className="py-8 text-sm text-[#64748b] dark:text-[#6b7a9a]">Keine Daten vorhanden</p>
-            ) : (
-              <div className="h-[420px] text-[#64748b] dark:text-[#6b7a9a] [&_.recharts-cartesian-grid_line]:stroke-[#e2e8f0] dark:[&_.recharts-cartesian-grid_line]:stroke-[rgba(255,255,255,0.08)]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={occupancyChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" vertical={false} />
-                    <XAxis dataKey="month" tick={{ fill: "currentColor", fontSize: 11 }} />
-                    <YAxis allowDecimals={false} tick={{ fill: "currentColor", fontSize: 11 }} />
-                    <Tooltip
-                      wrapperClassName="rounded-lg border border-black/10 bg-white !text-[#0f172a] shadow-sm dark:border-white/10 dark:bg-[#141824] dark:!text-[#eef2ff]"
-                    />
-                    <Legend />
-                    <Bar name="Belegt" dataKey="occupied" fill="#16a34a" radius={[8, 8, 0, 0]} />
-                    <Bar name="Frei" dataKey="free" fill="#ef4444" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </SectionCard>
+        <div>
+          <div className="mb-[10px] flex items-center gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">
+              Aktuell · Live
+            </span>
+            <div className="h-px flex-1 bg-[#1c2035]" />
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <HeroCard
+              title="Aktueller Umsatz"
+              value={
+                chartsLoading || chartsError || !heroFinance
+                  ? "-"
+                  : formatCurrency(heroFinance.revenue)
+              }
+              subtitle="Umsatz aus aktuell belegten Apartments"
+              trend={revenueTrend}
+            />
+            <HeroCard
+              title="Gewinn aktuell"
+              value={
+                chartsLoading || chartsError || !heroFinance
+                  ? "-"
+                  : formatCurrency(heroFinance.profit)
+              }
+              subtitle="Umsatz minus laufende Ausgaben"
+              trend={profitTrend}
+            />
+            <HeroCard
+              title="Aktuelle Ausgaben"
+              value={
+                chartsLoading || chartsError || !heroFinance
+                  ? "-"
+                  : formatCurrency(heroFinance.costs)
+              }
+              subtitle="Miete, Nebenkosten und Reinigung"
+              trend={costTrend}
+            />
+            <HeroCard
+              title="Belegt in %"
+              value={formatPercent(dashboard.occupiedRate)}
+              subtitle="Aktuelle Auslastung über alle Apartments"
+              trend={occupancyTrend}
+            />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <SmallStatCard
-            label="Apartments gesamt"
-            value={dashboard.totalApartments}
-            hint="Alle Business Apartments im Filter"
-          />
-          <SmallStatCard
-            label="Belegte Apartments"
-            value={dashboard.occupiedApartments}
-            hint="Aktuell laufende Apartments"
-          />
-          <SmallStatCard
-            label="Freie Apartments"
-            value={dashboard.freeApartments}
-            hint="Noch nicht belegte Apartments"
-          />
+        <div>
+          <div className="mb-[10px] flex items-center gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Analyse</span>
+            <div className="h-px flex-1 bg-[#1c2035]" />
+          </div>
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+            <SectionCard title={financeChartTitle} subtitle={financeChartSubtitle}>
+              {chartsLoading ? (
+                <p className="py-8 text-[12px] text-[#4a5070]">Lade Monatsdaten…</p>
+              ) : chartsError ? (
+                <p className="py-8 text-[12px] text-[#ff5f6d]">{chartsError}</p>
+              ) : financeChartData.length === 0 ? (
+                <p className="py-8 text-[12px] text-[#4a5070]">Keine Daten vorhanden</p>
+              ) : (
+                <>
+                  <div className="h-[420px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={financeChartData}>
+                        <defs>
+                          <linearGradient id="baFinUmsatz" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="rgba(245,166,35,0.85)" />
+                            <stop offset="100%" stopColor="rgba(245,166,35,0.4)" />
+                          </linearGradient>
+                          <linearGradient id="baFinAusgaben" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="rgba(74,80,112,0.7)" />
+                            <stop offset="100%" stopColor="rgba(74,80,112,0.3)" />
+                          </linearGradient>
+                          <linearGradient id="baFinGewinn" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="rgba(61,220,132,0.85)" />
+                            <stop offset="100%" stopColor="rgba(61,220,132,0.4)" />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          stroke="#1c2035"
+                          strokeDasharray="3 4"
+                          strokeWidth={0.5}
+                          vertical={false}
+                        />
+                        <XAxis
+                          dataKey="month"
+                          tick={(props) => {
+                            const { x, y, payload, index } = props;
+                            const last = index === financeChartData.length - 1;
+                            return (
+                              <text
+                                x={x}
+                                y={y}
+                                dy={12}
+                                textAnchor="middle"
+                                fill={last ? "#5b9cf6" : "#4a5070"}
+                                fontSize={9}
+                                fontFamily="DM Mono, monospace"
+                              >
+                                {payload.value}
+                              </text>
+                            );
+                          }}
+                          axisLine={{ stroke: "#1c2035" }}
+                          tickLine={{ stroke: "#1c2035" }}
+                        />
+                        <YAxis
+                          tick={chartAxisTick}
+                          axisLine={{ stroke: "#1c2035" }}
+                          tickLine={{ stroke: "#1c2035" }}
+                        />
+                        <Tooltip
+                          formatter={(value) => `CHF ${value.toLocaleString()}`}
+                          contentStyle={chartTooltipStyle}
+                        />
+                        <Bar
+                          name="Umsatz"
+                          dataKey="revenue"
+                          fill="url(#baFinUmsatz)"
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar
+                          name="Ausgaben"
+                          dataKey="costs"
+                          fill="url(#baFinAusgaben)"
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar
+                          name="Gewinn"
+                          dataKey="profit"
+                          fill="url(#baFinGewinn)"
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-[10px] flex flex-wrap gap-[12px]">
+                    <span className="flex items-center gap-[4px] text-[10px] text-[#4a5070]">
+                      <span className="h-[7px] w-[7px] rounded-full bg-[#f5a623]" />
+                      Umsatz
+                    </span>
+                    <span className="flex items-center gap-[4px] text-[10px] text-[#4a5070]">
+                      <span className="h-[7px] w-[7px] rounded-full bg-[#4a5070]" />
+                      Ausgaben
+                    </span>
+                    <span className="flex items-center gap-[4px] text-[10px] text-[#4a5070]">
+                      <span className="h-[7px] w-[7px] rounded-full bg-[#3ddc84]" />
+                      Gewinn
+                    </span>
+                  </div>
+                </>
+              )}
+            </SectionCard>
+
+            <SectionCard title={occupancyChartTitle} subtitle={occupancyChartSubtitle}>
+              {chartsLoading ? (
+                <p className="py-8 text-[12px] text-[#4a5070]">Lade Monatsdaten…</p>
+              ) : chartsError ? (
+                <p className="py-8 text-[12px] text-[#ff5f6d]">{chartsError}</p>
+              ) : occupancyChartData.length === 0 ? (
+                <p className="py-8 text-[12px] text-[#4a5070]">Keine Daten vorhanden</p>
+              ) : (
+                <>
+                  <div className="h-[420px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={occupancyChartData}>
+                        <defs>
+                          <linearGradient id="baOccBelegt" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="rgba(61,220,132,0.9)" />
+                            <stop offset="100%" stopColor="rgba(61,220,132,0.45)" />
+                          </linearGradient>
+                          <linearGradient id="baOccFrei" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="rgba(255,95,109,0.9)" />
+                            <stop offset="100%" stopColor="rgba(255,95,109,0.4)" />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          stroke="#1c2035"
+                          strokeDasharray="3 4"
+                          strokeWidth={0.5}
+                          vertical={false}
+                        />
+                        <XAxis
+                          dataKey="month"
+                          tick={(props) => {
+                            const { x, y, payload, index } = props;
+                            const last = index === occupancyChartData.length - 1;
+                            return (
+                              <text
+                                x={x}
+                                y={y}
+                                dy={12}
+                                textAnchor="middle"
+                                fill={last ? "#5b9cf6" : "#4a5070"}
+                                fontSize={9}
+                                fontFamily="DM Mono, monospace"
+                              >
+                                {payload.value}
+                              </text>
+                            );
+                          }}
+                          axisLine={{ stroke: "#1c2035" }}
+                          tickLine={{ stroke: "#1c2035" }}
+                        />
+                        <YAxis
+                          allowDecimals={false}
+                          tick={chartAxisTick}
+                          axisLine={{ stroke: "#1c2035" }}
+                          tickLine={{ stroke: "#1c2035" }}
+                        />
+                        <Tooltip contentStyle={chartTooltipStyle} />
+                        <Bar
+                          name="Belegt"
+                          dataKey="occupied"
+                          fill="url(#baOccBelegt)"
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar
+                          name="Frei"
+                          dataKey="free"
+                          fill="url(#baOccFrei)"
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-[10px] flex flex-wrap gap-[12px]">
+                    <span className="flex items-center gap-[4px] text-[10px] text-[#4a5070]">
+                      <span className="h-[7px] w-[7px] rounded-full bg-[#3ddc84]" />
+                      Belegt
+                    </span>
+                    <span className="flex items-center gap-[4px] text-[10px] text-[#4a5070]">
+                      <span className="h-[7px] w-[7px] rounded-full bg-[#ff5f6d]" />
+                      Frei
+                    </span>
+                  </div>
+                </>
+              )}
+            </SectionCard>
+          </div>
         </div>
 
-        <SectionCard
-          title="Top / Flop Apartments"
-          subtitle="Schnelle Übersicht der stärksten und schwächsten Apartments"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <div className="mb-[10px] flex items-center gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Bestand</span>
+            <div className="h-px flex-1 bg-[#1c2035]" />
+          </div>
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
             <SmallStatCard
-              label="Bestes Apartment"
-              value={dashboard.bestUnit ? dashboard.bestUnit.displayLabel : "-"}
-              hint={
-                dashboard.bestUnit
+              label="Apartments gesamt"
+              value={dashboard.totalApartments}
+              hint="Alle Business Apartments im Filter"
+              valueClassName="text-[20px] text-[#5b9cf6]"
+            />
+            <SmallStatCard
+              label="Belegte Apartments"
+              value={dashboard.occupiedApartments}
+              hint="Aktuell laufende Apartments"
+              valueClassName="text-[20px] text-[#3ddc84]"
+            />
+            <SmallStatCard
+              label="Freie Apartments"
+              value={dashboard.freeApartments}
+              hint="Noch nicht belegte Apartments"
+              valueClassName="text-[20px] text-[#ff5f6d]"
+            />
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+          <div className="border-b border-[#1c2035] px-[18px] py-[13px]">
+            <h3 className="text-[13px] font-medium text-[#edf0f7]">Top / Flop Apartments</h3>
+            <p className="mt-[2px] text-[10px] text-[#4a5070]">
+              Schnelle Übersicht der stärksten und schwächsten Apartments
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-0 md:grid-cols-3">
+            <div className="border-b border-[#1c2035] px-[18px] py-[16px] md:border-b-0 md:border-r md:border-[#1c2035]">
+              <p className="mb-[6px] text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                ⭐ Bestes Apartment
+              </p>
+              <p className="mb-[4px] text-[14px] font-medium text-[#edf0f7]">
+                {dashboard.bestUnit ? dashboard.bestUnit.displayLabel : "—"}
+              </p>
+              <p className="text-[11px] text-[#3ddc84]">
+                {dashboard.bestUnit
                   ? `${dashboard.bestUnit.place} · ${formatChfOrDash(
                       dashboard.bestUnit.profit
                     )} Gewinn`
-                  : "Keine Daten vorhanden"
-              }
-            />
-            <SmallStatCard
-              label="Schwächstes Apartment"
-              value={dashboard.worstUnit ? dashboard.worstUnit.displayLabel : "-"}
-              hint={
-                dashboard.worstUnit
+                  : "Keine Daten vorhanden"}
+              </p>
+            </div>
+            <div className="border-b border-[#1c2035] px-[18px] py-[16px] md:border-b-0 md:border-r md:border-[#1c2035]">
+              <p className="mb-[6px] text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                ⚠ Schwächstes Apartment
+              </p>
+              <p className="mb-[4px] text-[14px] font-medium text-[#edf0f7]">
+                {dashboard.worstUnit ? dashboard.worstUnit.displayLabel : "—"}
+              </p>
+              <p className="text-[11px] text-[#ff5f6d]">
+                {dashboard.worstUnit
                   ? `${dashboard.worstUnit.place} · ${formatChfOrDash(
                       dashboard.worstUnit.profit
                     )} Gewinn`
-                  : "Keine Daten vorhanden"
-              }
-            />
-            <SmallStatCard
-              label="Ø Gewinn pro Apartment"
-              value={
-                heroFinance &&
+                  : "Keine Daten vorhanden"}
+              </p>
+            </div>
+            <div className="px-[18px] py-[16px]">
+              <p className="mb-[6px] text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                Ø Gewinn pro Apartment
+              </p>
+              <p className="mb-[4px] font-mono text-[20px] font-medium text-[#f5a623]">
+                {heroFinance &&
                 dashboard.totalApartments > 0 &&
                 heroFinance.profit != null
                   ? formatCurrency(
                       heroFinance.profit / dashboard.totalApartments
                     )
-                  : "-"
-              }
-              hint="Durchschnitt über alle Business Apartments"
-            />
+                  : "—"}
+              </p>
+              <p className="text-[11px] text-[#4a5070]">Durchschnitt über alle Business Apartments</p>
+            </div>
           </div>
-        </SectionCard>
+        </div>
 
-        <SectionCard
-          title="Apartment Übersicht"
-          subtitle="Schnelle Performance-Sicht über alle Business Apartments"
-          rightSlot={
+        <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+          <div className="flex flex-col gap-2 border-b border-[#1c2035] px-[18px] py-[13px] sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-[13px] font-medium text-[#edf0f7]">Apartment Übersicht</h3>
+              <p className="mt-[2px] text-[10px] text-[#4a5070]">
+                Schnelle Performance-Sicht über alle Business Apartments
+              </p>
+            </div>
             <RankingBadge
               value={`${dashboard.performance.length} Apartments`}
               type="neutral"
             />
-          }
-        >
-          <div className="overflow-x-auto rounded-[14px] border border-black/10 dark:border-white/[0.07] bg-white dark:bg-[#141824]">
-            <table className="w-full border-collapse text-left text-sm">
-              <thead className="bg-slate-100 dark:bg-[#111520]">
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left">
+              <thead>
                 <tr>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
+                  <th className="border-b border-[#1c2035] px-[16px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
                     Apartment
                   </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
+                  <th className="border-b border-[#1c2035] px-[16px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
                     Ort
                   </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
+                  <th className="border-b border-[#1c2035] px-[16px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
                     Status
                   </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
+                  <th className="border-b border-[#1c2035] px-[16px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
                     Umsatz
                   </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
+                  <th className="border-b border-[#1c2035] px-[16px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
                     Ausgaben
                   </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
+                  <th className="border-b border-[#1c2035] px-[16px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
                     Gewinn
                   </th>
-                  <th className="py-3 pr-4 text-xs font-semibold uppercase tracking-wider text-[#64748b] dark:text-[#6b7a9a]">
+                  <th className="border-b border-[#1c2035] px-[16px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
                     Aktion
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {dashboard.performance.map((unit) => (
+                {dashboard.performance.map((unit, rowIdx, arr) => (
                   <tr
                     key={unit.unitId}
-                    className="border-b border-black/10 dark:border-white/[0.05] text-sm text-[#0f172a] dark:text-[#eef2ff]"
+                    className={`cursor-pointer border-b border-[#1c2035] text-[11px] text-[#8892b0] transition-colors hover:bg-[#141720] ${
+                      rowIdx === arr.length - 1 ? "border-b-0" : ""
+                    }`}
                   >
-                    <td className="py-4 pr-4 font-semibold">
-                      <span className="block font-medium text-sky-700 dark:text-sky-400">{unit.displayLabel}</span>
-                      <span className="mt-0.5 block break-all font-mono text-[10px] font-normal text-[#64748b] dark:text-[#6b7a9a]">
+                    <td className="align-middle px-[16px] py-[11px]">
+                      <span className="block font-mono text-[11px] font-medium text-[#5b9cf6]">
+                        {unit.displayLabel}
+                      </span>
+                      <span className="mt-[2px] block max-w-[200px] truncate font-mono text-[8px] text-[#4a5070]">
                         {unit.unitId}
                       </span>
                     </td>
-                    <td className="py-4 pr-4 font-medium">{unit.place}</td>
-                    <td className="py-4 pr-4">
+                    <td className="align-middle px-[16px] py-[11px] text-[11px] text-[#4a5070]">
+                      {unit.place}
+                    </td>
+                    <td className="align-middle px-[16px] py-[11px]">
                       {unit.occupied ? (
                         <RankingBadge value="Belegt" type="success" />
                       ) : (
                         <RankingBadge value="Frei" type="danger" />
                       )}
                     </td>
-                    <td className="py-4 pr-4 font-semibold text-emerald-600 dark:text-emerald-400">
+                    <td
+                      className={`align-middle px-[16px] py-[11px] font-mono text-[11px] text-[#f5a623] ${
+                        formatChfOrDash(unit.revenue) === "-" ? "text-[#4a5070]" : ""
+                      }`}
+                    >
                       {formatChfOrDash(unit.revenue)}
                     </td>
-                    <td className="py-4 pr-4 font-medium">
+                    <td
+                      className={`align-middle px-[16px] py-[11px] font-mono text-[11px] ${
+                        formatChfOrDash(unit.costs) === "-" ? "text-[#4a5070]" : "text-[#8892b0]"
+                      }`}
+                    >
                       {formatChfOrDash(unit.costs)}
                     </td>
-                    <td className="py-4 pr-4 font-medium">
+                    <td
+                      className={`align-middle px-[16px] py-[11px] font-mono text-[11px] ${
+                        formatChfOrDash(unit.profit) === "-"
+                          ? "text-[#4a5070]"
+                          : unit.profit != null && Number(unit.profit) >= 0
+                            ? "font-medium text-[#3ddc84]"
+                            : "font-medium text-[#ff5f6d]"
+                      }`}
+                    >
                       {formatChfOrDash(unit.profit)}
                     </td>
-                    <td className="py-4 pr-4">
+                    <td className="align-middle px-[16px] py-[11px]">
                       <Link
                         to={`/admin/units/${encodeURIComponent(unit.unitId)}`}
-                        className="inline-block rounded-[8px] border border-black/10 dark:border-white/[0.1] bg-transparent px-3 py-2 text-[13px] font-semibold text-[#64748b] no-underline hover:bg-slate-100 dark:text-[#6b7a9a] dark:hover:bg-white/[0.04]"
+                        className="inline-block rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[3px] text-[10px] text-[#8892b0] no-underline transition-colors hover:border-[#242840] hover:text-[#edf0f7]"
                       >
                         Öffnen
                       </Link>
@@ -901,7 +1091,10 @@ function AdminBusinessApartmentsDashboardPage() {
 
                 {dashboard.performance.length === 0 && (
                   <tr>
-                    <td colSpan="7" className="py-8 text-center text-[13px] text-[#64748b] dark:text-[#6b7a9a]">
+                    <td
+                      colSpan="7"
+                      className="border-b-0 px-[16px] py-8 text-center text-[12px] text-[#4a5070]"
+                    >
                       Keine Business Apartments gefunden.
                     </td>
                   </tr>
@@ -909,7 +1102,7 @@ function AdminBusinessApartmentsDashboardPage() {
               </tbody>
             </table>
           </div>
-        </SectionCard>
+        </div>
       </div>
     </div>
   );
