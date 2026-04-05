@@ -29,7 +29,7 @@ function parseOptionalProductUrl(raw) {
 
 function ProductUrlLink({ url, className = "" }) {
   if (!url || !String(url).trim()) {
-    return <span className="text-[#64748b] dark:text-[#93a4bf]">—</span>;
+    return <span className="text-[#4a5070]">—</span>;
   }
   const href = String(url).trim();
   return (
@@ -37,11 +37,25 @@ function ProductUrlLink({ url, className = "" }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={`inline-flex rounded-md border border-sky-300 bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-800 hover:bg-sky-100 dark:border-[#5b8cff]/40 dark:bg-[#5b8cff]/10 dark:text-[#5b8cff] dark:hover:bg-[#5b8cff]/20 ${className}`}
+      className={`inline-flex rounded-[6px] border border-[rgba(91,156,246,0.2)] bg-[rgba(91,156,246,0.1)] px-[10px] py-[3px] text-[10px] text-[#5b9cf6] transition-colors hover:bg-[rgba(91,156,246,0.2)] ${className}`}
     >
-      Produkt öffnen
+      Produkt öffnen ↗
     </a>
   );
+}
+
+function categoryBadgeClass(cat) {
+  const c = String(cat || "").trim();
+  if (c === "Wohnzimmer") {
+    return "border border-[rgba(157,124,244,0.2)] bg-[rgba(157,124,244,0.1)] text-[#9d7cf4]";
+  }
+  if (c === "Schlafzimmer") {
+    return "border border-[rgba(91,156,246,0.2)] bg-[rgba(91,156,246,0.1)] text-[#5b9cf6]";
+  }
+  if (c === "Küche") {
+    return "border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] text-[#f5a623]";
+  }
+  return "border border-[#1c2035] bg-[#191c28] text-[#8892b0]";
 }
 
 const INVENTORY_CATEGORIES = [
@@ -557,170 +571,349 @@ export default function AdminInventoryPage() {
   const canNext = skip + limit < data.total;
   const canPrev = skip > 0;
 
+  const kpiSku = loading ? "—" : summary != null ? summary.total_skus : "—";
+  const kpiPieces = loading ? "—" : summary != null ? summary.total_pieces : "—";
+  const kpiAssigned = loading ? "—" : summary != null ? summary.assigned_total : "—";
+  const kpiFree = loading ? "—" : summary != null ? summary.available_total : "—";
+  const kpiTotalValue =
+    loading || !summary
+      ? "—"
+      : summary.total_purchase_value_chf != null
+        ? formatChf(summary.total_purchase_value_chf)
+        : summary.total_anschaffung_chf != null
+          ? formatChf(summary.total_anschaffung_chf)
+          : "—";
+
   return (
     <div
-      className="min-h-screen bg-[#f8fafc] text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]"
+      className="-m-6 min-h-screen bg-[#080a0f]"
       data-testid="admin-inventory-page"
     >
-      <div className="mx-auto max-w-[min(1400px,100%)] gap-4 p-6">
-        <div className="mb-6 rounded-[14px] border border-black/10 bg-white p-6 dark:border-white/[0.07] dark:bg-[#141824]">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
-            Betrieb
-          </p>
-          <h1 className="mt-1 text-[22px] font-bold tracking-tight text-[#0f172a] dark:text-[#f8fafc]">
-            Inventar (Bestand)
-          </h1>
-          <p className="mt-2 max-w-[800px] text-[13px] leading-relaxed text-[#64748b] dark:text-[#93a4bf]">
-            Artikel mit Gesamtmenge und Zuordnung auf Units. Anschaffungspreise sind Investitionsdaten
-            — keine Betriebskosten (UnitCost).
-          </p>
-          {summary && !loading ? (
-            <p className="mt-3 text-[13px] text-[#64748b] dark:text-[#93a4bf]">
-              <span className="font-semibold text-[#0f172a] dark:text-[#f8fafc]">{summary.total_skus}</span>{" "}
-              Artikel ·{" "}
-              <span className="font-semibold text-[#0f172a] dark:text-[#f8fafc]">{summary.total_pieces}</span>{" "}
-              Stück gesamt ·{" "}
-              <span className="font-semibold text-[#0f172a] dark:text-[#f8fafc]">{summary.assigned_total}</span>{" "}
-              zugeordnet ·{" "}
-              <span className="font-semibold text-[#0f172a] dark:text-[#f8fafc]">{summary.available_total}</span>{" "}
-              frei
-            </p>
-          ) : null}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={openCreate}
-              className="rounded-lg bg-[#5b8cff] px-4 py-2 text-sm font-semibold text-white hover:bg-[#4a7ae8]"
-            >
-              Neuer Artikel
-            </button>
-            <button
-              type="button"
-              onClick={openSmartImport}
-              className="rounded-lg border border-black/15 bg-white px-4 py-2 text-sm font-semibold text-[#0f172a] hover:bg-slate-50 dark:border-white/[0.14] dark:bg-[#1a1f2e] dark:text-[#eef2ff] dark:hover:bg-white/[0.06]"
-            >
-              Smart Import
-            </button>
+      <div className="sticky top-0 z-30 flex h-[50px] items-center justify-between border-b border-[#1c2035] bg-[#0c0e15] px-6 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <span className="font-semibold text-[#edf0f7]">
+            Van<span className="text-[#5b9cf6]">tio</span>
+          </span>
+          <span className="text-[#4a5070]">·</span>
+          <span className="text-[14px] font-medium text-[#edf0f7]">Inventar</span>
+        </div>
+        <div className="flex gap-[8px]">
+          <button
+            type="button"
+            onClick={openSmartImport}
+            className="rounded-[6px] border border-[#252a3a] bg-[#141720] px-[14px] py-[5px] text-[11px] text-[#8892b0] hover:border-[#242840] hover:text-[#edf0f7]"
+          >
+            Smart Import
+          </button>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="rounded-[6px] border border-[rgba(91,156,246,0.28)] bg-[rgba(91,156,246,0.1)] px-[14px] py-[5px] text-[11px] font-medium text-[#5b9cf6]"
+          >
+            + Neuer Artikel
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4 px-6 py-5">
+        {error ? <p className="text-sm text-[#ff5f6d]">{error}</p> : null}
+
+        <div>
+          <div className="mb-[10px] flex items-center gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">
+              Bestand · Übersicht
+            </span>
+            <div className="h-px flex-1 bg-[#1c2035]" />
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#5b9cf6]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">
+                Artikel gesamt
+              </p>
+              <p className="mb-[4px] font-mono text-[20px] font-medium leading-none text-[#5b9cf6]">{kpiSku}</p>
+              <p className="text-[10px] leading-[1.4] text-[#4a5070]">Erfasste Artikel (SKUs)</p>
+            </div>
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#edf0f7]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">
+                Stück gesamt
+              </p>
+              <p className="mb-[4px] font-mono text-[20px] font-medium leading-none text-[#edf0f7]">{kpiPieces}</p>
+              <p className="text-[10px] leading-[1.4] text-[#4a5070]">Summe aller Stückzahlen</p>
+            </div>
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#3ddc84]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Zugeordnet</p>
+              <p className="mb-[4px] font-mono text-[20px] font-medium leading-none text-[#3ddc84]">{kpiAssigned}</p>
+              <p className="text-[10px] leading-[1.4] text-[#4a5070]">Auf Units verteilt</p>
+            </div>
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#f5a623]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Frei / Lager</p>
+              <p className="mb-[4px] font-mono text-[20px] font-medium leading-none text-[#f5a623]">{kpiFree}</p>
+              <p className="text-[10px] leading-[1.4] text-[#4a5070]">Noch nicht zugeordnet</p>
+            </div>
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] p-[13px_15px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#9d7cf4]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Gesamtwert</p>
+              <p className="mb-[4px] font-mono text-[17px] font-medium leading-none text-[#9d7cf4]">{kpiTotalValue}</p>
+              <p className="text-[10px] leading-[1.4] text-[#4a5070]">Summe aller Anschaffungspreise</p>
+            </div>
           </div>
         </div>
 
-        {error ? <p className="mb-4 text-sm text-[#f87171]">{error}</p> : null}
+        <div className="flex flex-wrap items-center gap-[10px] rounded-[10px] border border-[#1c2035] bg-[#10121a] px-[16px] py-[12px]">
+          <div className="flex flex-col gap-[3px]">
+            <span className="text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Suche</span>
+            <input
+              type="search"
+              defaultValue=""
+              placeholder="Artikelname, Nr., Lieferant…"
+              className="w-[200px] rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[5px] font-['DM_Sans'] text-[12px] text-[#edf0f7] outline-none placeholder:text-[#4a5070]"
+              onChange={() => {}}
+            />
+          </div>
+          <div className="hidden h-[32px] w-px bg-[#1c2035] sm:block" />
+          <div className="flex flex-col gap-[3px]">
+            <span className="text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Status</span>
+            <select
+              defaultValue="all"
+              className="cursor-pointer appearance-none rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[5px] font-['DM_Sans'] text-[12px] text-[#edf0f7]"
+              onChange={() => {}}
+            >
+              <option value="all">Alle Status</option>
+              <option value="assigned">Zugeordnet</option>
+              <option value="free">Frei</option>
+              <option value="storage">Lager</option>
+            </select>
+          </div>
+          <div className="hidden h-[32px] w-px bg-[#1c2035] sm:block" />
+          <div className="flex flex-col gap-[3px]">
+            <span className="text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Unit / Apartment</span>
+            <select
+              defaultValue=""
+              className="min-w-[160px] cursor-pointer appearance-none rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[5px] font-['DM_Sans'] text-[12px] text-[#edf0f7]"
+              onChange={() => {}}
+            >
+              <option value="">Alle Units</option>
+            </select>
+          </div>
+          <div className="hidden h-[32px] w-px bg-[#1c2035] sm:block" />
+          <div className="flex flex-col gap-[3px]">
+            <span className="text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Kategorie</span>
+            <select
+              defaultValue=""
+              className="min-w-[160px] cursor-pointer appearance-none rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[5px] font-['DM_Sans'] text-[12px] text-[#edf0f7]"
+              onChange={() => {}}
+            >
+              <option value="">Alle Kategorien</option>
+              {INVENTORY_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+          <span className="ml-auto text-[11px] text-[#4a5070]">
+            {data.total} Artikel · Filter folgen
+          </span>
+        </div>
 
-        <div className="rounded-[14px] border border-black/10 bg-white p-4 dark:border-white/[0.07] dark:bg-[#141824]">
-          {loading ? (
-            <p className="text-sm text-[#64748b] dark:text-[#93a4bf]">Lade …</p>
-          ) : data.items.length === 0 ? (
-            <p className="text-sm text-[#64748b] dark:text-[#93a4bf]">Keine Artikel.</p>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-black/10 text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:border-white/[0.08] dark:text-[#6b7a9a]">
-                      <th className="py-2 pr-3">Nr.</th>
-                      <th className="py-2 pr-3">Name</th>
-                      <th className="py-2 pr-3">Kategorie</th>
-                      <th className="py-2 pr-3 max-w-[100px]">Lief.-Nr.</th>
-                      <th className="py-2 pr-3 max-w-[120px]">Bezug</th>
-                      <th className="py-2 pr-3">Produkt</th>
-                      <th className="py-2 pr-3 text-right">Gesamt</th>
-                      <th className="py-2 pr-3 text-right">Zugeordnet</th>
-                      <th className="py-2 pr-3 text-right">Frei</th>
-                      <th className="py-2 pr-2 text-right">Anschaffung</th>
-                      <th className="py-2 pr-0 text-right">Aktionen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.items.map((row) => (
-                      <tr
-                        key={row.id}
-                        className="cursor-pointer border-b border-black/5 hover:bg-black/[0.02] dark:border-white/[0.05] dark:hover:bg-white/[0.02]"
-                        onClick={() => navigate(`/admin/inventory/${row.id}`)}
-                      >
-                        <td className="py-2 pr-3 font-mono text-[12px] text-[#64748b] dark:text-[#93a4bf]">
-                          {row.inventory_number}
-                        </td>
-                        <td className="py-2 pr-3 font-medium">
-                          <Link
-                            to={`/admin/inventory/${row.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-[#0f172a] hover:text-[#5b8cff] hover:underline dark:text-[#f8fafc]"
-                          >
-                            {row.name}
-                          </Link>
-                        </td>
-                        <td className="py-2 pr-3 text-[#64748b] dark:text-[#93a4bf]">{row.category || "—"}</td>
-                        <td
-                          className="py-2 pr-3 max-w-[100px] truncate text-[11px] text-[#64748b] dark:text-[#93a4bf]"
-                          title={row.supplier_article_number || ""}
-                        >
-                          {row.supplier_article_number || "—"}
-                        </td>
-                        <td
-                          className="py-2 pr-3 max-w-[120px] truncate text-[11px] text-[#64748b] dark:text-[#93a4bf]"
-                          title={row.purchased_from || ""}
-                        >
-                          {row.purchased_from || "—"}
-                        </td>
-                        <td
-                          className="py-2 pr-3 whitespace-nowrap"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ProductUrlLink url={row.product_url} />
-                        </td>
-                        <td className="py-2 pr-3 text-right tabular-nums">{row.total_quantity ?? 1}</td>
-                        <td className="py-2 pr-3 text-right tabular-nums text-amber-700 dark:text-amber-200/90">
-                          {row.assigned_total ?? 0}
-                        </td>
-                        <td className="py-2 pr-3 text-right tabular-nums text-emerald-700 dark:text-emerald-300/90">
-                          {row.available ?? 0}
-                        </td>
-                        <td className="py-2 pr-2 text-right tabular-nums text-[#64748b] dark:text-[#93a4bf]">
-                          {formatChf(row.purchase_price_chf)}
-                        </td>
-                        <td className="py-2 pr-0 text-right">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/admin/inventory/${row.id}`);
-                            }}
-                            className="rounded-[8px] border border-black/10 bg-transparent px-3 py-1.5 text-[13px] font-semibold text-[#64748b] hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#93a4bf] dark:hover:bg-white/[0.04]"
-                          >
-                            Öffnen
-                          </button>
-                        </td>
+        <div>
+          <div className="mb-[10px] flex items-center gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">
+              Inventar
+            </span>
+            <div className="h-px flex-1 bg-[#1c2035]" />
+          </div>
+          <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+            <div className="flex flex-col gap-2 border-b border-[#1c2035] px-[18px] py-[13px] sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-[13px] font-medium text-[#edf0f7]">Alle Artikel</h3>
+                <p className="mt-[2px] text-[10px] text-[#4a5070]">
+                  Artikel mit Gesamtmenge und Zuordnung auf Units
+                </p>
+              </div>
+              <span className="w-fit rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[3px] text-[10px] text-[#4a5070]">
+                {data.total} Einträge
+              </span>
+            </div>
+            {loading ? (
+              <p className="px-[18px] py-[16px] text-[12px] text-[#4a5070]">Lade …</p>
+            ) : data.items.length === 0 ? (
+              <p className="px-[18px] py-[16px] text-[12px] text-[#4a5070]">Keine Artikel.</p>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-left">
+                    <thead>
+                      <tr>
+                        <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                          Nr.
+                        </th>
+                        <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                          Name
+                        </th>
+                        <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                          Kategorie
+                        </th>
+                        <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                          Lief.-Nr.
+                        </th>
+                        <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                          Bezug
+                        </th>
+                        <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                          Produkt
+                        </th>
+                        <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-right text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                          Gesamt
+                        </th>
+                        <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-right text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                          Zugeordnet
+                        </th>
+                        <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-right text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                          Frei
+                        </th>
+                        <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-right text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                          Anschaffung
+                        </th>
+                        <th className="whitespace-nowrap border-b border-[#1c2035] px-[14px] py-[8px] text-right text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                          Aktionen
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[13px] text-[#64748b] dark:text-[#93a4bf]">
-                <span>
-                  {data.total} Einträge · {skip + 1}–
-                  {Math.min(skip + data.items.length, data.total)}
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={!canPrev}
-                    onClick={() => setSkip((s) => Math.max(0, s - limit))}
-                    className="rounded-lg border border-black/10 px-3 py-1.5 disabled:opacity-40 dark:border-white/[0.12]"
-                  >
-                    Zurück
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!canNext}
-                    onClick={() => setSkip((s) => s + limit)}
-                    className="rounded-lg border border-black/10 px-3 py-1.5 disabled:opacity-40 dark:border-white/[0.12]"
-                  >
-                    Weiter
-                  </button>
+                    </thead>
+                    <tbody>
+                      {data.items.map((row, idx, arr) => {
+                        const tot = row.total_quantity ?? 1;
+                        const asg = row.assigned_total ?? 0;
+                        const free = row.available ?? 0;
+                        return (
+                          <tr
+                            key={row.id}
+                            className={`cursor-pointer border-b border-[#1c2035] text-[11px] text-[#8892b0] transition-colors hover:bg-[#141720] ${
+                              idx === arr.length - 1 ? "border-b-0" : ""
+                            }`}
+                            onClick={() => navigate(`/admin/inventory/${row.id}`)}
+                          >
+                            <td className="align-middle px-[14px] py-[12px] font-mono text-[10px] text-[#4a5070]">
+                              {row.inventory_number}
+                            </td>
+                            <td className="align-middle px-[14px] py-[12px]">
+                              <Link
+                                to={`/admin/inventory/${row.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="font-medium text-[12px] text-[#edf0f7] hover:text-[#5b9cf6] hover:underline"
+                              >
+                                {row.name}
+                              </Link>
+                            </td>
+                            <td className="align-middle px-[14px] py-[12px]">
+                              {row.category ? (
+                                <span
+                                  className={`inline-flex rounded-full px-2 py-[2px] text-[9px] font-semibold ${categoryBadgeClass(
+                                    row.category
+                                  )}`}
+                                >
+                                  {row.category}
+                                </span>
+                              ) : (
+                                <span className="text-[#4a5070]">—</span>
+                              )}
+                            </td>
+                            <td
+                              className="align-middle px-[14px] py-[12px] font-mono text-[10px] text-[#4a5070]"
+                              title={row.supplier_article_number || ""}
+                            >
+                              {row.supplier_article_number || "—"}
+                            </td>
+                            <td
+                              className="align-middle px-[14px] py-[12px] text-[11px] text-[#4a5070]"
+                              title={row.purchased_from || ""}
+                            >
+                              {row.purchased_from || "—"}
+                            </td>
+                            <td
+                              className="align-middle px-[14px] py-[12px] whitespace-nowrap"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ProductUrlLink url={row.product_url} />
+                            </td>
+                            <td className="align-middle px-[14px] py-[12px] text-right">
+                              <span className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full border border-[#1c2035] bg-[#191c28] px-1 font-mono text-[10px] font-semibold text-[#8892b0]">
+                                {tot}
+                              </span>
+                            </td>
+                            <td className="align-middle px-[14px] py-[12px] text-right">
+                              <span
+                                className={`inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1 font-mono text-[10px] font-semibold ${
+                                  asg > 0
+                                    ? "border border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] text-[#3ddc84]"
+                                    : "border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] text-[#f5a623]"
+                                }`}
+                              >
+                                {asg}
+                              </span>
+                            </td>
+                            <td className="align-middle px-[14px] py-[12px] text-right">
+                              <span
+                                className={`inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1 font-mono text-[10px] font-semibold ${
+                                  free > 0
+                                    ? "border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] text-[#f5a623]"
+                                    : "border border-[#1c2035] bg-[#191c28] text-[#4a5070]"
+                                }`}
+                              >
+                                {free}
+                              </span>
+                            </td>
+                            <td className="align-middle px-[14px] py-[12px] text-right font-mono text-[11px] font-medium text-[#edf0f7]">
+                              {formatChf(row.purchase_price_chf)}
+                            </td>
+                            <td className="align-middle px-[14px] py-[12px] text-right">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/admin/inventory/${row.id}`);
+                                }}
+                                className="rounded-[6px] border border-[#252a3a] bg-[#141720] px-[10px] py-[3px] text-[10px] text-[#8892b0] transition-all hover:border-[#3b5fcf] hover:text-[#edf0f7]"
+                              >
+                                Öffnen →
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-            </>
-          )}
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#1c2035] px-[14px] py-[10px]">
+                  <span className="text-[11px] text-[#4a5070]">
+                    {data.total} Einträge · {skip + 1}–{Math.min(skip + data.items.length, data.total)}
+                  </span>
+                  <div className="flex gap-[6px]">
+                    <button
+                      type="button"
+                      disabled={!canPrev}
+                      onClick={() => setSkip((s) => Math.max(0, s - limit))}
+                      className="rounded-[6px] border border-[#252a3a] bg-[#141720] px-[12px] py-[3px] text-[10px] text-[#4a5070] disabled:opacity-40"
+                    >
+                      Zurück
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!canNext}
+                      onClick={() => setSkip((s) => s + limit)}
+                      className="rounded-[6px] border border-[#252a3a] bg-[#141720] px-[12px] py-[3px] text-[10px] text-[#8892b0] disabled:opacity-40"
+                    >
+                      Weiter
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
