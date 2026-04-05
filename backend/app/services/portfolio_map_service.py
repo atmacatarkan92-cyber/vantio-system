@@ -5,7 +5,8 @@ Map status precedence (single winner per unit):
 1. landlord_ended
 2. notice (tenancy_derived_display_status == notice_given on any tenancy)
 3. occupied (physical occupancy today via tenancy dates)
-4. vacant
+4. reserved (future move-in / reserved tenancy, no physical occupancy yet)
+5. vacant
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ MAP_STATUS_LABELS_DE: Dict[str, str] = {
     "vacant": "Leerstand",
     "notice": "Gekündigt",
     "landlord_ended": "Vertrag beendet",
+    "reserved": "Reserviert",
 }
 
 
@@ -74,7 +76,7 @@ def tenancy_has_physical_occupancy_today(t: Tenancy, today: date) -> bool:
 
 def compute_unit_map_status(unit: Unit, tenancies: List[Tenancy], today: date) -> str:
     """
-    Returns: occupied | vacant | notice | landlord_ended
+    Returns: occupied | vacant | notice | landlord_ended | reserved
     """
     if unit_is_landlord_ended(unit, today):
         return "landlord_ended"
@@ -86,6 +88,12 @@ def compute_unit_map_status(unit: Unit, tenancies: List[Tenancy], today: date) -
     for t in tenancies:
         if tenancy_has_physical_occupancy_today(t, today):
             return "occupied"
+
+    for t in tenancies:
+        ds = tenancy_derived_display_status(t, today)
+        mi = getattr(t, "move_in_date", None)
+        if ds == "reserved" and mi is not None and mi > today:
+            return "reserved"
 
     return "vacant"
 
@@ -166,7 +174,13 @@ def build_portfolio_map_payload(
         by_unit[str(t.unit_id)].append(t)
 
     items: List[Dict[str, Any]] = []
-    summary_status = {"occupied": 0, "vacant": 0, "notice": 0, "landlord_ended": 0}
+    summary_status = {
+        "occupied": 0,
+        "vacant": 0,
+        "notice": 0,
+        "landlord_ended": 0,
+        "reserved": 0,
+    }
     plotted = 0
     missing_coord = 0
 
@@ -217,5 +231,6 @@ def build_portfolio_map_payload(
             "vacant": summary_status["vacant"],
             "notice": summary_status["notice"],
             "landlord_ended": summary_status["landlord_ended"],
+            "reserved": summary_status["reserved"],
         },
     }

@@ -193,3 +193,28 @@ body > a[style*="position: fixed"][style*="bottom"] {
   display: none !important;
 }
 
+/* Portfolio map InfoWindow: strip default Google white frame (only InfoWindow usage in app). */
+.gm-style-iw-c,
+.gm-style-iw-d {
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+.gm-style-iw-chr {
+  background: transparent !important;
+}
+.gm-style-iw-tc::after {
+  display: none !important;
+}
+.gm-style button.gm-ui-hover-effect {
+  top: 4px !important;
+  right: 4px !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 6px !important;
+}
+.dark .gm-style button.gm-ui-hover-effect > span {
+  filter: invert(1) brightness(1.15);
+}
+
