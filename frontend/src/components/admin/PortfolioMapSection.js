@@ -155,69 +155,80 @@ function PortfolioMapUnitTypeBadge({ apiType }) {
   );
 }
 
-function PortfolioClusterListContent({ units, onOpenUnit, onHoverUnit, onHoverClear }) {
+function PortfolioClusterListContent({ units, onOpenUnit, onHoverUnit }) {
   return (
-    <div
-      className="max-h-[min(280px,60vh)] overflow-y-auto pr-0.5 text-[13px] leading-snug text-[#0f172a] dark:text-[#eef2ff]"
-      onMouseLeave={onHoverClear}
-    >
-      <p className="mb-2 text-[12px] font-semibold text-slate-700 dark:text-[#c8d4f0]">
-        {units.length} Einheiten an diesem Standort
-      </p>
-      <ul className="space-y-2">
-        {units.map((it) => {
-          const loc = portfolioMapLocationHint(it);
-          const shortId = String(it.short_unit_id || it.unit_id || "").trim() || "—";
-          return (
-            <li
-              key={it.unit_id}
-              data-portfolio-map-unit={it.unit_id}
-              className="rounded-lg border border-black/[0.08] bg-white/70 p-2 transition-colors hover:border-sky-500/35 hover:bg-slate-50 hover:shadow-sm dark:border-white/[0.08] dark:bg-[#141824]/90 dark:hover:border-sky-400/30 dark:hover:bg-white/[0.07]"
-              onMouseEnter={() => onHoverUnit?.(it.unit_id)}
-            >
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="font-semibold">{shortId}</span>
-                <span className="text-slate-400 dark:text-[#5c6b88]" aria-hidden>
-                  ·
-                </span>
-                <span className="text-[12px] font-medium text-slate-800 dark:text-[#dbe4fb]">
-                  {portfolioMapClusterSecondaryLine(it)}
-                </span>
-                <PortfolioMapUnitTypeBadge apiType={it.type} />
-              </div>
-              {loc ? (
-                <p className="mt-1 text-[11px] text-slate-500 dark:text-[#8b9ab8]">{loc}</p>
-              ) : null}
-              <button
-                type="button"
-                className="mt-1.5 text-left text-[12px] font-medium text-sky-600 underline decoration-sky-600/40 underline-offset-2 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
-                onClick={() => onOpenUnit(it.unit_id)}
+    <div className="pointer-events-auto max-w-[min(340px,92vw)] select-text text-[13px] leading-snug text-[#0f172a] dark:text-[#f1f5ff]">
+      <div className="mb-3 rounded-lg border border-slate-200/95 bg-white px-3 py-2.5 shadow-sm dark:border-white/[0.16] dark:bg-[#0f172a]">
+        <p className="text-[13px] font-bold leading-tight tracking-tight text-slate-950 dark:text-white">
+          {units.length} Einheiten an diesem Standort
+        </p>
+      </div>
+      <div className="max-h-[min(260px,55vh)] overflow-y-auto overscroll-contain pr-0.5">
+        <ul className="space-y-2.5">
+          {units.map((it) => {
+            const loc = portfolioMapLocationHint(it);
+            const shortId = String(it.short_unit_id || it.unit_id || "").trim() || "—";
+            return (
+              <li
+                key={it.unit_id}
+                data-portfolio-map-unit={it.unit_id}
+                className="rounded-lg border border-slate-200/90 bg-slate-50/95 p-2.5 shadow-sm transition-colors hover:border-sky-400/50 hover:bg-white dark:border-white/[0.12] dark:bg-[#141b2a] dark:hover:border-sky-400/40 dark:hover:bg-[#1a2235]"
+                onMouseEnter={() => onHoverUnit?.(it.unit_id)}
               >
-                Einheit öffnen
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-semibold text-slate-900 dark:text-[#f1f5ff]">{shortId}</span>
+                  <span className="text-slate-400 dark:text-[#7c8aad]" aria-hidden>
+                    ·
+                  </span>
+                  <span className="text-[12px] font-medium text-slate-800 dark:text-[#e2e8fb]">
+                    {portfolioMapClusterSecondaryLine(it)}
+                  </span>
+                  <PortfolioMapUnitTypeBadge apiType={it.type} />
+                </div>
+                {loc ? (
+                  <p className="mt-1 text-[11px] text-slate-600 dark:text-[#a8b8d8]">{loc}</p>
+                ) : null}
+                <button
+                  type="button"
+                  className="mt-2 w-full cursor-pointer rounded-md border border-transparent px-2 py-1.5 text-left text-[12px] font-semibold text-sky-700 transition-colors hover:border-sky-300/80 hover:bg-sky-50 dark:text-sky-300 dark:hover:border-sky-500/50 dark:hover:bg-sky-950/40"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenUnit(it.unit_id);
+                  }}
+                >
+                  Einheit öffnen
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </div>
   );
 }
 
-/** Custom cluster marker: neutral pill with count (dark-map friendly). */
+/** Custom cluster marker: high-contrast count bubble (reads well on light/neutral maps). */
 const portfolioMapClusterRenderer = {
   render(cluster, _stats, _map) {
     const count = cluster.count;
     const position = cluster.position;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 76 76" width="76" height="76">
-      <circle cx="38" cy="38" r="19" fill="rgba(248,250,252,0.96)" stroke="rgba(148,163,184,0.65)" stroke-width="2"/>
-      <text x="38" y="43" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a" font-family="system-ui,-apple-system,sans-serif">${count}</text>
+    const fid = `pmc_${count}_${Math.round(position.lat() * 1e5)}_${Math.round(position.lng() * 1e5)}`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 84" width="84" height="84">
+      <defs>
+        <filter id="${fid}" x="-35%" y="-35%" width="170%" height="170%">
+          <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.32"/>
+        </filter>
+      </defs>
+      <circle cx="42" cy="42" r="22" fill="#ffffff" stroke="#0f172a" stroke-width="2.75" filter="url(#${fid})"/>
+      <text x="42" y="48" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="system-ui,-apple-system,sans-serif">${count}</text>
     </svg>`;
     return new globalThis.google.maps.Marker({
       position,
+      cursor: "pointer",
       icon: {
         url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-        scaledSize: new globalThis.google.maps.Size(38, 38),
-        anchor: new globalThis.google.maps.Point(19, 19),
+        scaledSize: new globalThis.google.maps.Size(44, 44),
+        anchor: new globalThis.google.maps.Point(22, 22),
       },
       zIndex: Number(globalThis.google.maps.Marker.MAX_ZINDEX) + count,
       title: `${count} Einheiten`,
@@ -225,20 +236,31 @@ const portfolioMapClusterRenderer = {
   },
 };
 
-function buildCircleIcon(it, activeUnitId, hoverUnitId) {
+/** SVG circle markers: white ring + soft shadow; active state adds a subtle outer ring. */
+function buildUnitMarkerIcon(it, activeUnitId, hoverUnitId) {
   const fill = portfolioMapMarkerFill(it.map_status);
   const uid = it.unit_id;
   const active = activeUnitId === uid;
   const hover = hoverUnitId === uid;
-  const scale = active ? 13 : hover ? 12 : 10;
-  const strokeWeight = active || hover ? 3 : 2;
+  const rid = `pum_${String(uid).replace(/\W/g, "_").slice(0, 48)}`;
+  const rInner = active ? 12.75 : hover ? 11.5 : 10.25;
+  const sw = active ? 3.5 : hover ? 3.15 : 2.85;
+  const ring = active
+    ? `<circle cx="28" cy="28" r="17.5" fill="none" stroke="#0f172a" stroke-width="2" stroke-opacity="0.22"/>`
+    : "";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" width="56" height="56">
+      <defs>
+        <filter id="${rid}_sh" x="-40%" y="-40%" width="180%" height="180%">
+          <feDropShadow dx="0" dy="1.5" stdDeviation="2.25" flood-color="#0f172a" flood-opacity="0.3"/>
+        </filter>
+      </defs>
+      ${ring}
+      <circle cx="28" cy="28" r="${rInner}" fill="${fill}" stroke="#ffffff" stroke-width="${sw}" filter="url(#${rid}_sh)"/>
+    </svg>`;
   return {
-    path: globalThis.google.maps.SymbolPath.CIRCLE,
-    fillColor: fill,
-    fillOpacity: active ? 1 : hover ? 0.95 : 0.88,
-    strokeColor: "#ffffff",
-    strokeWeight,
-    scale,
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new globalThis.google.maps.Size(36, 36),
+    anchor: new globalThis.google.maps.Point(18, 18),
   };
 }
 
@@ -270,6 +292,16 @@ function PortfolioMapMarkersAndCluster({
     onClusterPopupClose();
   }, [onSinglePopupClose, onClusterPopupClose]);
 
+  const closeSinglePopup = useCallback(() => {
+    setSingleInfo(null);
+    onSinglePopupClose();
+  }, [onSinglePopupClose]);
+
+  const closeClusterPopup = useCallback(() => {
+    setClusterInfo(null);
+    onClusterPopupClose();
+  }, [onClusterPopupClose]);
+
   useEffect(() => {
     clearPopups();
     onHoverClear();
@@ -297,7 +329,8 @@ function PortfolioMapMarkersAndCluster({
           lng: Number(it.longitude),
         },
         map: null,
-        icon: buildCircleIcon(it, null, null),
+        icon: buildUnitMarkerIcon(it, null, null),
+        cursor: preview ? undefined : "pointer",
         zIndex: 1,
       });
       marker.set("portfolioUnit", it);
@@ -327,6 +360,7 @@ function PortfolioMapMarkersAndCluster({
         : (_event, c) => {
             setSingleInfo(null);
             onSinglePopupClose();
+            onHoverClear();
             const units = c.markers
               .map((m) => m.get("portfolioUnit"))
               .filter(Boolean);
@@ -361,6 +395,7 @@ function PortfolioMapMarkersAndCluster({
     onUnitMarkerClick,
     onSinglePopupClose,
     onClusterPopupClose,
+    onHoverClear,
   ]);
 
   useEffect(() => {
@@ -368,9 +403,9 @@ function PortfolioMapMarkersAndCluster({
     markersRef.current.forEach((m) => {
       const it = m.get("portfolioUnit");
       if (!it) return;
-      m.setIcon(buildCircleIcon(it, activeUnitId, clusterListHoverUnitId));
+      m.setIcon(buildUnitMarkerIcon(it, activeUnitId, clusterListHoverUnitId));
       m.setZIndex(
-        activeUnitId === it.unit_id ? 100 : clusterListHoverUnitId === it.unit_id ? 50 : 1
+        activeUnitId === it.unit_id ? 200 : clusterListHoverUnitId === it.unit_id ? 80 : 1
       );
     });
   }, [loaded, activeUnitId, clusterListHoverUnitId]);
@@ -393,7 +428,7 @@ function PortfolioMapMarkersAndCluster({
         lng: Number(it.longitude),
       });
     });
-    map.fitBounds(bounds, { top: 36, right: 36, bottom: 36, left: 36 });
+    map.fitBounds(bounds, { top: 48, right: 48, bottom: 48, left: 48 });
     globalThis.google.maps.event.addListenerOnce(map, "bounds_changed", () => {
       const z = map.getZoom();
       if (z != null && z > 15) map.setZoom(15);
@@ -405,10 +440,13 @@ function PortfolioMapMarkersAndCluster({
       {!preview && singleInfo ? (
         <InfoWindow
           position={singleInfo.position}
-          onCloseClick={() => {
-            setSingleInfo(null);
-            onSinglePopupClose();
-          }}
+          shouldFocus={false}
+          disableAutoPan
+          pixelOffset={[0, -12]}
+          className="portfolio-map-iw"
+          style={{ padding: 14, maxWidth: 288 }}
+          onClose={closeSinglePopup}
+          onCloseClick={closeSinglePopup}
         >
           <PortfolioMapPopupBody it={singleInfo.unit} />
         </InfoWindow>
@@ -416,10 +454,13 @@ function PortfolioMapMarkersAndCluster({
       {!preview && clusterInfo ? (
         <InfoWindow
           position={clusterInfo.position}
-          onCloseClick={() => {
-            setClusterInfo(null);
-            onClusterPopupClose();
-          }}
+          shouldFocus={false}
+          disableAutoPan
+          pixelOffset={[0, -12]}
+          className="portfolio-map-iw"
+          style={{ padding: 14, maxWidth: 368 }}
+          onClose={closeClusterPopup}
+          onCloseClick={closeClusterPopup}
         >
           <PortfolioClusterListContent
             units={clusterInfo.units}
@@ -429,7 +470,6 @@ function PortfolioMapMarkersAndCluster({
               navigate(`/admin/units/${encodeURIComponent(unitId)}`);
             }}
             onHoverUnit={onHoverUnit}
-            onHoverClear={onHoverClear}
           />
         </InfoWindow>
       ) : null}
@@ -454,8 +494,8 @@ function PortfolioMapPopupBody({ it }) {
   const postalCity = [postal, city].filter(Boolean).join(" ");
 
   return (
-    <div className="min-w-[200px] max-w-[260px] space-y-1.5 text-[13px] leading-snug text-[#0f172a] dark:text-[#eef2ff]">
-      <p className="font-semibold text-slate-900 dark:text-[#f1f5ff]">{line1}</p>
+    <div className="pointer-events-auto min-w-[200px] max-w-[260px] select-text space-y-1.5 text-[13px] leading-snug text-[#0f172a] dark:text-[#f1f5ff]">
+      <p className="font-semibold text-slate-950 dark:text-white">{line1}</p>
       <div className="flex flex-wrap items-center gap-1.5">
         <PortfolioMapUnitTypeBadge apiType={it.type} />
       </div>
@@ -476,7 +516,8 @@ function PortfolioMapPopupBody({ it }) {
       ) : null}
       <Link
         to={`/admin/units/${encodeURIComponent(it.unit_id)}`}
-        className="inline-block pt-1 text-sky-600 underline decoration-sky-600/40 underline-offset-2 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
+        className="mt-1 inline-flex w-full cursor-pointer items-center rounded-md border border-transparent px-2 py-1.5 text-[12px] font-semibold text-sky-700 transition-colors hover:border-sky-300/80 hover:bg-sky-50 dark:text-sky-300 dark:hover:border-sky-500/50 dark:hover:bg-sky-950/40"
+        onClick={(e) => e.stopPropagation()}
       >
         Einheit öffnen
       </Link>
@@ -524,6 +565,10 @@ function PortfolioMapGoogleInner({
     setClusterListHoverUnitId(null);
   }, [setClusterListHoverUnitId]);
 
+  const onHoverClear = useCallback(() => {
+    setClusterListHoverUnitId(null);
+  }, [setClusterListHoverUnitId]);
+
   return (
     <Map
       id="portfolio-map-google"
@@ -531,7 +576,7 @@ function PortfolioMapGoogleInner({
       defaultCenter={DEFAULT_CENTER}
       defaultZoom={DEFAULT_ZOOM}
       gestureHandling={preview ? "none" : "greedy"}
-      colorScheme={ColorScheme.DARK}
+      colorScheme={ColorScheme.LIGHT}
       renderingType="VECTOR"
       style={{ width: "100%", height: "100%" }}
       disableDefaultUI={preview}
@@ -548,7 +593,7 @@ function PortfolioMapGoogleInner({
         onSinglePopupClose={onSinglePopupClose}
         onClusterPopupClose={onClusterPopupClose}
         onHoverUnit={setClusterListHoverUnitId}
-        onHoverClear={() => setClusterListHoverUnitId(null)}
+        onHoverClear={onHoverClear}
       />
     </Map>
   );
@@ -706,7 +751,7 @@ export default function PortfolioMapSection({
   const missing = Number(summary.missing_coordinates) || 0;
 
   const mapShellClass =
-    "overflow-hidden rounded-[12px] border border-black/10 dark:border-white/[0.08] bg-slate-200/80 dark:bg-[#0f1219]";
+    "overflow-hidden rounded-[12px] border border-slate-200/90 bg-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] ring-1 ring-slate-900/[0.06] dark:border-white/[0.12] dark:bg-[#1a1f2c] dark:shadow-none dark:ring-white/[0.06]";
 
   const mapBlock = (
     <div
