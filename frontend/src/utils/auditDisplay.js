@@ -1060,7 +1060,6 @@ export function formatAuditLog(log, context = {}) {
     };
   }
 
-  const action = String(log.action || "").toLowerCase();
   const ov = log.old_values && typeof log.old_values === "object" ? log.old_values : {};
   const nv = log.new_values && typeof log.new_values === "object" ? log.new_values : {};
   const changes = buildGenericEntityChanges(ov, nv, entityType || "generic", (k, v) =>
