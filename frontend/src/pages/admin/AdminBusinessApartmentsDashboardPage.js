@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import {
   ResponsiveContainer,
   CartesianGrid,
@@ -15,6 +17,7 @@ import {
   fetchAdminRooms,
   fetchAdminTenanciesAll,
   fetchAdminProfit,
+  fetchAdminPortfolioMap,
   normalizeUnit,
   normalizeRoom,
   sanitizeClientErrorMessage,
@@ -187,6 +190,173 @@ function RankingBadge({ value, type }) {
   );
 }
 
+/** Leaflet circle colors — backend map_status keys */
+function portfolioMapCircleStyle(mapStatus) {
+  switch (mapStatus) {
+    case "occupied":
+      return { color: "#166534", fillColor: "#22c55e" };
+    case "vacant":
+      return { color: "#b91c1c", fillColor: "#ef4444" };
+    case "notice":
+      return { color: "#a16207", fillColor: "#eab308" };
+    case "landlord_ended":
+      return { color: "#475569", fillColor: "#94a3b8" };
+    default:
+      return { color: "#64748b", fillColor: "#cbd5e1" };
+  }
+}
+
+function PortfolioMapSection({ loading, error, data }) {
+  const plottedItems = useMemo(() => {
+    const items = data?.items;
+    if (!Array.isArray(items)) return [];
+    return items.filter(
+      (it) =>
+        it &&
+        it.has_coordinates &&
+        it.latitude != null &&
+        it.longitude != null
+    );
+  }, [data]);
+
+  const mapCenter = useMemo(() => {
+    if (plottedItems.length === 0) return [46.8, 8.2];
+    const sum = plottedItems.reduce(
+      (acc, it) => {
+        acc[0] += Number(it.latitude);
+        acc[1] += Number(it.longitude);
+        return acc;
+      },
+      [0, 0]
+    );
+    return [sum[0] / plottedItems.length, sum[1] / plottedItems.length];
+  }, [plottedItems]);
+
+  const mapZoom = plottedItems.length === 1 ? 13 : plottedItems.length ? 8 : 7;
+
+  if (loading) {
+    return (
+      <SectionCard
+        title="Portfolio-Karte"
+        subtitle="Standorte aus Liegenschaftskoordinaten (V1)"
+      >
+        <p className="py-8 text-sm text-[#64748b] dark:text-[#6b7a9a]">Karte wird geladen…</p>
+      </SectionCard>
+    );
+  }
+
+  if (error) {
+    return (
+      <SectionCard
+        title="Portfolio-Karte"
+        subtitle="Standorte aus Liegenschaftskoordinaten (V1)"
+      >
+        <p className="py-4 text-sm text-[#f87171]">{error}</p>
+      </SectionCard>
+    );
+  }
+
+  const summary = data?.summary || {};
+  const total = Number(summary.total_units) || 0;
+  const plotted = Number(summary.plotted_units) || 0;
+  const missing = Number(summary.missing_coordinates) || 0;
+
+  return (
+    <SectionCard
+      title="Portfolio-Karte"
+      subtitle="Business Apartments mit Statusfarbe (Belegt, Leerstand, Gekündigt, Vertrag beendet). Nur Einheiten mit Koordinaten an der Liegenschaft erscheinen als Marker."
+    >
+      <div className="mb-4 flex flex-wrap gap-3 text-sm text-[#64748b] dark:text-[#6b7a9a]">
+        <span>
+          <strong className="text-[#0f172a] dark:text-[#eef2ff]">{total}</strong>{" "}
+          Einheiten gesamt
+        </span>
+        <span className="text-black/20 dark:text-white/15">|</span>
+        <span>
+          <strong className="text-[#0f172a] dark:text-[#eef2ff]">{plotted}</strong>{" "}
+          auf der Karte
+        </span>
+        <span className="text-black/20 dark:text-white/15">|</span>
+        <span>
+          <strong className="text-[#0f172a] dark:text-[#eef2ff]">{missing}</strong>{" "}
+          ohne Koordinaten
+        </span>
+      </div>
+
+      {total === 0 ? (
+        <p className="rounded-[10px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-6 text-sm text-[#64748b] dark:text-[#6b7a9a]">
+          Keine Business Apartments für die Karte vorhanden.
+        </p>
+      ) : plotted === 0 ? (
+        <p className="rounded-[10px] border border-black/10 dark:border-white/[0.08] bg-slate-100 dark:bg-[#111520] px-4 py-6 text-sm text-[#64748b] dark:text-[#6b7a9a]">
+          Für diese Einheiten sind noch keine Koordinaten vorhanden. Bitte pflegen Sie die
+          Koordinaten an der zugehörigen Liegenschaft (Admin → Liegenschaften).
+        </p>
+      ) : (
+        <>
+          {missing > 0 ? (
+            <p className="mb-3 text-sm text-[#64748b] dark:text-[#6b7a9a]">
+              {missing} Einheiten haben noch keine Koordinaten und werden derzeit nicht auf der
+              Karte angezeigt.
+            </p>
+          ) : null}
+          <div
+            className="overflow-hidden rounded-[12px] border border-black/10 dark:border-white/[0.08] [&_.leaflet-container]:bg-slate-200 [&_.leaflet-container]:dark:bg-[#0f1219]"
+            style={{ height: 380 }}
+          >
+            <MapContainer
+              center={mapCenter}
+              zoom={mapZoom}
+              style={{ height: "100%", width: "100%" }}
+              scrollWheelZoom={false}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              {plottedItems.map((it) => {
+                const style = portfolioMapCircleStyle(it.map_status);
+                return (
+                  <CircleMarker
+                    key={it.unit_id}
+                    center={[Number(it.latitude), Number(it.longitude)]}
+                    radius={10}
+                    pathOptions={{
+                      ...style,
+                      fillOpacity: 0.9,
+                      weight: 2,
+                    }}
+                  >
+                    <Popup>
+                      <div className="min-w-[200px] text-[13px] text-[#0f172a]">
+                        <p className="font-semibold text-sky-700">
+                          {it.short_unit_id || it.unit_id}
+                        </p>
+                        <p className="mt-1 text-slate-600">
+                          {[it.address, [it.postal_code, it.city].filter(Boolean).join(" ")]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </p>
+                        <p className="mt-2 font-medium text-slate-800">{it.map_status_label}</p>
+                        <Link
+                          to={`/admin/units/${encodeURIComponent(it.unit_id)}`}
+                          className="mt-2 inline-block text-sky-600 underline"
+                        >
+                          Einheit öffnen
+                        </Link>
+                      </div>
+                    </Popup>
+                  </CircleMarker>
+                );
+              })}
+            </MapContainer>
+          </div>
+        </>
+      )}
+    </SectionCard>
+  );
+}
+
 function FilterSelect({ label, value, onChange, children }) {
   return (
     <div className="min-w-[180px]">
@@ -296,6 +466,27 @@ function AdminBusinessApartmentsDashboardPage() {
   const [financeChartData, setFinanceChartData] = useState([]);
   const [occupancyChartData, setOccupancyChartData] = useState([]);
   const [latestUnitProfit, setLatestUnitProfit] = useState({});
+  const [portfolioMap, setPortfolioMap] = useState(null);
+  const [portfolioMapLoading, setPortfolioMapLoading] = useState(true);
+  const [portfolioMapError, setPortfolioMapError] = useState("");
+
+  useEffect(() => {
+    fetchAdminPortfolioMap({ businessApartmentsOnly: true })
+      .then((data) => {
+        setPortfolioMap(data);
+        setPortfolioMapError("");
+      })
+      .catch((e) => {
+        setPortfolioMap(null);
+        setPortfolioMapError(
+          sanitizeClientErrorMessage(
+            e?.message,
+            "Portfolio-Karte konnte nicht geladen werden."
+          )
+        );
+      })
+      .finally(() => setPortfolioMapLoading(false));
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -655,6 +846,12 @@ function AdminBusinessApartmentsDashboardPage() {
             </FilterSelect>
           </div>
         </SectionCard>
+
+        <PortfolioMapSection
+          loading={portfolioMapLoading}
+          error={portfolioMapError}
+          data={portfolioMap}
+        />
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           <HeroCard

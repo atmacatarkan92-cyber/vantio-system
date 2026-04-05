@@ -137,6 +137,25 @@ export function fetchAdminUnits() {
     .then((data) => expectPaginatedItems(data, "GET /api/admin/units"));
 }
 
+/**
+ * GET /api/admin/portfolio-map — operational map rows (property coordinates + map status).
+ * @param {{ businessApartmentsOnly?: boolean }} [opts]
+ */
+export function fetchAdminPortfolioMap(opts = {}) {
+  const sp = new URLSearchParams();
+  if (opts.businessApartmentsOnly) {
+    sp.set("business_apartments_only", "true");
+  }
+  const qs = sp.toString();
+  const url = `${API_BASE_URL}/api/admin/portfolio-map${qs ? `?${qs}` : ""}`;
+  return fetch(url, { headers: getApiHeaders() }).then(async (res) => {
+    if (!res.ok) {
+      throw new Error(await parseAdminErrorResponse(res));
+    }
+    return res.json();
+  });
+}
+
 export function fetchAdminUnit(id) {
   return fetch(`${API_BASE_URL}/api/admin/units/${encodeURIComponent(id)}`, {
     headers: getApiHeaders(),

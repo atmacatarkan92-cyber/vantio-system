@@ -17,6 +17,7 @@ from app.api.v1.routes_admin_landlords import router as admin_landlords_router
 from app.api.v1.routes_admin_listings import router as admin_listings_router
 from app.api.v1.routes_admin_owner_documents import router as admin_owner_documents_router
 from app.api.v1.routes_admin_owners import router as admin_owners_router
+from app.api.v1.routes_admin_portfolio_map import router as admin_portfolio_map_router
 from app.api.v1.routes_admin_properties import router as admin_properties_router
 from app.api.v1.routes_admin_property_managers import router as admin_property_managers_router
 from app.api.v1.routes_admin_rooms import router as admin_rooms_router
@@ -177,6 +178,7 @@ app.include_router(admin_unit_documents_router)
 app.include_router(admin_tenant_documents_router)
 app.include_router(admin_landlord_documents_router)
 app.include_router(admin_owner_documents_router)
+app.include_router(admin_portfolio_map_router)
 app.include_router(admin_properties_router)
 app.include_router(admin_users_router)
 app.include_router(platform_router, prefix="/api/platform")
