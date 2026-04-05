@@ -2,7 +2,8 @@
  * Global portfolio map: all unit types, property coordinates only, client-side filters.
  */
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { createRoot } from "react-dom/client";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import {
   MapContainer,
@@ -11,10 +12,47 @@ import {
   Popup,
   useMap,
 } from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-markercluster";
 import "leaflet/dist/leaflet.css";
+import "react-leaflet-markercluster/styles";
 
 import { fetchAdminPortfolioMap, sanitizeClientErrorMessage } from "../../api/adminData";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
+
+/** Portfolio map filter query keys (namespaced; avoids clashes on Unternehmensübersicht). */
+const PM_QS_TYPE = "pm_type";
+const PM_QS_STATUS = "pm_status";
+const PM_QS_CITY = "pm_city";
+
+const PM_VALID_TYPES = new Set(["all", "apartments", "coliving"]);
+const PM_VALID_STATUSES = new Set([
+  "all",
+  "occupied",
+  "vacant",
+  "notice",
+  "landlord_ended",
+]);
+
+/**
+ * Cluster list sort: operational priority (backend map_status today: vacant | notice | occupied | landlord_ended).
+ * "reserved" ranked for forward compatibility if ever added to map payloads.
+ */
+const PORTFOLIO_MAP_STATUS_SORT_RANK = {
+  vacant: 0,
+  notice: 1,
+  reserved: 2,
+  occupied: 3,
+  landlord_ended: 4,
+};
+
+function portfolioMapClusterSortUnits(a, b) {
+  const ra = PORTFOLIO_MAP_STATUS_SORT_RANK[a.map_status] ?? 99;
+  const rb = PORTFOLIO_MAP_STATUS_SORT_RANK[b.map_status] ?? 99;
+  if (ra !== rb) return ra - rb;
+  const sa = String(a.short_unit_id || a.unit_id || "");
+  const sb = String(b.short_unit_id || b.unit_id || "");
+  return sa.localeCompare(sb, "de-CH");
+}
 
 function SectionCard({ title, subtitle, children, rightSlot = null }) {
   return (
@@ -81,6 +119,196 @@ function isCoLivingType(apiType) {
   return normalizeUnitTypeLabel(apiType) === "Co-Living";
 }
 
+function portfolioMapCoLivingOccSummary(it) {
+  if (!isCoLivingType(it.type)) return null;
+  const rooms = Number(it.rooms);
+  if (!(rooms > 0)) return null;
+  const occ = Number(it.occupied_rooms ?? 0);
+  return `${occ} / ${rooms} belegt`;
+}
+
+function portfolioMapLocationHint(it) {
+  const a = String(it.address || "").trim();
+  if (a) return a;
+  const city = String(it.city || "").trim();
+  const postal = String(it.postal_code || "").trim();
+  const pc = [postal, city].filter(Boolean).join(" ");
+  return pc || "";
+}
+
+function portfolioMapClusterSecondaryLine(it) {
+  const occ = portfolioMapCoLivingOccSummary(it);
+  if (occ) return occ;
+  return String(it.map_status_label || "").trim() || "—";
+}
+
+function portfolioMapClusterIconCreate(cluster) {
+  const count = cluster.getChildCount();
+  return L.divIcon({
+    html: `<div class="portfolio-map-cb"><span>${count}</span></div>`,
+    className: "portfolio-map-cm",
+    iconSize: L.point(38, 38),
+  });
+}
+
+function PortfolioMapUnitTypeBadge({ apiType }) {
+  const label = portfolioMapTypeLabel(apiType);
+  return (
+    <span className="inline-flex max-w-full shrink-0 items-center rounded-md border border-slate-200/90 bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-slate-700 dark:border-white/[0.12] dark:bg-white/[0.08] dark:text-[#c8d4f0]">
+      {label}
+    </span>
+  );
+}
+
+function PortfolioClusterListContent({ units, onOpenUnit }) {
+  return (
+    <div className="max-h-[min(280px,60vh)] overflow-y-auto pr-0.5 text-[13px] leading-snug text-[#0f172a] dark:text-[#eef2ff]">
+      <p className="mb-2 text-[12px] font-semibold text-slate-700 dark:text-[#c8d4f0]">
+        {units.length} Einheiten an diesem Standort
+      </p>
+      <ul className="space-y-2">
+        {units.map((it) => {
+          const loc = portfolioMapLocationHint(it);
+          const shortId = String(it.short_unit_id || it.unit_id || "").trim() || "—";
+          return (
+            <li
+              key={it.unit_id}
+              data-portfolio-map-unit={it.unit_id}
+              className="rounded-lg border border-black/[0.08] bg-white/70 p-2 transition-colors hover:border-sky-500/35 hover:bg-slate-50 hover:shadow-sm dark:border-white/[0.08] dark:bg-[#141824]/90 dark:hover:border-sky-400/30 dark:hover:bg-white/[0.07]"
+            >
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="font-semibold">{shortId}</span>
+                <span className="text-slate-400 dark:text-[#5c6b88]" aria-hidden>
+                  ·
+                </span>
+                <span className="text-[12px] font-medium text-slate-800 dark:text-[#dbe4fb]">
+                  {portfolioMapClusterSecondaryLine(it)}
+                </span>
+                <PortfolioMapUnitTypeBadge apiType={it.type} />
+              </div>
+              {loc ? (
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-[#8b9ab8]">{loc}</p>
+              ) : null}
+              <button
+                type="button"
+                className="mt-1.5 text-left text-[12px] font-medium text-sky-600 underline decoration-sky-600/40 underline-offset-2 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
+                onClick={() => onOpenUnit(it.unit_id)}
+              >
+                Einheit öffnen
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function PortfolioMapClusteredMarkers({
+  plottedItems,
+  activeUnitId,
+  onUnitMarkerClick,
+  onSinglePopupClose,
+}) {
+  const navigate = useNavigate();
+  const [clusterListHoverUnitId, setClusterListHoverUnitId] = useState(null);
+
+  return (
+    <MarkerClusterGroup
+      showCoverageOnHover={false}
+      zoomToBoundsOnClick={false}
+      spiderfyOnMaxZoom
+      maxClusterRadius={76}
+      iconCreateFunction={portfolioMapClusterIconCreate}
+      onClick={(e) => {
+        const cluster = e.layer;
+        const markers = cluster.getAllChildMarkers();
+        const units = markers.map((m) => m?.options?.portfolioUnit).filter(Boolean);
+        if (units.length === 0) return;
+
+        const sorted = [...units].sort(portfolioMapClusterSortUnits);
+
+        const container = document.createElement("div");
+        cluster.bindPopup(container, {
+          maxWidth: 320,
+          minWidth: 260,
+          className: "portfolio-map-cluster-popup",
+          autoPanPadding: [12, 12],
+        });
+
+        const onContainerMouseOver = (ev) => {
+          const el = ev.target.closest?.("[data-portfolio-map-unit]");
+          if (el?.dataset?.portfolioMapUnit) {
+            setClusterListHoverUnitId(el.dataset.portfolioMapUnit);
+          }
+        };
+        const onContainerMouseLeave = () => setClusterListHoverUnitId(null);
+
+        container.addEventListener("mouseover", onContainerMouseOver);
+        container.addEventListener("mouseleave", onContainerMouseLeave);
+
+        const root = createRoot(container);
+        root.render(
+          <PortfolioClusterListContent
+            units={sorted}
+            onOpenUnit={(unitId) => {
+              cluster.closePopup();
+              navigate(`/admin/units/${encodeURIComponent(unitId)}`);
+            }}
+          />
+        );
+
+        cluster.openPopup();
+        const popup = cluster.getPopup();
+        if (popup) {
+          popup.once("remove", () => {
+            setClusterListHoverUnitId(null);
+            container.removeEventListener("mouseover", onContainerMouseOver);
+            container.removeEventListener("mouseleave", onContainerMouseLeave);
+            queueMicrotask(() => {
+              try {
+                root.unmount();
+              } catch {
+                /* ignore */
+              }
+            });
+          });
+        }
+      }}
+    >
+      {plottedItems.map((it) => {
+        const style = portfolioMapCircleStyle(it.map_status);
+        const isActive = activeUnitId === it.unit_id;
+        const isClusterListHover = clusterListHoverUnitId === it.unit_id;
+        return (
+          <CircleMarker
+            key={it.unit_id}
+            center={[Number(it.latitude), Number(it.longitude)]}
+            radius={isActive ? 13 : isClusterListHover ? 12 : 10}
+            pathOptions={{
+              ...style,
+              fillOpacity: isActive ? 1 : isClusterListHover ? 0.95 : 0.88,
+              weight: isActive ? 3 : isClusterListHover ? 3 : 2,
+            }}
+            portfolioUnit={it}
+            eventHandlers={{
+              click: () => onUnitMarkerClick(it.unit_id),
+            }}
+          >
+            <Popup
+              eventHandlers={{
+                remove: () => onSinglePopupClose(),
+              }}
+            >
+              <PortfolioMapPopupBody it={it} />
+            </Popup>
+          </CircleMarker>
+        );
+      })}
+    </MarkerClusterGroup>
+  );
+}
+
 function PortfolioMapFitBounds({ items }) {
   const map = useMap();
   useEffect(() => {
@@ -110,38 +338,36 @@ function PortfolioMapPopupBody({ it }) {
         ? shortId
         : city || "—";
 
-  const typeLine = portfolioMapTypeLabel(it.type);
-  const coLivingExtra =
-    isCoLivingType(it.type) && Number(it.rooms) > 0
-      ? `${Number(it.rooms)} Zimmer · ${Number(it.occupied_rooms ?? 0)} belegt`
-      : null;
+  const coLivingExtra = portfolioMapCoLivingOccSummary(it);
 
   const addressLine = String(it.address || "").trim();
   const postal = String(it.postal_code || "").trim();
   const postalCity = [postal, city].filter(Boolean).join(" ");
 
   return (
-    <div className="min-w-[200px] max-w-[260px] space-y-1.5 text-[13px] leading-snug text-[#0f172a]">
-      <p className="font-semibold text-slate-900">{line1}</p>
-      <p className="text-[12px] text-slate-600">{typeLine}</p>
+    <div className="min-w-[200px] max-w-[260px] space-y-1.5 text-[13px] leading-snug text-[#0f172a] dark:text-[#eef2ff]">
+      <p className="font-semibold text-slate-900 dark:text-[#f1f5ff]">{line1}</p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <PortfolioMapUnitTypeBadge apiType={it.type} />
+      </div>
       {coLivingExtra ? (
-        <p className="text-[12px] text-slate-500">{coLivingExtra}</p>
+        <p className="text-[12px] text-slate-600 dark:text-[#9aaccc]">{coLivingExtra}</p>
       ) : null}
       <div className="flex items-center gap-1.5 pt-0.5">
         <span className="text-[15px] leading-none" aria-hidden>
           {portfolioMapStatusEmoji(it.map_status)}
         </span>
-        <span className="font-medium text-slate-800">{it.map_status_label}</span>
+        <span className="font-medium text-slate-800 dark:text-[#dbe4fb]">{it.map_status_label}</span>
       </div>
       {addressLine ? (
-        <p className="pt-0.5 text-slate-600">{addressLine}</p>
+        <p className="pt-0.5 text-slate-600 dark:text-[#b6c4e3]">{addressLine}</p>
       ) : null}
       {postalCity ? (
-        <p className="text-[12px] text-slate-500">{postalCity}</p>
+        <p className="text-[12px] text-slate-500 dark:text-[#8b9ab8]">{postalCity}</p>
       ) : null}
       <Link
         to={`/admin/units/${encodeURIComponent(it.unit_id)}`}
-        className="inline-block pt-1 text-sky-600 underline decoration-sky-600/40 underline-offset-2 hover:text-sky-700"
+        className="inline-block pt-1 text-sky-600 underline decoration-sky-600/40 underline-offset-2 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
       >
         Einheit öffnen
       </Link>
@@ -175,9 +401,7 @@ export default function PortfolioMapSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeUnitId, setActiveUnitId] = useState(null);
-  const [filterType, setFilterType] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterCity, setFilterCity] = useState("all");
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     fetchAdminPortfolioMap()
@@ -198,6 +422,50 @@ export default function PortfolioMapSection() {
   }, []);
 
   const items = data?.items;
+
+  const cityOptions = useMemo(() => {
+    if (!Array.isArray(items)) return [];
+    const s = new Set();
+    for (const it of items) {
+      const c = String(it?.city || "").trim();
+      if (c) s.add(c);
+    }
+    return [...s].sort((a, b) => a.localeCompare(b, "de-CH"));
+  }, [items]);
+
+  const filterType = useMemo(() => {
+    const v = searchParams.get(PM_QS_TYPE);
+    return PM_VALID_TYPES.has(v) ? v : "all";
+  }, [searchParams]);
+
+  const filterStatus = useMemo(() => {
+    const v = searchParams.get(PM_QS_STATUS);
+    return PM_VALID_STATUSES.has(v) ? v : "all";
+  }, [searchParams]);
+
+  const filterCityParam = searchParams.get(PM_QS_CITY);
+
+  const filterCity = useMemo(() => {
+    if (!filterCityParam || filterCityParam === "all") return "all";
+    if (cityOptions.length === 0) return filterCityParam;
+    return cityOptions.includes(filterCityParam) ? filterCityParam : "all";
+  }, [filterCityParam, cityOptions]);
+
+  useEffect(() => {
+    if (!filterCityParam || filterCityParam === "all") return;
+    if (cityOptions.length === 0) return;
+    if (!cityOptions.includes(filterCityParam)) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete(PM_QS_CITY);
+          return next;
+        },
+        { replace: true }
+      );
+    }
+  }, [filterCityParam, cityOptions, setSearchParams]);
+
   const filteredItems = useMemo(
     () => filterMapItems(items, filterType, filterStatus, filterCity),
     [items, filterType, filterStatus, filterCity]
@@ -212,16 +480,6 @@ export default function PortfolioMapSection() {
         it.longitude != null
     );
   }, [filteredItems]);
-
-  const cityOptions = useMemo(() => {
-    if (!Array.isArray(items)) return [];
-    const s = new Set();
-    for (const it of items) {
-      const c = String(it?.city || "").trim();
-      if (c) s.add(c);
-    }
-    return [...s].sort((a, b) => a.localeCompare(b, "de-CH"));
-  }, [items]);
 
   const hasActiveFilters =
     filterType !== "all" || filterStatus !== "all" || filterCity !== "all";
@@ -278,7 +536,18 @@ export default function PortfolioMapSection() {
           </label>
           <select
             value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setSearchParams(
+                (prev) => {
+                  const next = new URLSearchParams(prev);
+                  if (v === "all") next.delete(PM_QS_TYPE);
+                  else next.set(PM_QS_TYPE, v);
+                  return next;
+                },
+                { replace: true }
+              );
+            }}
             className="w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] outline-none dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
           >
             <option value="all">Alle</option>
@@ -292,7 +561,18 @@ export default function PortfolioMapSection() {
           </label>
           <select
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setSearchParams(
+                (prev) => {
+                  const next = new URLSearchParams(prev);
+                  if (v === "all") next.delete(PM_QS_STATUS);
+                  else next.set(PM_QS_STATUS, v);
+                  return next;
+                },
+                { replace: true }
+              );
+            }}
             className="w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] outline-none dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
           >
             <option value="all">Alle</option>
@@ -308,7 +588,18 @@ export default function PortfolioMapSection() {
           </label>
           <select
             value={filterCity}
-            onChange={(e) => setFilterCity(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setSearchParams(
+                (prev) => {
+                  const next = new URLSearchParams(prev);
+                  if (v === "all") next.delete(PM_QS_CITY);
+                  else next.set(PM_QS_CITY, v);
+                  return next;
+                },
+                { replace: true }
+              );
+            }}
             className="w-full rounded-lg border border-black/10 bg-slate-100 px-3 py-2 text-sm text-[#0f172a] outline-none dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
           >
             <option value="all">Alle</option>
@@ -343,7 +634,7 @@ export default function PortfolioMapSection() {
             </p>
           ) : null}
           <div
-            className="overflow-hidden rounded-[12px] border border-black/10 dark:border-white/[0.08] [&_.leaflet-container]:bg-slate-200 [&_.leaflet-container]:dark:bg-[#0f1219]"
+            className="overflow-hidden rounded-[12px] border border-black/10 dark:border-white/[0.08] [&_.leaflet-container]:bg-slate-200 [&_.leaflet-container]:dark:bg-[#0f1219] [&_.leaflet-popup-content-wrapper]:rounded-xl [&_.leaflet-popup-content-wrapper]:border [&_.leaflet-popup-content-wrapper]:border-black/10 [&_.leaflet-popup-content-wrapper]:bg-white dark:[&_.leaflet-popup-content-wrapper]:border-white/[0.08] dark:[&_.leaflet-popup-content-wrapper]:bg-[#1a2030] [&_.leaflet-popup-tip]:bg-white dark:[&_.leaflet-popup-tip]:bg-[#1a2030] dark:[&_.leaflet-popup-tip]:border-white/[0.08] [&_.portfolio-map-cm]:flex [&_.portfolio-map-cm]:items-center [&_.portfolio-map-cm]:justify-center [&_.portfolio-map-cm]:rounded-[19px] [&_.portfolio-map-cm]:border [&_.portfolio-map-cm]:border-slate-400/55 [&_.portfolio-map-cm]:bg-white/95 [&_.portfolio-map-cm]:shadow-sm dark:[&_.portfolio-map-cm]:border-slate-500/55 dark:[&_.portfolio-map-cm]:bg-slate-800/95 [&_.portfolio-map-cb]:flex [&_.portfolio-map-cb]:h-[30px] [&_.portfolio-map-cb]:min-w-[30px] [&_.portfolio-map-cb]:items-center [&_.portfolio-map-cb]:justify-center [&_.portfolio-map-cb]:rounded-[15px] [&_.portfolio-map-cb]:bg-slate-100 [&_.portfolio-map-cb]:px-1.5 [&_.portfolio-map-cb]:text-[12px] [&_.portfolio-map-cb]:font-semibold [&_.portfolio-map-cb]:text-slate-800 dark:[&_.portfolio-map-cb]:bg-slate-900/90 dark:[&_.portfolio-map-cb]:text-[#e8ecff]"
             style={{ height: 380 }}
           >
             <MapContainer
@@ -357,33 +648,12 @@ export default function PortfolioMapSection() {
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
               <PortfolioMapFitBounds items={plottedItems} />
-              {plottedItems.map((it) => {
-                const style = portfolioMapCircleStyle(it.map_status);
-                const isActive = activeUnitId === it.unit_id;
-                return (
-                  <CircleMarker
-                    key={it.unit_id}
-                    center={[Number(it.latitude), Number(it.longitude)]}
-                    radius={isActive ? 13 : 10}
-                    pathOptions={{
-                      ...style,
-                      fillOpacity: isActive ? 1 : 0.88,
-                      weight: isActive ? 3 : 2,
-                    }}
-                    eventHandlers={{
-                      click: () => setActiveUnitId(it.unit_id),
-                    }}
-                  >
-                    <Popup
-                      eventHandlers={{
-                        remove: () => setActiveUnitId(null),
-                      }}
-                    >
-                      <PortfolioMapPopupBody it={it} />
-                    </Popup>
-                  </CircleMarker>
-                );
-              })}
+              <PortfolioMapClusteredMarkers
+                plottedItems={plottedItems}
+                activeUnitId={activeUnitId}
+                onUnitMarkerClick={setActiveUnitId}
+                onSinglePopupClose={() => setActiveUnitId(null)}
+              />
             </MapContainer>
           </div>
         </>
