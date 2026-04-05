@@ -4,36 +4,34 @@ import {
   formatOccupancyStatusDe,
 } from "../utils/unitOccupancyStatus";
 
-function getStatusStyle(status) {
-  if (status === "Belegt") {
-    return "bg-emerald-100 border-emerald-300 text-emerald-700";
+function getRoomCardClasses(occ) {
+  if (occ === "belegt") {
+    return "border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.05)]";
   }
-
-  if (status === "Reserviert") {
-    return "bg-amber-100 border-amber-300 text-amber-700";
+  if (occ === "reserviert") {
+    return "border-[rgba(245,166,35,0.18)] bg-[rgba(245,166,35,0.05)]";
   }
-
-  if (status === "Frei") {
-    return "bg-rose-100 border-rose-300 text-rose-700";
+  if (occ === "frei") {
+    return "border-[rgba(255,95,109,0.18)] bg-[rgba(255,95,109,0.05)]";
   }
+  return "border-[rgba(255,95,109,0.18)] bg-[rgba(255,95,109,0.05)]";
+}
 
-  return "bg-slate-100 border-slate-300 text-slate-700";
+function getStatusDotClass(occ) {
+  if (occ === "belegt") return "bg-[#3ddc84]";
+  if (occ === "reserviert") return "bg-[#f5a623]";
+  return "bg-[#ff5f6d]";
+}
+
+function getStatusValueClass(occ) {
+  if (occ === "belegt") return "text-[#3ddc84]";
+  if (occ === "reserviert") return "text-[#f5a623]";
+  return "text-[#ff5f6d]";
 }
 
 function getStatusLabelFromOcc(occ) {
   if (occ == null) return "—";
-  const de = formatOccupancyStatusDe(occ);
-  if (occ === "belegt") return `🟢 ${de}`;
-  if (occ === "reserviert") return `🟡 ${de}`;
-  if (occ === "frei") return `🔴 ${de}`;
-  return de;
-}
-
-function getStatusStyleFromOcc(occ) {
-  if (occ === "belegt") return getStatusStyle("Belegt");
-  if (occ === "reserviert") return getStatusStyle("Reserviert");
-  if (occ === "frei") return getStatusStyle("Frei");
-  return getStatusStyle("Frei");
+  return formatOccupancyStatusDe(occ);
 }
 
 function RoomMap({ unit, rooms: allRooms = [], tenancies = null }) {
@@ -60,67 +58,76 @@ function RoomMap({ unit, rooms: allRooms = [], tenancies = null }) {
 
   if (unitRooms.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm font-semibold text-slate-700">
-          {unit.unitId} – {unit.place}
-        </p>
-        <p className="text-sm text-slate-400 mt-2">
-          Keine Rooms für diese Unit erfasst.
-        </p>
+      <div className="mx-[14px] my-[12px] overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#141720]">
+        <div className="flex flex-wrap items-center gap-[10px] border-b border-[#1c2035] px-[14px] py-[11px]">
+          <div className="min-w-0 flex-1">
+            <p className="font-mono text-[11px] font-medium text-[#5b9cf6]">{unit.unitId}</p>
+            <p className="mt-[2px] text-[11px] text-[#8892b0]">{unit.place}</p>
+          </div>
+        </div>
+        <p className="px-[12px] py-[12px] text-[11px] italic text-[#4a5070]">Keine Rooms für diese Unit erfasst.</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5">
-      <div className="mb-4">
-        <h4 className="text-lg font-semibold text-slate-800">
-          {unit.unitId} – {unit.place}
-        </h4>
-
-        <p className="text-sm text-slate-500 mt-1">
-          Visuelle Übersicht aller Rooms dieser Unit
-        </p>
-
-        <div className="flex flex-wrap gap-2 mt-3">
-          <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
+    <div className="mx-[14px] my-[12px] overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#141720]">
+      <div className="flex flex-wrap items-center gap-[10px] border-b border-[#1c2035] px-[14px] py-[11px]">
+        <div className="min-w-0 flex-1">
+          <p className="font-mono text-[11px] font-medium text-[#5b9cf6]">{unit.unitId}</p>
+          <p className="mt-[2px] text-[11px] text-[#8892b0]">{unit.place}</p>
+        </div>
+        <div className="ml-auto flex flex-wrap gap-[6px]">
+          <span className="rounded-full border border-[#1c2035] bg-[#191c28] px-2 py-[2px] text-[9px] font-semibold text-[#8892b0]">
             {unitRooms.length} Rooms
           </span>
-          <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
+          <span className="rounded-full border border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#3ddc84]">
             {occupiedCount} Belegt
           </span>
-          <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
+          <span className="rounded-full border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#f5a623]">
             {reservedCount} Reserviert
           </span>
-          <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-medium">
+          <span className="rounded-full border border-[rgba(255,95,109,0.2)] bg-[rgba(255,95,109,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#ff5f6d]">
             {freeCount} Frei
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+      <div className="flex flex-wrap gap-[8px] px-[12px] py-[12px]">
         {unitRooms.map((room, index) => {
           const occ =
             tenancies != null ? getRoomOccupancyStatus(room, tenancies) : null;
           return (
-          <div
-            key={room.roomId || index}
-            className={`rounded-xl border p-4 ${getStatusStyleFromOcc(occ)}`}
-          >
-            <p className="font-semibold">
-              {room.roomName || room.name || `Zimmer ${index + 1}`}
-            </p>
-
-            <p className="text-xs mt-2 opacity-80">
-              {getStatusLabelFromOcc(occ)}
-            </p>
-
-            {room.priceMonthly ? (
-              <p className="text-xs mt-1 opacity-70">
-                CHF {Number(room.priceMonthly).toLocaleString("de-CH")}
+            <div
+              key={room.roomId || index}
+              className={`flex-1 min-w-[150px] rounded-[9px] border p-[12px_14px] ${getRoomCardClasses(occ)}`}
+            >
+              <p className="mb-[8px] flex items-center gap-[6px] text-[12px] font-medium text-[#edf0f7]">
+                <span className={`h-[6px] w-[6px] shrink-0 rounded-full ${getStatusDotClass(occ)}`} />
+                {room.roomName || room.name || `Zimmer ${index + 1}`}
               </p>
-            ) : null}
-          </div>
+
+              <div className="mb-[3px] flex items-baseline justify-between">
+                <span className="text-[10px] text-[#4a5070]">Status</span>
+                <span className={`font-mono text-[11px] ${getStatusValueClass(occ)}`}>
+                  {getStatusLabelFromOcc(occ)}
+                </span>
+              </div>
+
+              {room.priceMonthly ? (
+                <div className="mb-[3px] flex items-baseline justify-between">
+                  <span className="text-[10px] text-[#4a5070]">Miete / Mt.</span>
+                  <span className="font-mono text-[11px] text-[#8892b0]">
+                    CHF {Number(room.priceMonthly).toLocaleString("de-CH")}
+                  </span>
+                </div>
+              ) : (
+                <div className="mb-[3px] flex items-baseline justify-between">
+                  <span className="text-[10px] text-[#4a5070]">Miete / Mt.</span>
+                  <span className="font-mono text-[11px] italic text-[#4a5070]">—</span>
+                </div>
+              )}
+            </div>
           );
         })}
       </div>

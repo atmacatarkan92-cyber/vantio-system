@@ -35,18 +35,18 @@ function formatCurrency(value) {
 
 function getMonthBarStyle(type) {
   if (type === "secure") {
-    return "bg-emerald-500 text-white";
+    return "bg-[rgba(61,220,132,0.12)] text-[#3ddc84] border border-[rgba(61,220,132,0.2)]";
   }
 
   if (type === "risk") {
-    return "bg-amber-400 text-slate-900";
+    return "bg-[rgba(245,166,35,0.12)] text-[#f5a623] border border-[rgba(245,166,35,0.2)]";
   }
 
   if (type === "reserved") {
-    return "bg-sky-400 text-white";
+    return "bg-[rgba(157,124,244,0.1)] text-[#9d7cf4] border border-[rgba(157,124,244,0.2)]";
   }
 
-  return "bg-rose-500 text-white";
+  return "bg-[rgba(255,95,109,0.1)] text-[#ff5f6d] border border-[rgba(255,95,109,0.18)]";
 }
 
 function getLegendText(type) {
@@ -190,13 +190,14 @@ function RoomCalendar({ unit, rooms: allRooms = [], tenancies = null }) {
 
   if (unitRooms.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm font-semibold text-slate-700">
-          {unit.unitId} – {unit.place}
-        </p>
-        <p className="text-sm text-slate-400 mt-2">
-          Keine Rooms für diese Unit erfasst.
-        </p>
+      <div className="mx-[14px] my-[12px] overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#141720]">
+        <div className="flex flex-wrap items-center gap-[10px] border-b border-[#1c2035] px-[14px] py-[11px]">
+          <div className="min-w-0 flex-1">
+            <p className="font-mono text-[11px] font-medium text-[#5b9cf6]">{unit.unitId}</p>
+            <p className="mt-[2px] text-[11px] text-[#8892b0]">{unit.place}</p>
+          </div>
+        </div>
+        <p className="px-[14px] py-[12px] text-[11px] italic text-[#4a5070]">Keine Rooms für diese Unit erfasst.</p>
       </div>
     );
   }
@@ -217,36 +218,29 @@ function RoomCalendar({ unit, rooms: allRooms = [], tenancies = null }) {
   }, 0);
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5">
-      <div className="mb-4">
-        <h4 className="text-lg font-semibold text-slate-800">
-          {unit.unitId} – {unit.place}
-        </h4>
-
-        <p className="text-sm text-slate-500 mt-1">
-          Visueller Monatskalender über {MONTH_PREVIEW_COUNT} Monate
-        </p>
-
-        <div className="flex flex-wrap gap-2 mt-3">
-          <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
+    <div className="mx-[14px] my-[12px] overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#141720]">
+      <div className="flex flex-wrap items-center gap-[10px] border-b border-[#1c2035] px-[14px] py-[11px]">
+        <div className="min-w-0 flex-1">
+          <p className="font-mono text-[11px] font-medium text-[#5b9cf6]">{unit.unitId}</p>
+          <p className="mt-[2px] text-[11px] text-[#8892b0]">{unit.place}</p>
+        </div>
+        <div className="ml-auto flex flex-wrap gap-[6px]">
+          <span className="rounded-full border border-[#1c2035] bg-[#191c28] px-2 py-[2px] text-[9px] font-semibold text-[#8892b0]">
             {unitRooms.length} Rooms
           </span>
-
-          <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-medium">
+          <span className="rounded-full border border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#3ddc84]">
             {unitFreeMonths} freie Monate
           </span>
-
-          <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
+          <span className="rounded-full border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#f5a623]">
             {unitRiskMonths} Risiko-Monate
           </span>
-
-          <span className="px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-xs font-medium">
-            {formatCurrency(unitEstimatedLostRevenue)} potenzieller Verlust
+          <span className="rounded-full border border-[rgba(255,95,109,0.2)] bg-[rgba(255,95,109,0.1)] px-2 py-[2px] font-mono text-[9px] font-semibold text-[#ff5f6d]">
+            {formatCurrency(unitEstimatedLostRevenue)} pot. Verlust
           </span>
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="px-0 pb-0 pt-0">
         {unitRooms.map((room, index) => {
           const timeline = getRoomMonthlyTimeline(room, tenancies);
           const freeMonths = getFreeMonthsCount(timeline);
@@ -258,15 +252,15 @@ function RoomCalendar({ unit, rooms: allRooms = [], tenancies = null }) {
           return (
             <div
               key={room.roomId || index}
-              className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+              className="border-b border-[#1c2035] px-[14px] py-[12px] last:border-b-0"
             >
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+              <div className="mb-[8px] flex flex-col gap-[8px] sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="font-semibold text-slate-800">
+                  <p className="text-[12px] font-medium text-[#edf0f7]">
                     {room.roomName || room.name || `Zimmer ${index + 1}`}
                   </p>
 
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="mt-[1px] text-[10px] text-[#4a5070]">
                     {occ != null ? formatOccupancyStatusDe(occ) : "—"}
                     {room.priceMonthly
                       ? ` · CHF ${Number(room.priceMonthly).toLocaleString("de-CH")}`
@@ -281,32 +275,38 @@ function RoomCalendar({ unit, rooms: allRooms = [], tenancies = null }) {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-medium">
+                <div className="flex flex-wrap gap-[4px] sm:justify-end">
+                  <span className="rounded-full border border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#3ddc84]">
                     {freeMonths} freie Monate
                   </span>
-                  <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
+                  <span className="rounded-full border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] px-2 py-[2px] text-[9px] font-semibold text-[#f5a623]">
                     {riskMonths} Risiko-Monate
                   </span>
-                  <span className="px-2.5 py-1 rounded-full bg-sky-100 text-sky-700 text-xs font-medium">
+                  <span className="rounded-full border border-[rgba(255,95,109,0.2)] bg-[rgba(255,95,109,0.1)] px-2 py-[2px] font-mono text-[9px] font-semibold text-[#ff5f6d]">
                     {formatCurrency(estimatedLostRevenue)} Risiko
                   </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-9 gap-3">
-                {timeline.map((month) => (
-                  <div key={`${room.roomId || index}-${month.label}`}>
-                    <div className="text-[11px] text-slate-500 mb-1">
-                      {month.label}
-                    </div>
-                    <div
-                      className={`h-10 rounded-xl flex items-center justify-center text-xs font-semibold ${getMonthBarStyle(
-                        month.type
-                      )}`}
-                    >
-                      {getLegendText(month.type)}
-                    </div>
+              <div className="mb-[4px] grid grid-cols-3 gap-[3px] md:grid-cols-4 xl:grid-cols-9">
+                {timeline.map((month, mi) => (
+                  <div
+                    key={`${room.roomId || index}-h-${mi}-${month.label}`}
+                    className="text-center font-mono text-[8px] text-[#4a5070]"
+                  >
+                    {month.label}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-[3px] md:grid-cols-4 xl:grid-cols-9">
+                {timeline.map((month, mi) => (
+                  <div
+                    key={`${room.roomId || index}-c-${mi}-${month.label}`}
+                    className={`rounded-[5px] px-[2px] py-[5px] text-center font-mono text-[9px] font-semibold tracking-[0.2px] ${getMonthBarStyle(
+                      month.type
+                    )}`}
+                  >
+                    {getLegendText(month.type)}
                   </div>
                 ))}
               </div>
