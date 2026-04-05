@@ -23,6 +23,8 @@ sentry-sdk[fastapi]>=1.39.0
 # Testing (Starlette/FastAPI TestClient uses httpx)
 pytest>=7.0.0
 httpx>=0.27.0
+# Smart Product Import (Phase 2) — LLM extraction
+openai>=1.40.0
 boto3>=1.34.0
 # Lint + format (see pyproject.toml; optional: pre-commit for git hooks)
 ruff>=0.4.4
