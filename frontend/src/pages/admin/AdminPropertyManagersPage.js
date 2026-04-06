@@ -187,187 +187,214 @@ function AdminPropertyManagersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[40vh] bg-[#f8fafc] px-4 py-8 text-[#64748b] [color-scheme:light] dark:bg-[#07090f] dark:text-[#6b7a9a] dark:[color-scheme:dark]">
-        Lade Bewirtschafter …
-      </div>
+      <div className="min-h-[40vh] bg-[#080a0f] px-6 py-8 text-[#4a5070]">Lade Bewirtschafter …</div>
     );
   }
 
   return (
-    <div className="grid min-h-screen gap-6 bg-[#f8fafc] px-4 py-6 text-[#0f172a] [color-scheme:light] dark:bg-[#07090f] dark:text-[#eef2ff] dark:[color-scheme:dark]">
-      <div>
-        <div className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[#fb923c]">Vantio</div>
-
-        <h2 className="text-[22px] font-bold">Bewirtschafter</h2>
-
-        <p className="mt-2 text-[12px] text-[#64748b] dark:text-[#6b7a9a]">
-          Verwaltung von Bewirtschafter-Kontakten (PostgreSQL).
-        </p>
-      </div>
-
-      {error && (
-        <div className="rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[14px] text-[#f87171]">
-          {error}
+    <div className="-m-6 min-h-screen bg-[#080a0f]">
+      <div className="sticky top-0 z-30 flex h-[50px] items-center justify-between border-b border-[#1c2035] bg-[#0c0e15] px-6 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <span className="font-semibold text-[#edf0f7]">
+            Van<span className="text-[#5b9cf6]">tio</span>
+          </span>
+          <span className="text-[#4a5070]">·</span>
+          <span className="text-[14px] font-medium text-[#edf0f7]">Bewirtschafter</span>
         </div>
-      )}
-
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
-        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#7aaeff] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
-            Bewirtschafter gesamt
-          </p>
-          <p className="mt-2 text-[24px] font-bold text-[#0f172a] dark:text-[#eef2ff]">{summary.totalCount}</p>
-          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Alle erfassten Kontakte</p>
-        </div>
-
-        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#7aaeff] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">
-            Mit Verwaltung
-          </p>
-          <p className="mt-2 text-[24px] font-bold text-[#7aaeff]">{summary.withLandlord}</p>
-          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Verwaltung verknüpft</p>
-        </div>
-
-        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#4ade80] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Aktiv</p>
-          <p className="mt-2 text-[24px] font-bold text-[#4ade80]">{summary.activeCount}</p>
-          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Status aktiv</p>
-        </div>
-
-        <div className="relative overflow-hidden rounded-[14px] border border-black/10 border-t-4 border-t-[#6b7a9a] bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#64748b] dark:text-[#6b7a9a]">Inaktiv</p>
-          <p className="mt-2 text-[24px] font-bold text-[#8090b0]">{summary.inactiveCount}</p>
-          <p className="mt-2 text-[11px] text-[#64748b] dark:text-[#6b7a9a]">Status inaktiv</p>
-        </div>
-      </div>
-
-      <div className="rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "16px",
-            alignItems: "flex-end",
-            justifyContent: "space-between",
-          }}
+        <button
+          type="button"
+          onClick={openCreate}
+          className="cursor-pointer rounded-[6px] border border-[rgba(91,156,246,0.28)] bg-[rgba(91,156,246,0.1)] px-[14px] py-[5px] text-[11px] font-medium text-[#5b9cf6]"
         >
-          <div
-            style={{
-              flex: "1 1 280px",
-              minWidth: 0,
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "16px",
-              alignItems: "flex-end",
-            }}
-          >
-            <div style={{ flex: "1 1 220px", minWidth: 0 }}>
-              <label className="mb-2 block text-[10px] font-medium text-[#64748b] dark:text-[#6b7a9a]">Suche</label>
+          + Neuer Bewirtschafter
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-4 px-6 py-5">
+        {error && <p className="text-[14px] text-[#ff5f6d]">{error}</p>}
+
+        <div>
+          <div className="mb-[10px] flex items-center gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.8px] text-[#4a5070]">Übersicht</span>
+            <div className="h-px flex-1 bg-[#1c2035]" />
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] px-[15px] py-[13px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#5b9cf6]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">
+                Bewirtschafter gesamt
+              </p>
+              <p className="mb-[4px] font-mono text-[22px] font-medium leading-none text-[#5b9cf6]">
+                {summary.totalCount}
+              </p>
+              <p className="text-[10px] text-[#4a5070]">Alle erfassten Kontakte</p>
+            </div>
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] px-[15px] py-[13px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#9d7cf4]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">
+                Mit Verwaltung
+              </p>
+              <p className="mb-[4px] font-mono text-[22px] font-medium leading-none text-[#9d7cf4]">
+                {summary.withLandlord}
+              </p>
+              <p className="text-[10px] text-[#4a5070]">Verwaltung verknüpft</p>
+            </div>
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] px-[15px] py-[13px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#3ddc84]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Aktiv</p>
+              <p className="mb-[4px] font-mono text-[22px] font-medium leading-none text-[#3ddc84]">
+                {summary.activeCount}
+              </p>
+              <p className="text-[10px] text-[#4a5070]">Status aktiv</p>
+            </div>
+            <div className="relative overflow-hidden rounded-[10px] border border-[#1c2035] bg-[#10121a] px-[15px] py-[13px] transition-colors hover:border-[#242840]">
+              <div className="absolute left-0 right-0 top-0 h-[2px] rounded-t-[10px] bg-[#f5a623]" />
+              <p className="mb-[4px] text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Inaktiv</p>
+              <p className="mb-[4px] font-mono text-[22px] font-medium leading-none text-[#f5a623]">
+                {summary.inactiveCount}
+              </p>
+              <p className="text-[10px] text-[#4a5070]">Status inaktiv</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+          <div className="flex flex-wrap items-center gap-x-[10px] gap-y-2 border-b border-[#1c2035] px-[18px] py-[13px]">
+            <h3 className="text-[13px] font-medium text-[#edf0f7]">Bewirtschafterübersicht</h3>
+            <div className="ml-auto flex flex-wrap items-center gap-[8px]">
               <input
                 type="text"
-                placeholder="Nach Name, E-Mail, Telefon oder Verwaltung suchen"
+                placeholder="Nach Name, E-Mail, Telefon oder Verwaltung suchen…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="box-border h-[44px] w-full rounded-[8px] border border-black/10 bg-slate-100 px-3.5 text-[14px] text-[#0f172a] placeholder:text-[#64748b]/70 dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff] dark:placeholder:text-[#6b7a9a]/70"
+                className="box-border w-[260px] max-w-full rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[5px] font-['DM_Sans'] text-[12px] text-[#edf0f7] outline-none placeholder:text-[#4a5070]"
               />
-            </div>
-            <div style={{ flex: "0 1 180px", minWidth: "min(100%, 160px)" }}>
-              <label
-                htmlFor="pm-list-filter"
-                className="mb-2 block text-[10px] font-medium text-[#64748b] dark:text-[#6b7a9a]"
-              >
-                Anzeige
-              </label>
               <select
                 id="pm-list-filter"
                 value={listFilter}
                 onChange={(e) => setListFilter(e.target.value)}
                 aria-label="Anzeige"
-                className="box-border h-[44px] w-full rounded-[8px] border border-black/10 bg-slate-100 px-3 text-[14px] text-[#0f172a] dark:border-white/[0.08] dark:bg-[#111520] dark:text-[#eef2ff]"
+                className="box-border cursor-pointer appearance-none rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[5px] font-['DM_Sans'] text-[12px] text-[#8892b0]"
               >
                 <option value="active">Aktiv</option>
                 <option value="inactive">Inaktiv</option>
                 <option value="all">Alle</option>
               </select>
+              <span className="rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[3px] text-[10px] text-[#4a5070]">
+                {filteredRows.length} Einträge
+              </span>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="h-[44px] cursor-pointer rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-[18px] text-[14px] font-semibold text-white hover:opacity-95"
-          >
-            + Neuer Bewirtschafter
-          </button>
-        </div>
-      </div>
 
-      <div className="overflow-x-auto rounded-[14px] border border-black/10 bg-white p-5 dark:border-white/[0.07] dark:bg-[#141824]">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-[16px] font-bold text-[#0f172a] dark:text-[#eef2ff]">Bewirtschafterübersicht</h3>
-
-          <div className="text-[13px] text-[#64748b] dark:text-[#6b7a9a]">{filteredRows.length} Einträge</div>
-        </div>
-
-        {filteredRows.length === 0 ? (
-          <p className="text-[#64748b] dark:text-[#6b7a9a]">Keine Bewirtschafter gefunden.</p>
-        ) : (
-          <table className="w-full border-collapse text-[13px] text-[#0f172a] dark:text-[#eef2ff]">
-            <thead>
-              <tr className="border-b border-black/10 bg-slate-100 text-left text-[9px] font-bold uppercase tracking-[0.8px] text-[#64748b] dark:border-white/[0.05] dark:bg-[#111520] dark:text-[#6b7a9a]">
-                <th className="px-3 py-3">Name</th>
-                <th className="px-3 py-3">E-Mail</th>
-                <th className="px-3 py-3">Telefon</th>
-                <th className="px-3 py-3">Verwaltung</th>
-                <th className="px-3 py-3">Erstellt</th>
-                <th className="whitespace-nowrap px-3 py-3">Aktionen</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredRows.map((item) => {
-                const ll = item.landlord_id ? landlordById.get(item.landlord_id) : null;
-                return (
-                  <tr key={item.id} className="border-b border-black/10 dark:border-white/[0.05]">
-                    <td className="px-3 py-3 align-top font-semibold text-[#0f172a] dark:text-[#eef2ff]">
-                      {item.name || "—"}
-                    </td>
-                    <td className="px-3 py-3 align-top font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                      {item.email || "—"}
-                    </td>
-                    <td className="px-3 py-3 align-top font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                      {item.phone || "—"}
-                    </td>
-                    <td className="px-3 py-3 align-top font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                      {ll && landlordDisplayLabel(ll) ? (
-                        <Link
-                          to={`/admin/landlords/${encodeURIComponent(ll.id)}`}
-                          className="text-[13px] font-medium text-blue-700 no-underline hover:underline dark:text-blue-400"
-                        >
-                          {landlordDisplayLabel(ll)}
-                        </Link>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-3 py-3 align-top font-medium text-[#0f172a] dark:text-[#eef2ff]">
-                      {formatDate(item.created_at)}
-                    </td>
-                    <td className="px-3 py-3 align-top">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Link
-                          to={`/admin/bewirtschafter/${encodeURIComponent(item.id)}`}
-                          className="inline-block rounded-[8px] border border-black/10 bg-transparent px-3 py-1.5 text-[13px] font-semibold text-[#64748b] no-underline hover:bg-slate-100 dark:border-white/[0.1] dark:text-[#8090b0] dark:hover:bg-white/[0.04]"
-                        >
-                          Öffnen
-                        </Link>
-                      </div>
-                    </td>
+          {filteredRows.length === 0 ? (
+            <p className="px-[18px] py-8 text-[12px] text-[#4a5070]">Keine Bewirtschafter gefunden.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Name
+                    </th>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      E-Mail
+                    </th>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Telefon
+                    </th>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Verwaltung
+                    </th>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Erstellt
+                    </th>
+                    <th className="whitespace-nowrap border-b border-[#1c2035] px-[18px] py-[8px] text-left text-[9px] font-medium uppercase tracking-[0.6px] text-[#4a5070]">
+                      Aktionen
+                    </th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
+                </thead>
+                <tbody>
+                  {filteredRows.map((item, rowIdx) => {
+                    const ll = item.landlord_id ? landlordById.get(item.landlord_id) : null;
+                    const isLast = rowIdx === filteredRows.length - 1;
+                    const nameRaw = String(item.name || "").trim();
+                    const nameParts = nameRaw.split(/\s+/).filter(Boolean);
+                    let initials = "?";
+                    if (nameParts.length >= 2) {
+                      const a = nameParts[0][0] || "";
+                      const b = nameParts[nameParts.length - 1][0] || "";
+                      initials = `${a}${b}`.toUpperCase() || "?";
+                    } else if (nameRaw) {
+                      initials = nameRaw.slice(0, 2).toUpperCase();
+                    }
+                    const avMod = rowIdx % 5;
+                    const avBox =
+                      avMod === 0
+                        ? "bg-[rgba(91,156,246,0.1)] border-[rgba(91,156,246,0.2)] text-[#5b9cf6]"
+                        : avMod === 1
+                          ? "bg-[rgba(157,124,244,0.1)] border-[rgba(157,124,244,0.2)] text-[#9d7cf4]"
+                          : avMod === 2
+                            ? "bg-[rgba(61,220,132,0.1)] border-[rgba(61,220,132,0.2)] text-[#3ddc84]"
+                            : avMod === 3
+                              ? "bg-[rgba(245,166,35,0.1)] border-[rgba(245,166,35,0.2)] text-[#f5a623]"
+                              : "bg-[rgba(255,95,109,0.1)] border-[rgba(255,95,109,0.2)] text-[#ff5f6d]";
+                    const tdBase =
+                      "px-[18px] py-[13px] align-middle text-[11px] text-[#8892b0] border-b border-[#1c2035]";
+                    const tdLast = isLast ? " border-b-0" : "";
+                    return (
+                      <tr
+                        key={item.id}
+                        className="cursor-pointer transition-colors hover:bg-[#141720]"
+                      >
+                        <td className={`${tdBase}${tdLast}`}>
+                          <div className="flex items-center gap-[9px]">
+                            <div
+                              className={`flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-[8px] border text-[10px] font-semibold ${avBox}`}
+                            >
+                              {initials}
+                            </div>
+                            <span className="text-[12px] font-medium text-[#edf0f7]">
+                              {item.name || "—"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className={`${tdBase}${tdLast} text-[11px] text-[#8892b0]`}>
+                          {item.email || "—"}
+                        </td>
+                        <td className={`${tdBase}${tdLast} font-mono text-[10px] text-[#4a5070]`}>
+                          {item.phone || "—"}
+                        </td>
+                        <td className={`${tdBase}${tdLast} text-[11px]`}>
+                          {ll && landlordDisplayLabel(ll) ? (
+                            <Link
+                              to={`/admin/landlords/${encodeURIComponent(ll.id)}`}
+                              className="text-[11px] font-medium text-[#5b9cf6] no-underline hover:underline"
+                            >
+                              {landlordDisplayLabel(ll)}
+                            </Link>
+                          ) : (
+                            <span className="text-[#8892b0]">—</span>
+                          )}
+                        </td>
+                        <td className={`${tdBase}${tdLast} font-mono text-[10px] text-[#4a5070]`}>
+                          {formatDate(item.created_at)}
+                        </td>
+                        <td className={`${tdBase}${tdLast}`}>
+                          <Link
+                            to={`/admin/bewirtschafter/${encodeURIComponent(item.id)}`}
+                            className="inline-block cursor-pointer rounded-[6px] border border-[#252a3a] bg-[#141720] px-[12px] py-[4px] text-[11px] text-[#8892b0] no-underline transition-all duration-150 hover:border-[#3b5fcf] hover:bg-[#1a1e2c] hover:text-[#edf0f7]"
+                          >
+                            Öffnen →
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
       {formOpen && (
