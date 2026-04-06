@@ -14,15 +14,13 @@ import {
   normalizeRoom,
   patchAdminPropertyManager,
 } from "../../api/adminData";
-import { formatAuditLog, auditActorDisplay } from "../../utils/auditDisplay";
-import { AdminAuditTimeline, AdminAuditTimelineEntry } from "../../components/admin/AuditLogVisual";
+import { formatAuditLog, auditActorDisplay, auditActionLabel } from "../../utils/auditDisplay";
 import { normalizeUnitTypeLabel } from "../../utils/unitDisplayId";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getCoLivingMetrics } from "../../utils/adminUnitCoLivingMetrics";
 import {
   formatOccupancyStatusDe,
   getUnitOccupancyStatus,
-  occupancyStatusBadgeClassName,
   sumActiveTenancyMonthlyRentForUnit,
 } from "../../utils/unitOccupancyStatus";
 
@@ -54,24 +52,6 @@ function formatChfMonthly(value) {
   const n = Number(value);
   if (Number.isNaN(n)) return "—";
   return `CHF ${n.toLocaleString("de-CH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function unitTypeBadgeClasses(type, isDark) {
-  const raw = String(type ?? "").trim();
-  const normalized = normalizeUnitTypeLabel(raw);
-  if (normalized === "Co-Living") {
-    return isDark
-      ? "border-sky-500/20 bg-sky-500/10 text-sky-300"
-      : "border-sky-300 bg-sky-100 text-sky-800";
-  }
-  if (raw === "Business Apartment") {
-    return isDark
-      ? "border-purple-500/20 bg-purple-500/10 text-purple-300"
-      : "border-purple-300 bg-purple-100 text-purple-800";
-  }
-  return isDark
-    ? "border-white/[0.08] bg-white/[0.05] text-[#6b7a9a]"
-    : "border-black/10 bg-slate-100 text-[#64748b]";
 }
 
 function formatDateTime(iso) {
@@ -379,18 +359,18 @@ function AdminPropertyManagerDetailPage() {
 
   if (loading) {
     return (
-      <p className={pmTh.loadingText}>Lade Bewirtschafter …</p>
+      <p className="min-h-[40vh] bg-[#080a0f] px-6 py-8 text-[#4a5070]">Lade Bewirtschafter …</p>
     );
   }
 
   if (error || !pm) {
     return (
-      <div className={pmTh.errorWrap}>
-        <p className="mb-3 text-[#f87171]">{error || "Nicht gefunden."}</p>
+      <div className="min-h-screen bg-[#080a0f] px-6 py-8 text-[#edf0f7]">
+        <p className="mb-3 text-[14px] text-[#ff5f6d]">{error || "Nicht gefunden."}</p>
         <button
           type="button"
           onClick={() => navigate("/admin/bewirtschafter")}
-          className={pmTh.btnGhost}
+          className="rounded-[6px] border border-[#252a3a] bg-[#141720] px-[12px] py-[4px] text-[11px] text-[#8892b0] hover:text-[#edf0f7]"
         >
           Zurück zur Liste
         </button>
@@ -498,29 +478,48 @@ function AdminPropertyManagerDetailPage() {
       .finally(() => setStatusSaving(false));
   };
 
-  return (
-    <div className={pmTh.page}>
-      <p className="mb-4">
-        <Link to="/admin/bewirtschafter" className={pmTh.link}>
-          ← Bewirtschafter
-        </Link>
-      </p>
+  const nameRawForInitials = String(pm.name || "").trim();
+  const namePartsForInitials = nameRawForInitials.split(/\s+/).filter(Boolean);
+  let stammInitials = "?";
+  if (namePartsForInitials.length >= 2) {
+    const a = namePartsForInitials[0][0] || "";
+    const b = namePartsForInitials[namePartsForInitials.length - 1][0] || "";
+    stammInitials = `${a}${b}`.toUpperCase() || "?";
+  } else if (nameRawForInitials) {
+    stammInitials = nameRawForInitials.slice(0, 2).toUpperCase();
+  }
 
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2 gap-y-2">
-            <h1 className={pmTh.h1}>{displayName}</h1>
-            <span className={isPmActive ? pmTh.pmChipActive : pmTh.pmChipInactive}>
-              {isPmActive ? "Aktiv" : "Inaktiv"}
-            </span>
+  return (
+    <div className="-m-6 min-h-screen bg-[#080a0f]">
+      <div className="sticky top-0 z-30 flex h-[50px] items-center justify-between border-b border-[#1c2035] bg-[#0c0e15] px-6 backdrop-blur-md">
+        <div className="flex min-w-0 flex-1 items-center gap-[12px]">
+          <Link
+            to="/admin/bewirtschafter"
+            className="shrink-0 rounded-[6px] border border-[#252a3a] bg-[#141720] px-[10px] py-[4px] text-[11px] text-[#4a5070] no-underline hover:text-[#edf0f7]"
+          >
+            ← Bewirtschafter
+          </Link>
+          <div className="h-[20px] w-px shrink-0 bg-[#1c2035]" aria-hidden />
+          <div className="flex min-w-0 flex-wrap items-center gap-x-[8px] gap-y-1">
+            <span className="shrink-0 text-[10px] text-[#4a5070]">Bewirtschafter</span>
+            <span className="shrink-0 text-[#1c2035]">/</span>
+            <span className="truncate text-[14px] font-medium text-[#edf0f7]">{displayName}</span>
+            {isPmActive ? (
+              <span className="inline-flex shrink-0 items-center rounded-full border border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] px-[8px] py-[1px] text-[10px] font-semibold text-[#3ddc84]">
+                Aktiv
+              </span>
+            ) : (
+              <span className="inline-flex shrink-0 items-center rounded-full border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] px-[8px] py-[1px] text-[10px] font-semibold text-[#f5a623]">
+                Inaktiv
+              </span>
+            )}
           </div>
-          <p className={pmTh.subLead}>Bewirtschafter / Property Manager</p>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex shrink-0 items-center gap-[8px]">
           <button
             type="button"
             onClick={openEditModal}
-            className={pmTh.btnToolbar}
+            className="rounded-[6px] border border-[#252a3a] bg-[#141720] px-[12px] py-[4px] text-[11px] text-[#8892b0] hover:text-[#edf0f7]"
           >
             Bearbeiten
           </button>
@@ -530,237 +529,399 @@ function AdminPropertyManagerDetailPage() {
             onClick={handleToggleStatus}
             className={
               isPmActive
-                ? "inline-flex items-center rounded-[8px] border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm font-semibold text-[#f87171] hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-60"
-                : "inline-flex items-center rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-3 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+                ? "rounded-[6px] border border-[rgba(245,166,35,0.25)] bg-transparent px-[12px] py-[4px] text-[11px] text-[#f5a623] hover:bg-[rgba(245,166,35,0.08)] disabled:cursor-not-allowed disabled:opacity-60"
+                : "rounded-[6px] border border-[rgba(61,220,132,0.25)] bg-transparent px-[12px] py-[4px] text-[11px] text-[#3ddc84] hover:bg-[rgba(61,220,132,0.08)] disabled:cursor-not-allowed disabled:opacity-60"
             }
           >
-            {statusSaving
-              ? "…"
-              : isPmActive
-                ? "Als inaktiv markieren"
-                : "Aktivieren"}
+            {statusSaving ? "…" : isPmActive ? "Als inaktiv markieren" : "Aktivieren"}
           </button>
         </div>
       </div>
 
-      <section className={pmTh.section}>
-        <h2 className={pmTh.sectionTitle}>Stammdaten</h2>
-        <div className="space-y-4">
-          <div>
-            <p className={pmTh.labelMuted}>Name</p>
-            <p className={`mt-1 text-[13px] font-medium ${pmTh.body}`}>{displayName}</p>
+      <div className="grid grid-cols-1 items-start gap-[16px] px-[24px] py-[20px] lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="flex min-w-0 flex-col gap-[12px]">
+          <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+            <div className="flex items-center justify-between border-b border-[#1c2035] px-[16px] py-[12px]">
+              <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#edf0f7]">
+                Stammdaten
+              </span>
+            </div>
+            <div className="px-[16px] py-[14px]">
+              <div className="mb-[14px] flex items-center gap-[12px]">
+                <div className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-[10px] border border-[rgba(91,156,246,0.2)] bg-[rgba(91,156,246,0.1)] text-[14px] font-semibold text-[#5b9cf6]">
+                  {stammInitials}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold text-[#edf0f7]">{displayName}</p>
+                  <p className="mt-[2px] text-[10px] text-[#4a5070]">Bewirtschafter / Property Manager</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-[12px]">
+                <div className="flex flex-col gap-[3px]">
+                  <span className="text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Name</span>
+                  <span className="text-[12px] font-medium text-[#edf0f7]">{displayName}</span>
+                </div>
+                <div className="flex flex-col gap-[3px]">
+                  <span className="text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">E-Mail</span>
+                  {pm.email?.trim() ? (
+                    <span className="text-[11px] text-[#5b9cf6]">{pm.email.trim()}</span>
+                  ) : (
+                    <span className="text-[12px] font-medium text-[#4a5070]">—</span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-[3px]">
+                  <span className="text-[9px] font-medium uppercase tracking-[0.5px] text-[#4a5070]">Telefon</span>
+                  {pm.phone?.trim() ? (
+                    <span className="font-mono text-[11px] text-[#edf0f7]">{pm.phone.trim()}</span>
+                  ) : (
+                    <span className="text-[12px] font-medium text-[#4a5070]">—</span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <p className={pmTh.labelMuted}>E-Mail</p>
-            <p className={`mt-1 text-[13px] font-medium ${pmTh.body}`}>{pm.email?.trim() || "—"}</p>
-          </div>
-          <div>
-            <p className={pmTh.labelMuted}>Telefonnummer</p>
-            <p className={`mt-1 text-[13px] font-medium ${pmTh.body}`}>{pm.phone?.trim() || "—"}</p>
-          </div>
-        </div>
-      </section>
 
-      <section className={pmTh.section}>
-        <h2 className={pmTh.sectionTitle}>Zugeordnete Verwaltung</h2>
-        {!pm.landlord_id ? (
-          <p className={pmTh.pMuted}>Keine Verwaltung zugeordnet</p>
-        ) : landlordRow === undefined ? (
-          <p className={pmTh.pMuted}>Lade Verwaltung …</p>
-        ) : landlordRow ? (
-          <div>
-            <Link
-              to={`/admin/landlords/${encodeURIComponent(pm.landlord_id)}`}
-              className={pmTh.linkMd}
-            >
-              {landlordDisplayLabel(landlordRow) || landlordLabel(landlordRow)}
-            </Link>
-          </div>
-        ) : (
-          <p className={pmTh.pMuted}>Die zugeordnete Verwaltung konnte nicht geladen werden.</p>
-        )}
-      </section>
-
-      <section className={pmTh.section}>
-        <h2 className={pmTh.sectionTitle}>Notizen</h2>
-        <form
-          className="mb-6"
-          onSubmit={(e) => {
-            e.preventDefault();
-            saveNewNote();
-          }}
-        >
-          <label htmlFor="pm-new-note" className={`mb-1.5 block ${pmTh.labelMuted}`}>
-            Neue Notiz
-          </label>
-          <textarea
-            id="pm-new-note"
-            value={newNoteDraft}
-            onChange={(e) => {
-              setNewNoteDraft(e.target.value);
-              setNewNoteErr(null);
-            }}
-            disabled={newNoteSaving}
-            placeholder="Interne Notiz …"
-            rows={3}
-            className={pmTh.textarea}
-          />
-          {newNoteErr ? <p className="mt-2 text-sm text-[#f87171]">{newNoteErr}</p> : null}
-          {newNoteSubmitErr ? <p className="mt-2 text-sm text-[#f87171]">{newNoteSubmitErr}</p> : null}
-          <div className="mt-3">
-            <button
-              type="submit"
-              disabled={newNoteSaving}
-              className="inline-flex items-center rounded-[8px] border-none bg-gradient-to-r from-[#5b8cff] to-[#7c5cfc] px-3.5 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {newNoteSaving ? "Speichern …" : "Notiz speichern"}
-            </button>
-          </div>
-        </form>
-        <div className={pmTh.borderT}>
-          <p className={`mb-3 ${pmTh.labelMuted}`}>Alle Notizen</p>
-          {notesLoading ? (
-            <p className={pmTh.pMuted}>Lade Notizen …</p>
-          ) : !notes.length ? (
-            <p className={pmTh.pMuted}>Noch keine Notizen vorhanden.</p>
-          ) : (
-            <ul className="space-y-4">
-              {notes.map((n) => (
-                <li
-                  key={n.id}
-                  className={`${pmTh.borderB} pb-4 last:border-0 last:pb-0`}
-                >
-                  <div className={pmTh.noteBox}>
-                    <p className={`whitespace-pre-wrap text-sm ${pmTh.body}`}>{n.content}</p>
-                    <p className={pmTh.metaXs}>
-                      {formatDateTime(n.created_at)} · {n.author_name || "—"}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
-
-      <section className={pmTh.section}>
-        <h2 className={pmTh.sectionTitle}>Historie</h2>
-        <p className={`mb-3 ${pmTh.labelMuted}`}>
-          Änderungen an Stammdaten (wer, wann, welches Feld).
-        </p>
-        {auditLoading ? (
-          <p className={pmTh.pMuted}>Lade Verlauf …</p>
-        ) : auditError ? (
-          <p className="text-sm text-[#f87171]">{auditError}</p>
-        ) : auditLogs.length === 0 ? (
-          <p className={pmTh.pMuted}>Noch keine Einträge im Audit-Protokoll.</p>
-        ) : (
-          <AdminAuditTimeline>
-            {auditLogs.map((log) => {
-              const { summary, changes } = formatAuditLog(log, {
-                entityType: "property_manager",
-                landlordNameById,
-              });
-              return (
-                <AdminAuditTimelineEntry
-                  key={log.id}
-                  summary={summary}
-                  changes={changes}
-                  createdAt={log.created_at}
-                  actor={auditActorDisplay(log)}
-                  action={log.action}
-                  metaClassName={isDark ? "text-xs text-[#6b7a9a]" : "text-xs text-[#64748b]"}
+          <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+            <div className="flex items-center justify-between border-b border-[#1c2035] px-[16px] py-[12px]">
+              <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#edf0f7]">Notizen</span>
+            </div>
+            <div className="px-[16px] py-[14px]">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  saveNewNote();
+                }}
+              >
+                <textarea
+                  id="pm-new-note"
+                  value={newNoteDraft}
+                  onChange={(e) => {
+                    setNewNoteDraft(e.target.value);
+                    setNewNoteErr(null);
+                  }}
+                  disabled={newNoteSaving}
+                  placeholder="Interne Notiz …"
+                  rows={3}
+                  className="min-h-[70px] w-full resize-y rounded-[7px] border border-[#1c2035] bg-[#141720] px-[12px] py-[10px] font-['DM_Sans'] text-[12px] text-[#edf0f7] outline-none placeholder:text-[#4a5070] focus:border-[#242840] disabled:opacity-60"
                 />
-              );
-            })}
-          </AdminAuditTimeline>
-        )}
-      </section>
-
-      <section className={pmTh.section}>
-        <h2 className={pmTh.sectionTitle}>Zugeordnete Units</h2>
-        {unitsLoading ? (
-          <div className="space-y-2" aria-busy="true">
-            <p className={pmTh.pMuted}>Lade Units …</p>
-            <div className={pmTh.pulse1} />
-            <div className={pmTh.pulse2} />
-          </div>
-        ) : unitsError ? (
-          <p className="text-sm text-[#f87171]">{unitsError}</p>
-        ) : units.length === 0 ? (
-          <div className={pmTh.emptyBox}>
-            <p className={`text-sm font-semibold ${pmTh.body}`}>Keine Units zugeordnet</p>
-            <p className={`mx-auto mt-2 max-w-md text-sm ${pmTh.mutedInline}`}>
-              Diesem Bewirtschafter sind aktuell keine Units als Ansprechpartner zugewiesen.
-            </p>
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {units.map((u) => {
-              const uid = u.unitId ?? u.id;
-              const title = (u.title || u.name || "").trim() || "—";
-              const typeLabel = normalizeUnitTypeLabel(u.type) || String(u.type || "").trim() || "—";
-              const addr = String(u.address || "").trim();
-              const zip = String(u.zip ?? "").trim();
-              const city = String(u.city || "").trim();
-              const zipCity = [zip, city].filter(Boolean).join(" ");
-              const propTitle = String(u.property_title || "").trim();
-              const occKey = getUnitOccupancyStatus(u, occupancyRooms, occupancyTenancies);
-              const colivingMetrics = getCoLivingMetrics(u, occupancyRooms, occupancyTenancies);
-              const coLivingRatio =
-                typeLabel === "Co-Living" &&
-                colivingMetrics.totalRooms > 0 &&
-                occKey != null
-                  ? ` · ${colivingMetrics.occupiedCount}/${colivingMetrics.totalRooms} Zimmer`
-                  : "";
-              return (
-                <li key={String(uid)} className={pmTh.unitRow}>
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <Link to={`/admin/units/${encodeURIComponent(uid)}`} className={pmTh.linkUnit}>
-                        {title}
-                      </Link>
-                      {propTitle ? (
-                        <p className={`mt-1 text-xs ${pmTh.mutedInline}`}>Liegenschaft: {propTitle}</p>
-                      ) : null}
-                      {addr ? <p className={`mt-2 text-sm ${pmTh.body}`}>{addr}</p> : null}
-                      {zipCity ? <p className={`text-sm ${pmTh.body}`}>{zipCity}</p> : null}
-                    </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-2">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${unitTypeBadgeClasses(u.type, isDark)}`}
+                {newNoteErr ? <p className="mt-2 text-[12px] text-[#ff5f6d]">{newNoteErr}</p> : null}
+                {newNoteSubmitErr ? (
+                  <p className="mt-2 text-[12px] text-[#ff5f6d]">{newNoteSubmitErr}</p>
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={newNoteSaving}
+                  className="mt-[8px] rounded-[6px] border border-[rgba(91,156,246,0.28)] bg-[rgba(91,156,246,0.1)] px-[14px] py-[5px] text-[11px] font-medium text-[#5b9cf6] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {newNoteSaving ? "Speichern …" : "Notiz speichern"}
+                </button>
+              </form>
+              <div className="mt-[12px] border-t border-[#1c2035] pt-[12px]">
+                {notesLoading ? (
+                  <p className="text-[12px] text-[#4a5070]">Lade Notizen …</p>
+                ) : !notes.length ? (
+                  <p className="text-[12px] text-[#4a5070]">Noch keine Notizen vorhanden.</p>
+                ) : (
+                  <ul className="m-0 list-none p-0">
+                    {notes.map((n, ni) => (
+                      <li
+                        key={n.id}
+                        className={`py-[10px] ${ni < notes.length - 1 ? "border-b border-[#1c2035]" : ""}`}
                       >
-                        {typeLabel}
-                      </span>
-                      {occKey == null ? (
-                        <span className={pmTh.occBadgeUnknown}>—</span>
-                      ) : (
-                        <span
-                          className={`${pmTh.occBadgeWrap} ${occupancyStatusBadgeClassName(occKey)}`}
-                        >
-                          {formatOccupancyStatusDe(occKey)}
-                          {coLivingRatio}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <p className={`${pmTh.unitFooter} text-sm ${pmTh.body}`}>
-                    <span className={pmTh.mutedInline}>Miete (Mieter): </span>
-                    <span className={pmTh.rentStrong}>
-                      {formatChfMonthly(
-                        sumActiveTenancyMonthlyRentForUnit(
-                          u,
-                          occupancyTenancies ?? []
-                        )
-                      )}
-                    </span>
+                        <p className="mb-[3px] whitespace-pre-wrap text-[12px] text-[#edf0f7]">{n.content}</p>
+                        <p className="text-[10px] text-[#4a5070]">
+                          {formatDateTime(n.created_at)} · {n.author_name || "—"}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+            <div className="flex items-center justify-between border-b border-[#1c2035] px-[16px] py-[12px]">
+              <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#edf0f7]">
+                Historia · Änderungsprotokoll
+              </span>
+              <span className="text-[10px] text-[#4a5070]">
+                {auditLoading ? "…" : `${auditLogs.length} Einträge`}
+              </span>
+            </div>
+            <div className="px-[16px] py-[14px]">
+              {auditLoading ? (
+                <p className="text-[12px] text-[#4a5070]">Lade Verlauf …</p>
+              ) : auditError ? (
+                <p className="text-[12px] text-[#ff5f6d]">{auditError}</p>
+              ) : auditLogs.length === 0 ? (
+                <p className="text-[12px] text-[#4a5070]">Noch keine Einträge im Audit-Protokoll.</p>
+              ) : (
+                <ul className="m-0 list-none p-0">
+                  {auditLogs.map((log, li) => {
+                    const { summary, changes } = formatAuditLog(log, {
+                      entityType: "property_manager",
+                      landlordNameById,
+                    });
+                    const actorLine = auditActorDisplay(log);
+                    return (
+                      <li
+                        key={log.id}
+                        className={`py-[12px] ${li < auditLogs.length - 1 ? "border-b border-[#1c2035]" : ""}`}
+                      >
+                        <p className="mb-[4px] text-[11px] font-medium text-[#edf0f7]">{summary}</p>
+                        <p className="mb-[8px] text-[10px] text-[#4a5070]">
+                          <span>{formatDateTime(log.created_at)}</span>
+                          {log.action != null && String(log.action) !== "" ? (
+                            <>
+                              <span> · </span>
+                              <span>{auditActionLabel(log.action)}</span>
+                            </>
+                          ) : null}
+                          {actorLine ? (
+                            <>
+                              <span> · </span>
+                              <span className="text-[#f5a623]">{actorLine}</span>
+                            </>
+                          ) : null}
+                        </p>
+                        {changes && changes.length > 0 ? (
+                          <div className="flex flex-col gap-[8px]">
+                            {changes.map((c, ci) => {
+                              const oldDisp = c.old == null || c.old === "" ? "—" : String(c.old);
+                              const isNarr =
+                                (c.label === "Ereignis" || c.label === "Details") &&
+                                (oldDisp === "—" || oldDisp === "");
+                              return (
+                                <div key={`${log.id}-${ci}`}>
+                                  {isNarr ? (
+                                    <div className="rounded-[6px] border border-[#1c2035] bg-[#141720] px-[10px] py-[6px] text-[12px] text-[#edf0f7]">
+                                      {c.new == null || c.new === "" ? "—" : String(c.new)}
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <div className="mb-[4px] text-[10px] font-medium text-[#8892b0]">{c.label}</div>
+                                      <div className="grid grid-cols-2 gap-[6px]">
+                                        <div className="rounded-[6px] bg-[#141720] px-[10px] py-[6px]">
+                                          <div className="mb-[3px] text-[8px] uppercase tracking-[0.5px] text-[#4a5070]">
+                                            Alt
+                                          </div>
+                                          <div className="break-words font-mono text-[10px] text-[#ff5f6d]">
+                                            {oldDisp}
+                                          </div>
+                                        </div>
+                                        <div className="rounded-[6px] bg-[#141720] px-[10px] py-[6px]">
+                                          <div className="mb-[3px] text-[8px] uppercase tracking-[0.5px] text-[#4a5070]">
+                                            Neu
+                                          </div>
+                                          <div className="break-words font-mono text-[10px] text-[#3ddc84]">
+                                            {c.new == null || c.new === "" ? "—" : String(c.new)}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <aside className="flex min-w-0 flex-col gap-[12px]">
+          <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+            <div className="border-b border-[#1c2035] px-[16px] py-[12px]">
+              <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#edf0f7]">
+                Zugeordnete Verwaltung
+              </span>
+            </div>
+            <div className="px-[16px] py-[12px]">
+              {!pm.landlord_id ? (
+                <p className="text-[12px] text-[#4a5070]">Keine Verwaltung zugeordnet</p>
+              ) : landlordRow === undefined ? (
+                <p className="text-[12px] text-[#4a5070]">Lade Verwaltung …</p>
+              ) : landlordRow ? (
+                <Link
+                  to={`/admin/landlords/${encodeURIComponent(pm.landlord_id)}`}
+                  className="text-[12px] font-medium text-[#5b9cf6] no-underline hover:underline"
+                >
+                  {landlordDisplayLabel(landlordRow) || landlordLabel(landlordRow)}
+                </Link>
+              ) : (
+                <p className="text-[12px] text-[#4a5070]">Die zugeordnete Verwaltung konnte nicht geladen werden.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+            <div className="flex items-center justify-between border-b border-[#1c2035] px-[16px] py-[12px]">
+              <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#edf0f7]">
+                Zugeordnete Units
+              </span>
+              <span className="text-[10px] text-[#4a5070]">{units.length} Units</span>
+            </div>
+            <div className="px-[12px] py-[10px]">
+              {unitsLoading ? (
+                <div className="space-y-2" aria-busy="true">
+                  <p className="text-[12px] text-[#4a5070]">Lade Units …</p>
+                  <div className="h-2 w-full max-w-xs animate-pulse rounded bg-[#141720]" />
+                  <div className="h-2 w-full max-w-[14rem] animate-pulse rounded bg-[#141720]" />
+                </div>
+              ) : unitsError ? (
+                <p className="text-[12px] text-[#ff5f6d]">{unitsError}</p>
+              ) : units.length === 0 ? (
+                <div className="rounded-[9px] border border-dashed border-[#1c2035] bg-[#141720] px-[14px] py-[12px] text-center">
+                  <p className="text-[12px] font-medium text-[#edf0f7]">Keine Units zugeordnet</p>
+                  <p className="mx-auto mt-[6px] max-w-none text-[11px] text-[#4a5070]">
+                    Diesem Bewirtschafter sind aktuell keine Units als Ansprechpartner zugewiesen.
                   </p>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+                </div>
+              ) : (
+                <ul className="m-0 list-none p-0">
+                  {units.map((u, ui) => {
+                    const uid = u.unitId ?? u.id;
+                    const title = (u.title || u.name || "").trim() || "—";
+                    const typeLabel = normalizeUnitTypeLabel(u.type) || String(u.type || "").trim() || "—";
+                    const rawType = String(u.type ?? "").trim();
+                    const addr = String(u.address || "").trim();
+                    const zip = String(u.zip ?? "").trim();
+                    const city = String(u.city || "").trim();
+                    const zipCity = [zip, city].filter(Boolean).join(" ");
+                    const occKey = getUnitOccupancyStatus(u, occupancyRooms, occupancyTenancies);
+                    const colivingMetrics = getCoLivingMetrics(u, occupancyRooms, occupancyTenancies);
+                    const coLivingRatio =
+                      typeLabel === "Co-Living" &&
+                      colivingMetrics.totalRooms > 0 &&
+                      occKey != null
+                        ? ` · ${colivingMetrics.occupiedCount}/${colivingMetrics.totalRooms} Zimmer`
+                        : "";
+                    const rentSum = sumActiveTenancyMonthlyRentForUnit(u, occupancyTenancies ?? []);
+                    const typeBadgeCls =
+                      typeLabel === "Co-Living"
+                        ? "rounded-full border border-[rgba(91,156,246,0.2)] bg-[rgba(91,156,246,0.1)] px-[6px] py-[1px] text-[9px] font-semibold text-[#5b9cf6]"
+                        : rawType === "Business Apartment"
+                          ? "rounded-full border border-[rgba(157,124,244,0.2)] bg-[rgba(157,124,244,0.1)] px-[6px] py-[1px] text-[9px] font-semibold text-[#9d7cf4]"
+                          : "rounded-full border border-[#1c2035] bg-[#191c28] px-[6px] py-[1px] text-[9px] font-semibold text-[#8892b0]";
+                    const occBadgeCls =
+                      occKey === "belegt"
+                        ? "rounded-full border border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] px-[6px] py-[1px] text-[9px] font-semibold text-[#3ddc84]"
+                        : occKey === "frei"
+                          ? "rounded-full border border-[rgba(255,95,109,0.2)] bg-[rgba(255,95,109,0.1)] px-[6px] py-[1px] text-[9px] font-semibold text-[#ff5f6d]"
+                          : occKey === "reserviert"
+                            ? "rounded-full border border-[rgba(91,156,246,0.2)] bg-[rgba(91,156,246,0.1)] px-[6px] py-[1px] text-[9px] font-semibold text-[#5b9cf6]"
+                            : occKey === "teilbelegt"
+                              ? "rounded-full border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] px-[6px] py-[1px] text-[9px] font-semibold text-[#f5a623]"
+                              : "rounded-full border border-[#1c2035] bg-[#191c28] px-[6px] py-[1px] text-[9px] font-semibold text-[#4a5070]";
+                    return (
+                      <li key={String(uid)} className={ui < units.length - 1 ? "mb-[8px]" : ""}>
+                        <Link
+                          to={`/admin/units/${encodeURIComponent(uid)}`}
+                          className="block cursor-pointer rounded-[9px] border border-[#1c2035] bg-[#141720] px-[14px] py-[12px] transition-colors hover:border-[#242840]"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="min-w-0 truncate text-[12px] font-medium text-[#5b9cf6]">{title}</span>
+                            <div className="flex shrink-0 flex-wrap justify-end gap-[4px]">
+                              <span className={`inline-flex items-center ${typeBadgeCls}`}>{typeLabel}</span>
+                              {occKey == null ? (
+                                <span className="inline-flex items-center rounded-full border border-[#1c2035] bg-[#191c28] px-[6px] py-[1px] text-[9px] font-semibold text-[#4a5070]">
+                                  —
+                                </span>
+                              ) : (
+                                <span className={`inline-flex items-center ${occBadgeCls}`}>
+                                  {formatOccupancyStatusDe(occKey)}
+                                  {coLivingRatio}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {addr || zipCity ? (
+                            <p className="mb-[5px] mt-[3px] text-[10px] text-[#4a5070]">
+                              {[addr, zipCity].filter(Boolean).join(", ")}
+                            </p>
+                          ) : null}
+                          <p className="text-[11px] text-[#8892b0]">
+                            <span>Miete (Mieter): </span>
+                            <span
+                              className={
+                                rentSum > 0
+                                  ? "font-mono font-medium text-[#3ddc84]"
+                                  : "font-mono text-[#4a5070]"
+                              }
+                            >
+                              {formatChfMonthly(rentSum)}
+                            </span>
+                          </p>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-[12px] border border-[#1c2035] bg-[#10121a]">
+            <div className="border-b border-[#1c2035] px-[16px] py-[12px]">
+              <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[#edf0f7]">Schnellinfo</span>
+            </div>
+            <div className="divide-y divide-[#1c2035]">
+              <div className="flex items-center justify-between px-[16px] py-[9px]">
+                <span className="text-[11px] text-[#4a5070]">Status</span>
+                <span className="text-[12px] font-medium text-[#edf0f7]">
+                  {isPmActive ? (
+                    <span className="inline-flex items-center rounded-full border border-[rgba(61,220,132,0.2)] bg-[rgba(61,220,132,0.1)] px-2 py-[1px] text-[10px] font-semibold text-[#3ddc84]">
+                      Aktiv
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full border border-[rgba(245,166,35,0.2)] bg-[rgba(245,166,35,0.1)] px-2 py-[1px] text-[10px] font-semibold text-[#f5a623]">
+                      Inaktiv
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center justify-between px-[16px] py-[9px]">
+                <span className="text-[11px] text-[#4a5070]">ID</span>
+                <span className="break-all text-right text-[12px] font-medium text-[#edf0f7]">{String(pm.id)}</span>
+              </div>
+              <div className="flex items-center justify-between px-[16px] py-[9px]">
+                <span className="text-[11px] text-[#4a5070]">E-Mail</span>
+                <span className="max-w-[60%] break-all text-right text-[12px] font-medium text-[#edf0f7]">
+                  {pm.email?.trim() || "—"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between px-[16px] py-[9px]">
+                <span className="text-[11px] text-[#4a5070]">Telefon</span>
+                <span className="text-right font-mono text-[12px] font-medium text-[#edf0f7]">
+                  {pm.phone?.trim() || "—"}
+                </span>
+              </div>
+              {pm.created_at ? (
+                <div className="flex items-center justify-between px-[16px] py-[9px]">
+                  <span className="text-[11px] text-[#4a5070]">Erfasst</span>
+                  <span className="text-right text-[12px] font-medium text-[#edf0f7]">
+                    {formatDateTime(pm.created_at)}
+                  </span>
+                </div>
+              ) : null}
+              {pm.updated_at ? (
+                <div className="flex items-center justify-between px-[16px] py-[9px]">
+                  <span className="text-[11px] text-[#4a5070]">Aktualisiert</span>
+                  <span className="text-right text-[12px] font-medium text-[#edf0f7]">
+                    {formatDateTime(pm.updated_at)}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </aside>
+      </div>
 
       {editOpen && (
         <div
